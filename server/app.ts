@@ -105,6 +105,11 @@ export function criarApp({ db, cookieSeguro = false, pastaWeb }: OpcoesApp) {
       },
     }),
   );
+  // verificação de saúde usada pela hospedagem (não expõe dados)
+  app.get('/api/saude', (_req, res) => {
+    res.set('Cache-Control', 'no-store').json({ ok: true });
+  });
+
   app.use('/api', (_req, res, next) => {
     res.set('Cache-Control', 'no-store');
     next();

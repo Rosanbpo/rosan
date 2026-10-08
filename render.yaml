@@ -1,0 +1,27 @@
+# Blueprint do Render: cria o serviço web com disco persistente para o banco.
+# No Render: New → Blueprint → escolha este repositório.
+services:
+  - type: web
+    name: rosan-gestao-financeira
+    runtime: node
+    plan: starter # o disco persistente exige plano pago; no gratuito os dados se perdem
+    region: virginia
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/saude
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ROSAN_DB
+        value: /var/data/rosan.db
+      - key: ROSAN_ADMIN_EMAIL
+        sync: false # e-mail do primeiro administrador (você digita no Render)
+      - key: ROSAN_ADMIN_SENHA
+        sync: false # senha provisória do primeiro administrador
+      - key: ROSAN_DEMO
+        value: "0" # "1" cria os 2 clientes demonstrativos
+    disk:
+      name: dados
+      mountPath: /var/data
+      sizeGB: 1

@@ -27,21 +27,35 @@ Os dados demonstrativos (`npm run demo`) criam:
 
 Os dois clientes aparecem com o selo **Dados demonstrativos** e **nunca recebem importações reais**, para que dados fictícios e reais não se misturem.
 
-### Produção
+### Colocar no ar (Render)
 
-```bash
-npm run build                 # gera dist/
-NODE_ENV=production npm start # serve API + interface na porta 3001 (PORT)
-```
+O repositório já tem o `render.yaml`, que cria o serviço com HTTPS e um disco persistente para o banco.
+
+1. Crie uma conta em [render.com](https://render.com) entrando com o GitHub e autorize o acesso ao repositório `rosan`.
+2. Clique em **New → Blueprint**, escolha o repositório e a branch com o sistema.
+3. Preencha as variáveis pedidas:
+   - `ROSAN_ADMIN_EMAIL`: seu e-mail de administrador.
+   - `ROSAN_ADMIN_SENHA`: uma senha provisória (mínimo 8 caracteres, com letras e números). A troca é pedida no primeiro acesso.
+4. Confirme com **Apply**. O primeiro deploy leva de 3 a 5 minutos. O endereço fica como `https://rosan-gestao-financeira.onrender.com`.
+5. Para ver os clientes demonstrativos, mude `ROSAN_DEMO` para `1` em *Environment*. Eles são criados uma única vez.
+
+Custo: plano Starter (cerca de US$ 7/mês) + disco de 1 GB (cerca de US$ 0,25/mês). O plano gratuito não tem disco, e os dados se perdem a cada reinício. O Render faz snapshots diários do disco.
+
+**Domínio próprio** (ex.: `painel.rosan.com.br`): em *Settings → Custom Domains*, adicione o domínio e crie no seu provedor de DNS o registro CNAME indicado. O certificado HTTPS é emitido automaticamente.
+
+Toda alteração enviada para a branch configurada é publicada automaticamente.
+
+### Outros provedores
+
+O `Dockerfile` funciona em Railway, Fly.io ou em uma VPS. Monte um volume persistente em `/data` (onde fica o banco) e sirva por HTTPS.
 
 | Variável | Uso |
 |---|---|
 | `PORT` | Porta HTTP (padrão 3001) |
 | `ROSAN_DB` | Caminho do banco (padrão `dados/rosan.db`) |
-| `ROSAN_ADMIN_EMAIL` / `ROSAN_ADMIN_SENHA` | Primeiro administrador |
+| `ROSAN_ADMIN_EMAIL` / `ROSAN_ADMIN_SENHA` | Primeiro administrador (usado só se não houver nenhum) |
+| `ROSAN_DEMO` | `1` cria os clientes demonstrativos uma vez |
 | `NODE_ENV=production` | Ativa cookies `Secure` (exige HTTPS) |
-
-Coloque o servidor atrás de HTTPS (proxy reverso, Render, Railway, VPS etc.). O banco é um único arquivo SQLite: faça backup da pasta `dados/`.
 
 ## Perfis de acesso
 
