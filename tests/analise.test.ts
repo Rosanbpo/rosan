@@ -164,6 +164,12 @@ describe('categorias, despesas e centros de custo', () => {
     expect(a.prioridades.length).toBeLessThanOrEqual(3);
   });
 
+  it('despesas crescendo abaixo do faturamento contam como ponto positivo', () => {
+    const a = doMes([...mes('2026-08', 100000, 40000, 20000), ...mes('2026-09', 125000, 43000, 21800)], '2026-09');
+    expect(a.insights.positivos.map((x) => x.id)).toContain('despesas_controle');
+    expect(a.insights.atencao.map((x) => x.id)).not.toContain('despesas_alta');
+  });
+
   it('sem centro de custo: não inventa, mostra mensagem', () => {
     const a = doMes(lanc, '2026-09', false);
     expect(a.centros.disponivel).toBe(false);

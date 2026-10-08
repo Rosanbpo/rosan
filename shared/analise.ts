@@ -655,7 +655,8 @@ export function analisar(lancamentos: LancamentoAnalise[], opcoes: OpcoesAnalise
   } else if (atual.centros.size === 0) {
     centros = { disponivel: false, mensagem: 'Não existem centros de custo informados nos lançamentos deste período.' };
   } else {
-    const mesesAtual = mesesDe(opcoes.atual);
+    // evolução de cada centro na mesma janela da evolução financeira (até 12 meses)
+    const mesesJanela = evolucao.meses.map((m) => m.mes);
     const lista_ = [...atual.centros.entries()]
       .map(([nome, v]): CentroAnalise => {
         const anterior = temComparacao ? comp.centros.get(nome)?.valor ?? 0 : null;
@@ -667,7 +668,7 @@ export function analisar(lancamentos: LancamentoAnalise[], opcoes: OpcoesAnalise
           anterior,
           variacao: rel(v.valor, anterior),
           maioresDespesas: [...v.itens.values()].sort((a, b) => b.valor - a.valor).slice(0, 3),
-          evolucao: mesesAtual.map((mes) => ({
+          evolucao: mesesJanela.map((mes) => ({
             mes,
             valor: lancamentos
               .filter((l) => l.tipo === 'despesa' && l.mes === mes && l.centroCusto === nome)
@@ -810,6 +811,15 @@ export function analisar(lancamentos: LancamentoAnalise[], opcoes: OpcoesAnalise
         dado: `As despesas recuaram ${pct(-vd)}, uma economia de ${moedaInteira(comp.despesa - atual.despesa)}.`,
         comparacao: `Comparado ao ${rc}.`,
         insight: `As despesas foram reduzidas em ${pct(-vd)} (${moedaInteira(comp.despesa - atual.despesa)}) em relação ao ${rc}.`,
+      });
+    } else if (vd !== null && vd >= relv && !despesasAcima && vf !== null && vf - vd >= relv) {
+      r.push({
+        id: 'despesas_controle',
+        tipo: 'positivo',
+        severidade: 1,
+        titulo: 'Maior controle de despesas',
+        dado: `As despesas cresceram ${pct(vd)}, abaixo do faturamento (${pctSinal(vf)}).`,
+        insight: `As despesas cresceram ${pct(vd)}, menos do que o faturamento (${pctSinal(vf)}), o que ajuda a margem.`,
       });
     } else if (vd !== null && vd >= relv && !despesasAcima) {
       r.push({
@@ -1122,7 +1132,7 @@ export function analisar(lancamentos: LancamentoAnalise[], opcoes: OpcoesAnalise
           tipo: 'oportunidade',
           severidade: centros.semCentro.participacao > 0.1 ? 2 : 1,
           titulo: 'Classificar despesas sem centro de custo',
-          dado: `${moedaInteira(centros.semCentro.valor)} em despesas não possuem centro de custo informado (${centros.semCentro.quantidade} lançamento(s)).`,
+          dado: `${moedaInteira(centros.semCentro.valor)} em despesas não possuem centro de custo informado, em ${centros.semCentro.quantidade} ${centros.semCentro.quantidade === 1 ? 'lançamento' : 'lançamentos'}.`,
           insight: `${moedaInteira(centros.semCentro.valor)} em despesas (${pct(centros.semCentro.participacao)}) não possuem centro de custo informado.`,
           recomendacao: 'Classificar essas despesas permitirá uma visão mais precisa de onde os recursos da empresa estão sendo consumidos.',
           alerta: centros.semCentro.participacao > 0.1 ? 'Despesas sem centro de custo' : undefined,
@@ -1231,6 +1241,8 @@ export interface ResumoCliente {
   alertas: string[];
 }
 
+const CLASSIFICACAO = ['sem_centro', 'sem_natureza'];
+
 export function resumirCliente(lancamentos: LancamentoAnalise[], usaCentroCusto: boolean, premissas?: Partial<Premissas>): ResumoCliente {
   const meses = lancamentos.filter((l) => l.tipo !== 'transferencia').map((l) => l.mes);
   if (!meses.length) {
@@ -1252,8 +1264,12 @@ export function resumirCliente(lancamentos: LancamentoAnalise[], usaCentroCusto:
     resultado: a.kpis.resultado.atual,
     margem: a.kpis.margem.atual,
     abaixoPE: a.pontoEquilibrio.status === 'calculado' ? a.pontoEquilibrio.situacao === 'abaixo' : null,
-    atencao: a.alertas.some((x) => x.severidade >= 2),
-    alertas: a.alertas.filter((x) => x.severidade >= 2).map((x) => x.rotulo),
+    // classificação pendente não é problema financeiro: aparece nos alertas, mas não marca "atenção"
+    atencao: a.alertas.some((x) => x.severidade >= 2 && !CLASSIFICACAO.includes(x.id)),
+    alertas: a.alertas
+      .filter((x) => x.severidade >= 2)
+      .sort((x, y) => Number(CLASSIFICACAO.includes(x.id)) - Number(CLASSIFICACAO.includes(y.id)))
+      .map((x) => x.rotulo),
   };
 }
 
