@@ -1,13 +1,19 @@
 import { redirect } from "next/navigation";
 import { getActor } from "@/server/context";
 import { APP_NAME } from "@/lib/app-config";
+import { needsFirstSetup } from "@/server/services/setup";
 import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Entrar" };
 
-export default async function LoginPage() {
+export const dynamic = "force-dynamic";
+
+export default async function LoginPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  if (await needsFirstSetup()) redirect("/primeiro-acesso");
   if (await getActor()) redirect("/");
+  const { configurado } = await searchParams;
   const showDemo = process.env.NODE_ENV !== "production";
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 via-white to-slate-100 px-4">
       <div className="w-full max-w-sm">
@@ -18,6 +24,11 @@ export default async function LoginPage() {
           <h1 className="text-xl font-semibold text-slate-900">{APP_NAME}</h1>
           <p className="text-sm text-slate-600">Operação de BPO Financeiro</p>
         </div>
+        {configurado && (
+          <p role="status" className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            Empresa configurada! Entre com o e-mail e a senha que você acabou de criar.
+          </p>
+        )}
         <div className="card p-6">
           <LoginForm />
         </div>

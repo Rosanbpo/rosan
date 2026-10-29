@@ -7,13 +7,13 @@ import type { NextAuthConfig } from "next-auth";
 export const authConfig = {
   pages: { signIn: "/login" },
   session: { strategy: "jwt", maxAge: 60 * 60 * 12 },
-  trustHost: process.env.AUTH_TRUST_HOST === "true",
+  trustHost: process.env.AUTH_TRUST_HOST === "true" || !!process.env.VERCEL,
   providers: [],
   callbacks: {
     authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;
       const { pathname } = request.nextUrl;
-      if (pathname.startsWith("/login")) return true;
+      if (pathname.startsWith("/login") || pathname.startsWith("/primeiro-acesso")) return true;
       return isLoggedIn;
     },
     jwt({ token, user }) {

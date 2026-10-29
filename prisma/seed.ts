@@ -8,6 +8,7 @@ import { PrismaClient, type Client, type Prisma } from "@prisma/client";
 import { addDays, instantToLocalDate, localDateTimeToInstant, localDateToDbDate } from "../src/domain/dates";
 import { brazilianNationalHolidays } from "../src/domain/holidays";
 import { runScheduler } from "../src/server/services/generator";
+import { DEFAULT_TEMPLATES } from "../src/server/defaults";
 
 const TZ = "America/Sao_Paulo";
 const PASSWORD = "demo1234";
@@ -19,162 +20,6 @@ if (process.env.NODE_ENV === "production" && process.env.ALLOW_SEED_IN_PRODUCTIO
 }
 
 const db = new PrismaClient();
-
-type TemplateSeed = Omit<Prisma.RoutineTemplateUncheckedCreateInput, "organizationId"> & {
-  checklist: Array<[string, boolean]>;
-};
-
-const TEMPLATES: TemplateSeed[] = [
-  {
-    name: "Conciliação bancária diária",
-    title: "Conciliação bancária diária",
-    description: "Importar extratos de todas as contas, conciliar lançamentos e registrar divergências.",
-    category: "CONCILIACAO_BANCARIA",
-    priority: "ALTA",
-    estimatedMinutes: 45,
-    frequency: "DAILY_BUSINESS",
-    dueTime: "12:00",
-    leadDays: 0,
-    checklist: [
-      ["Baixar extratos de todas as contas", true],
-      ["Conciliar entradas e saídas", true],
-      ["Registrar divergências para o cliente", false],
-    ],
-  },
-  {
-    name: "Preparação da agenda de pagamentos",
-    title: "Preparar agenda de pagamentos da semana",
-    description: "Levantar contas a pagar da semana e enviar para aprovação do cliente. O sistema não realiza pagamentos.",
-    category: "CONTAS_A_PAGAR",
-    priority: "ALTA",
-    estimatedMinutes: 60,
-    frequency: "WEEKLY",
-    weekdays: [1],
-    dueTime: "11:00",
-    leadDays: 2,
-    requiresEvidence: true,
-    checklist: [
-      ["Conferir boletos e notas recebidos", true],
-      ["Montar planilha de pagamentos", true],
-      ["Enviar agenda para aprovação do cliente", true],
-    ],
-  },
-  {
-    name: "Acompanhamento de recebimentos",
-    title: "Acompanhar recebimentos",
-    category: "CONTAS_A_RECEBER",
-    priority: "NORMAL",
-    estimatedMinutes: 30,
-    frequency: "WEEKLY",
-    weekdays: [2, 4],
-    dueTime: "17:00",
-    leadDays: 1,
-    checklist: [
-      ["Baixar recebimentos identificados", true],
-      ["Listar títulos vencidos", false],
-    ],
-  },
-  {
-    name: "Cobrança de inadimplentes",
-    title: "Cobrança de inadimplentes",
-    category: "COBRANCA",
-    priority: "NORMAL",
-    estimatedMinutes: 60,
-    frequency: "BIWEEKLY",
-    monthDays: [10, 25],
-    dueTime: "16:00",
-    leadDays: 2,
-    checklist: [
-      ["Atualizar relação de inadimplentes", true],
-      ["Registrar contatos de cobrança realizados", true],
-    ],
-  },
-  {
-    name: "Atualização do fluxo de caixa",
-    title: "Atualizar fluxo de caixa",
-    category: "FLUXO_DE_CAIXA",
-    priority: "NORMAL",
-    estimatedMinutes: 40,
-    frequency: "WEEKLY",
-    weekdays: [5],
-    dueTime: "15:00",
-    leadDays: 2,
-    checklist: [
-      ["Lançar realizados da semana", true],
-      ["Revisar projeção das próximas 4 semanas", true],
-    ],
-  },
-  {
-    name: "Solicitação de documentos",
-    title: "Solicitar documentos do mês",
-    description: "Solicitar ao cliente notas fiscais, extratos e comprovantes pendentes do mês anterior.",
-    category: "DOCUMENTACAO",
-    priority: "NORMAL",
-    estimatedMinutes: 20,
-    competenceRule: "PREVIOUS_MONTH",
-    frequency: "MONTHLY_NTH_BUSINESS_DAY",
-    nthBusinessDay: 1,
-    dueTime: "18:00",
-    leadDays: 3,
-    checklist: [["Enviar lista de documentos pendentes", true]],
-  },
-  {
-    name: "Fechamento financeiro mensal",
-    title: "Fechamento financeiro mensal",
-    category: "FECHAMENTO_MENSAL",
-    priority: "CRITICA",
-    estimatedMinutes: 240,
-    competenceRule: "PREVIOUS_MONTH",
-    requiresEvidence: true,
-    frequency: "MONTHLY_NTH_BUSINESS_DAY",
-    nthBusinessDay: 5,
-    dueTime: "18:00",
-    leadDays: 5,
-    startOffsetDays: 3,
-    checklist: [
-      ["Conciliar todas as contas do mês", true],
-      ["Conferir contas a pagar e a receber em aberto", true],
-      ["Classificar lançamentos pendentes", true],
-      ["Anexar relatório de fechamento", true],
-    ],
-  },
-  {
-    name: "Preparação de relatório gerencial",
-    title: "Relatório gerencial",
-    category: "RELATORIOS_GERENCIAIS",
-    priority: "ALTA",
-    estimatedMinutes: 120,
-    competenceRule: "PREVIOUS_MONTH",
-    requiresEvidence: true,
-    frequency: "MONTHLY_NTH_BUSINESS_DAY",
-    nthBusinessDay: 8,
-    dueTime: "18:00",
-    leadDays: 5,
-    startOffsetDays: 2,
-    checklist: [
-      ["Gerar DRE gerencial", true],
-      ["Comentar principais variações", true],
-      ["Publicar relatório (link)", true],
-    ],
-  },
-  {
-    name: "Reunião mensal de resultados",
-    title: "Reunião mensal de resultados",
-    category: "REUNIAO_CLIENTE",
-    priority: "NORMAL",
-    estimatedMinutes: 60,
-    competenceRule: "PREVIOUS_MONTH",
-    frequency: "MONTHLY_DAY",
-    monthDays: [15],
-    nonBusinessDayRule: "POSTPONE",
-    dueTime: "10:00",
-    leadDays: 7,
-    checklist: [
-      ["Agendar com o cliente", true],
-      ["Registrar ata e próximos passos", false],
-    ],
-  },
-];
 
 async function main() {
   const existing = await db.user.findUnique({ where: { email: `admin@${DOMAIN}` } });
@@ -210,7 +55,7 @@ async function main() {
   }
 
   const templates: Record<string, string> = {};
-  for (const { checklist, ...t } of TEMPLATES) {
+  for (const { checklist, ...t } of DEFAULT_TEMPLATES) {
     const created = await db.routineTemplate.create({
       data: {
         ...t,

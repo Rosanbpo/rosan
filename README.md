@@ -10,6 +10,7 @@ Aplicação web para gestão operacional de uma empresa de **BPO Financeiro** co
 
 - [Stack e arquitetura](#stack-e-arquitetura)
 - [O que foi implementado](#o-que-foi-implementado)
+- [Publicar online (Vercel + Neon, sem terminal)](#publicar-online-vercel--neon-sem-terminal)
 - [Instalação e execução](#instalação-e-execução)
 - [Banco, migrações e dados demonstrativos](#banco-migrações-e-dados-demonstrativos)
 - [Geração recorrente (agendador)](#geração-recorrente-agendador)
@@ -113,6 +114,20 @@ Modelos iniciais (no seed, editáveis): Conciliação bancária diária, Prepara
 
 Interface em português do Brasil, responsiva (menu lateral vira gaveta no celular), estados vazios com orientação, feedback de carregamento/sucesso/erro, confirmação em ações destrutivas e cores consistentes por status.
 
+## Publicar online (Vercel + Neon, sem terminal)
+
+1. Crie uma conta gratuita em https://vercel.com usando **“Continue with GitHub”**.
+2. Clique em **Add New… → Project**, escolha o repositório e clique em **Import**. Ainda **não** clique em Deploy.
+3. Em **Environment Variables**, cadastre:
+   - `AUTH_SECRET`: uma sequência aleatória longa (32+ caracteres);
+   - `CRON_SECRET`: outra sequência aleatória longa, diferente da anterior.
+4. Clique em **Deploy**. A primeira tentativa falha por falta de banco; isso é esperado.
+5. No projeto, abra a aba **Storage → Create Database → Neon (Postgres)**, aceite os padrões e clique em **Connect**. A Vercel cria `DATABASE_URL` e `DATABASE_URL_UNPOOLED` automaticamente.
+6. Em **Deployments**, abra o menu “⋯” do último deploy e clique em **Redeploy**. O build aplica as migrações sozinho (`scripts/vercel-build.mjs`).
+7. Abra o endereço do site. Na primeira visita aparece a tela **Primeiro acesso**: informe o nome da empresa, seu nome, e-mail e senha. São criados o administrador, os 9 modelos de rotina e os feriados nacionais do ano atual e do próximo. Essa tela só funciona enquanto não houver nenhum usuário, então faça isso logo após publicar.
+
+A geração automática de tarefas recorrentes já vem configurada no `vercel.json` para rodar **uma vez por dia às 06:00 (Brasília)**, que é o limite do plano gratuito (a Vercel pode executar em qualquer momento entre 06:00 e 06:59). Com antecedência 0, uma rotina cujo prazo seja antes das 07:00 seria criada já vencida; nesses casos use antecedência de 1 dia. No plano pago, troque a programação para `0 * * * *` (de hora em hora).
+
 ## Instalação e execução
 
 Requisitos: **Node.js 20+** (testado com 22) e **PostgreSQL 14+** (testado com 16).
@@ -200,7 +215,7 @@ npm run scheduler:worker
 curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://seu-dominio/api/cron/gerar-tarefas
 ```
 
-Na Vercel, o `vercel.json` já declara a execução de hora em hora e a plataforma envia o `CRON_SECRET` automaticamente (planos gratuitos podem limitar a frequência a uma vez por dia — nesse caso use antecedência ≥ 1 dia).
+Na Vercel, o `vercel.json` já declara a execução diária às 06:00 de Brasília (09:00 UTC, compatível com o plano gratuito) e a plataforma envia o `CRON_SECRET` automaticamente. Em planos pagos, use `0 * * * *` para rodar de hora em hora.
 
 Cada execução fica registrada (tabela `SchedulerRun`) e é exibida em **Configurações → Empresa e agendador**, onde o administrador também pode executar manualmente. Ao criar ou reativar uma recorrência, as ocorrências já dentro da antecedência são geradas na hora.
 
@@ -250,7 +265,7 @@ npm run db:deploy
 npm run build
 ```
 
-Crie a empresa e o primeiro administrador (a senha vem de variável de ambiente para não ficar no histórico):
+Na primeira visita ao site, a tela **Primeiro acesso** cria a empresa e o administrador. Alternativamente, pelo terminal (a senha vem de variável de ambiente para não ficar no histórico):
 
 ```bash
 ADMIN_PASSWORD='uma-senha-forte' npm run admin:create -- --org "Minha BPO" --name "Nome do Admin" --email admin@minhabpo.com.br

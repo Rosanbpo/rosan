@@ -16,7 +16,9 @@
     "db:seed": "prisma db seed",
     "scheduler:run": "tsx scripts/run-scheduler.ts",
     "scheduler:worker": "tsx scripts/scheduler-worker.ts",
-    "admin:create": "tsx scripts/create-admin.ts"
+    "admin:create": "tsx scripts/create-admin.ts",
+    "vercel-build": "node scripts/vercel-build.mjs",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
