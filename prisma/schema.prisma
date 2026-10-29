@@ -1,0 +1,472 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Empresa de BPO, usuários e vínculos
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  timezone  String   @default("America/Sao_Paulo")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships   Membership[]
+  clients       Client[]
+  templates     RoutineTemplate[]
+  recurrences   Recurrence[]
+  tasks         Task[]
+  holidays      Holiday[]
+  auditEvents   AuditEvent[]
+  pendings      Pending[]
+  schedulerRuns SchedulerRun[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  active       Boolean  @default(true)
+  /// Usuários criados pelo seed de demonstração. Bloqueados em produção.
+  isDemo       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships        Membership[]
+  clientMemberships  ClientMember[]
+  responsibleClients Client[]       @relation("ClientResponsible")
+  managedClients     Client[]       @relation("ClientManager")
+  assignedTasks      Task[]         @relation("TaskAssignee")
+  reviewTasks        Task[]         @relation("TaskReviewer")
+  createdTasks       Task[]         @relation("TaskCreator")
+  completedTasks     Task[]         @relation("TaskCompletedBy")
+  reviewedTasks      Task[]         @relation("TaskReviewedBy")
+  executedTasks      Task[]         @relation("TaskExecutedBy")
+  comments           Comment[]
+  evidences          Evidence[]
+  checklistDone      ChecklistItem[]
+  auditEvents        AuditEvent[]
+  pendingsCreated    Pending[]      @relation("PendingCreatedBy")
+  pendingsResolved   Pending[]      @relation("PendingResolvedBy")
+  recurrenceAssignee Recurrence[]   @relation("RecurrenceAssignee")
+  recurrenceReviewer Recurrence[]   @relation("RecurrenceReviewer")
+}
+
+enum Role {
+  ADMIN
+  GESTOR
+  OPERADOR
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  role           Role
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId, role])
+}
+
+// ---------------------------------------------------------------------------
+// Clientes
+// ---------------------------------------------------------------------------
+
+enum ClientStatus {
+  IMPLANTACAO
+  ATIVO
+  PAUSADO
+  ENCERRADO
+}
+
+model Client {
+  id                    String       @id @default(cuid())
+  organizationId        String
+  legalName             String
+  tradeName             String
+  cnpj                  String?
+  contactName           String?
+  contactEmail          String?
+  contactPhone          String?
+  contactChannels       String?
+  status                ClientStatus @default(IMPLANTACAO)
+  services              String[]
+  startDate             DateTime?    @db.Date
+  notes                 String?
+  responsibleOperatorId String?
+  managerId             String?
+  archivedAt            DateTime?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  organization        Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  responsibleOperator User?          @relation("ClientResponsible", fields: [responsibleOperatorId], references: [id])
+  manager             User?          @relation("ClientManager", fields: [managerId], references: [id])
+  members             ClientMember[]
+  tasks               Task[]
+  recurrences         Recurrence[]
+  pendings            Pending[]
+
+  @@unique([organizationId, cnpj])
+  @@index([organizationId, status])
+  @@index([organizationId, tradeName])
+}
+
+/// Vínculo de usuário com cliente. Define quem pode acessar o cliente
+/// (o operador responsável e o gestor também são registrados aqui).
+model ClientMember {
+  clientId  String
+  userId    String
+  createdAt DateTime @default(now())
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([clientId, userId])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Modelos de rotina e recorrências
+// ---------------------------------------------------------------------------
+
+enum TaskCategory {
+  CONTAS_A_PAGAR
+  CONTAS_A_RECEBER
+  CONCILIACAO_BANCARIA
+  COBRANCA
+  FLUXO_DE_CAIXA
+  DOCUMENTACAO
+  FECHAMENTO_MENSAL
+  RELATORIOS_GERENCIAIS
+  REUNIAO_CLIENTE
+  IMPLANTACAO
+  OUTRAS
+}
+
+enum Priority {
+  BAIXA
+  NORMAL
+  ALTA
+  CRITICA
+}
+
+enum Frequency {
+  DAILY_BUSINESS
+  WEEKLY
+  BIWEEKLY
+  MONTHLY_DAY
+  MONTHLY_NTH_BUSINESS_DAY
+}
+
+enum NonBusinessDayRule {
+  ANTICIPATE
+  POSTPONE
+}
+
+enum CompetenceRule {
+  NONE
+  CURRENT_MONTH
+  PREVIOUS_MONTH
+}
+
+model RoutineTemplate {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  name               String
+  title              String
+  description        String?
+  category           TaskCategory
+  priority           Priority           @default(NORMAL)
+  estimatedMinutes   Int?
+  requiresEvidence   Boolean            @default(false)
+  competenceRule     CompetenceRule     @default(NONE)
+  // Regras de prazo padrão (copiadas para a recorrência ao vincular a um cliente)
+  frequency          Frequency          @default(MONTHLY_DAY)
+  weekdays           Int[]
+  monthDays          Int[]
+  nthBusinessDay     Int?
+  dueTime            String             @default("18:00")
+  leadDays           Int                @default(3)
+  startOffsetDays    Int                @default(0)
+  nonBusinessDayRule NonBusinessDayRule @default(POSTPONE)
+  archivedAt         DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  checklistItems TemplateChecklistItem[]
+  recurrences    Recurrence[]
+
+  @@index([organizationId, archivedAt])
+}
+
+model TemplateChecklistItem {
+  id         String          @id @default(cuid())
+  templateId String
+  label      String
+  required   Boolean         @default(false)
+  position   Int             @default(0)
+  template   RoutineTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId, position])
+}
+
+enum RecurrenceStatus {
+  ACTIVE
+  PAUSED
+}
+
+model Recurrence {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  clientId           String
+  templateId         String
+  status             RecurrenceStatus   @default(ACTIVE)
+  frequency          Frequency
+  weekdays           Int[]
+  monthDays          Int[]
+  nthBusinessDay     Int?
+  dueTime            String             @default("18:00")
+  leadDays           Int                @default(3)
+  startOffsetDays    Int                @default(0)
+  nonBusinessDayRule NonBusinessDayRule @default(POSTPONE)
+  timezone           String             @default("America/Sao_Paulo")
+  startDate          DateTime           @db.Date
+  endDate            DateTime?          @db.Date
+  /// Data local a partir da qual ocorrências podem ser geradas. Atualizada ao
+  /// criar e ao reativar, para não gerar retroativamente o período pausado.
+  generationFloor    DateTime           @db.Date
+  assigneeId         String?
+  reviewerId         String?
+  lastGeneratedAt    DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  template     RoutineTemplate @relation(fields: [templateId], references: [id])
+  assignee     User?           @relation("RecurrenceAssignee", fields: [assigneeId], references: [id])
+  reviewer     User?           @relation("RecurrenceReviewer", fields: [reviewerId], references: [id])
+  tasks        Task[]
+
+  @@index([organizationId, status])
+  @@index([clientId])
+}
+
+model Holiday {
+  id             String       @id @default(cuid())
+  organizationId String
+  date           DateTime     @db.Date
+  name           String
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, date])
+}
+
+// ---------------------------------------------------------------------------
+// Tarefas
+// ---------------------------------------------------------------------------
+
+enum TaskStatus {
+  A_FAZER
+  EM_ANDAMENTO
+  AGUARDANDO_CLIENTE
+  AGUARDANDO_TERCEIRO
+  EM_REVISAO
+  CONCLUIDA
+  CANCELADA
+}
+
+enum TaskOrigin {
+  MANUAL
+  RECORRENTE
+}
+
+model Task {
+  id               String       @id @default(cuid())
+  organizationId   String
+  clientId         String
+  title            String
+  description      String?
+  category         TaskCategory
+  status           TaskStatus   @default(A_FAZER)
+  priority         Priority     @default(NORMAL)
+  competence       String? // AAAA-MM
+  startAt          DateTime?
+  dueAt            DateTime
+  estimatedMinutes Int?
+  requiresEvidence Boolean      @default(false)
+  origin           TaskOrigin   @default(MANUAL)
+  recurrenceId     String?
+  /// Data nominal da ocorrência (antes de ajuste de dia útil). Chave de idempotência.
+  occurrenceKey    String?
+  assigneeId       String?
+  reviewerId       String?
+  createdById      String?
+  executedById     String?
+  executedAt       DateTime?
+  reviewedById     String?
+  reviewedAt       DateTime?
+  completedById    String?
+  completedAt      DateTime?
+  returnCount      Int          @default(0)
+  lastReturnReason String?
+  archivedAt       DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  recurrence     Recurrence?     @relation(fields: [recurrenceId], references: [id], onDelete: SetNull)
+  assignee       User?           @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  reviewer       User?           @relation("TaskReviewer", fields: [reviewerId], references: [id])
+  createdBy      User?           @relation("TaskCreator", fields: [createdById], references: [id])
+  executedBy     User?           @relation("TaskExecutedBy", fields: [executedById], references: [id])
+  reviewedBy     User?           @relation("TaskReviewedBy", fields: [reviewedById], references: [id])
+  completedBy    User?           @relation("TaskCompletedBy", fields: [completedById], references: [id])
+  checklistItems ChecklistItem[]
+  comments       Comment[]
+  evidences      Evidence[]
+  pendings       Pending[]
+  auditEvents    AuditEvent[]
+
+  @@unique([recurrenceId, occurrenceKey])
+  @@index([organizationId, status, dueAt])
+  @@index([organizationId, assigneeId, status])
+  @@index([organizationId, clientId, status])
+  @@index([organizationId, reviewerId, status])
+  @@index([organizationId, category])
+  @@index([organizationId, completedAt])
+}
+
+model ChecklistItem {
+  id         String    @id @default(cuid())
+  taskId     String
+  label      String
+  required   Boolean   @default(false)
+  done       Boolean   @default(false)
+  doneById   String?
+  doneAt     DateTime?
+  position   Int       @default(0)
+  task       Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  doneBy     User?     @relation(fields: [doneById], references: [id])
+
+  @@index([taskId, position])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  taskId    String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+
+  @@index([taskId, createdAt])
+}
+
+model Evidence {
+  id          String   @id @default(cuid())
+  taskId      String
+  url         String
+  description String?
+  addedById   String
+  createdAt   DateTime @default(now())
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  addedBy     User     @relation(fields: [addedById], references: [id])
+
+  @@index([taskId])
+}
+
+enum PendingType {
+  CLIENTE
+  TERCEIRO
+}
+
+model Pending {
+  id             String       @id @default(cuid())
+  organizationId String
+  clientId       String
+  taskId         String
+  type           PendingType
+  /// Informação ou documento necessário / motivo da pendência
+  reason         String
+  /// Quem precisa responder (pessoa ou área)
+  respondent     String?
+  requestedAt    DateTime     @default(now())
+  followUpAt     DateTime     @db.Date
+  resolvedAt     DateTime?
+  resolution     String?
+  createdById    String
+  resolvedById   String?
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client         Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  task           Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdBy      User         @relation("PendingCreatedBy", fields: [createdById], references: [id])
+  resolvedBy     User?        @relation("PendingResolvedBy", fields: [resolvedById], references: [id])
+
+  @@index([organizationId, resolvedAt, followUpAt])
+  @@index([taskId])
+}
+
+// ---------------------------------------------------------------------------
+// Auditoria e agendador
+// ---------------------------------------------------------------------------
+
+model AuditEvent {
+  id             String       @id @default(cuid())
+  organizationId String
+  actorId        String?
+  entityType     String
+  entityId       String
+  taskId         String?
+  clientId       String?
+  action         String
+  summary        String
+  changes        Json?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor          User?        @relation(fields: [actorId], references: [id])
+  task           Task?        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([taskId, createdAt])
+  @@index([clientId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model SchedulerRun {
+  id             String        @id @default(cuid())
+  organizationId String?
+  startedAt      DateTime      @default(now())
+  finishedAt     DateTime?
+  created        Int           @default(0)
+  skipped        Int           @default(0)
+  errors         Int           @default(0)
+  details        Json?
+  trigger        String
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([startedAt])
+}
+
+/// Trava simples com expiração para impedir execuções simultâneas do agendador.
+model SchedulerLock {
+  id          String    @id
+  lockedUntil DateTime?
+  holder      String?
+}
