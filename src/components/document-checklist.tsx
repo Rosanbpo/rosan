@@ -39,11 +39,11 @@ export function DocumentChecklist({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <Link aria-label="Mês anterior" className="icon-btn" href={`${base}?competencia=${shiftCompetence(competence, -1)}`}>
+          <Link aria-label="Mês anterior" className="icon-btn" href={`${base}?aba=documentos&competencia=${shiftCompetence(competence, -1)}`}>
             <ChevronLeft className="h-4 w-4" />
           </Link>
           <span className="min-w-16 text-center text-sm font-semibold">{fmtCompetence(competence)}</span>
-          <Link aria-label="Próximo mês" className="icon-btn" href={`${base}?competencia=${shiftCompetence(competence, 1)}`}>
+          <Link aria-label="Próximo mês" className="icon-btn" href={`${base}?aba=documentos&competencia=${shiftCompetence(competence, 1)}`}>
             <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
