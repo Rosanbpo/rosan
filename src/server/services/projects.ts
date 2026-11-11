@@ -1,9 +1,11 @@
 import type { Prisma } from "@prisma/client";
-import { dbDateToLocalDate, localDateToDbDate } from "@/domain/dates";
+import { addDays, dbDateToLocalDate, localDateTimeToInstant, localDateToDbDate, weekday } from "@/domain/dates";
+import { IMPLANTATION_DAYS, IMPLANTATION_STEPS } from "@/domain/implantation";
+import { APP_TIMEZONE } from "../config";
 import type { ProjectStatus } from "@/domain/enums";
 import { assertCan, NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
 import { prisma } from "../db";
-import { parseInput, projectSchema } from "../validation";
+import { implantationSchema, parseInput, projectSchema } from "../validation";
 import { assertClientAccess, clientScope } from "./access";
 import { recordAudit } from "./audit";
 
@@ -186,5 +188,69 @@ export async function updateProject(actor: Actor, id: string, raw: unknown) {
       action: "project.updated",
       summary: "Projeto atualizado",
     });
+  });
+}
+
+/**
+ * Cria o projeto "Implantação" de um cliente com o roteiro padrão de tarefas.
+ * Cada tarefa vence em dia útil (sábado e domingo passam para segunda) às 18h.
+ */
+export async function createImplantationProject(actor: Actor, raw: unknown) {
+  assertCan(actor, "projects.manage");
+  const input = parseInput(implantationSchema, raw);
+  await assertClientAccess(actor, input.clientId);
+  await assertOwner(actor, input.ownerId);
+  const client = await prisma.client.findUniqueOrThrow({ where: { id: input.clientId }, select: { tradeName: true } });
+  const existing = await prisma.project.findFirst({
+    where: { organizationId: actor.organizationId, clientId: input.clientId, name: { startsWith: "Implantação" }, status: { not: "CANCELADO" } },
+  });
+  if (existing) {
+    throw new ValidationError("Este cliente já tem um projeto de implantação.", { clientId: "Já existe uma implantação para este cliente." });
+  }
+  const businessDay = (date: string) => {
+    const w = weekday(date);
+    return w === 6 ? addDays(date, 2) : w === 0 ? addDays(date, 1) : date;
+  };
+  const dueDate = businessDay(addDays(input.startDate, IMPLANTATION_DAYS));
+  return prisma.$transaction(async (tx) => {
+    const project = await tx.project.create({
+      data: {
+        organizationId: actor.organizationId,
+        clientId: input.clientId,
+        name: `Implantação — ${client.tradeName}`,
+        description: "Roteiro padrão de implantação: início, diagnóstico, configuração e rotina.",
+        status: "EM_ANDAMENTO",
+        startDate: localDateToDbDate(input.startDate),
+        dueDate: localDateToDbDate(dueDate),
+        ownerId: input.ownerId ?? null,
+      },
+    });
+    for (const step of IMPLANTATION_STEPS) {
+      await tx.task.create({
+        data: {
+          organizationId: actor.organizationId,
+          clientId: input.clientId,
+          projectId: project.id,
+          title: step.title,
+          description: [step.phase, step.description].filter(Boolean).join(" — "),
+          category: step.category,
+          estimatedMinutes: step.estimatedMinutes,
+          dueAt: localDateTimeToInstant(businessDay(addDays(input.startDate, step.offsetDays)), "18:00", APP_TIMEZONE),
+          assigneeId: input.ownerId ?? null,
+          createdById: actor.userId,
+          origin: "MANUAL",
+        },
+      });
+    }
+    await recordAudit(tx, {
+      organizationId: actor.organizationId,
+      actorId: actor.userId,
+      entityType: "Project",
+      entityId: project.id,
+      clientId: project.clientId,
+      action: "project.implantation_created",
+      summary: `Implantação criada com ${IMPLANTATION_STEPS.length} tarefas`,
+    });
+    return project;
   });
 }

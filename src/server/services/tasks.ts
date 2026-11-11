@@ -101,7 +101,14 @@ export async function getTaskDetail(actor: Actor, taskId: string) {
       executedBy: { select: { name: true } },
       reviewedBy: { select: { name: true } },
       completedBy: { select: { name: true } },
-      recurrence: { select: { id: true, template: { select: { name: true } } } },
+      recurrence: {
+        select: {
+          id: true,
+          template: {
+            select: { name: true, procedure: { select: { id: true, title: true, objective: true, content: true, status: true } } },
+          },
+        },
+      },
       checklistItems: { orderBy: { position: "asc" }, include: { doneBy: { select: { name: true } } } },
       comments: { orderBy: { createdAt: "asc" }, include: { author: { select: { name: true } } } },
       evidences: { orderBy: { createdAt: "asc" }, include: { addedBy: { select: { name: true } } } },

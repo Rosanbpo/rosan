@@ -27,10 +27,21 @@ export interface TemplateValues extends RuleValues {
   estimatedMinutes: number | null;
   requiresEvidence: boolean;
   competenceRule: string;
+  procedureId?: string | null;
   checklist: ChecklistDraftItem[];
 }
 
-export function TemplateForm({ action, values, submitLabel }: { action: Action; values: TemplateValues; submitLabel: string }) {
+export function TemplateForm({
+  action,
+  values,
+  submitLabel,
+  procedures = [],
+}: {
+  action: Action;
+  values: TemplateValues;
+  submitLabel: string;
+  procedures?: { id: string; title: string }[];
+}) {
   return (
     <ActionForm action={action} className="space-y-6">
       <section className="card grid gap-4 p-5 md:grid-cols-2">
@@ -70,6 +81,16 @@ export function TemplateForm({ action, values, submitLabel }: { action: Action; 
             {COMPETENCE_RULES.map((c) => (
               <option key={c} value={c}>
                 {COMPETENCE_RULE_LABEL[c]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="POP vinculado" name="procedureId" hint="O passo a passo aparece dentro de cada tarefa gerada por este modelo.">
+          <select id="procedureId" name="procedureId" className="input" defaultValue={values.procedureId ?? ""}>
+            <option value="">Nenhum</option>
+            {procedures.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
               </option>
             ))}
           </select>

@@ -6,6 +6,11 @@ import { CONTRACT_STATUS_LABEL } from "@/domain/contract";
 import { PROPOSAL_STATUS_LABEL, type ProposalStatus } from "@/domain/proposal";
 import { can } from "@/domain/permissions";
 import { Card, EmptyState, Stat } from "@/components/ui/layout";
+import { DocumentChecklist } from "@/components/document-checklist";
+import { isCompetence, previousCompetence } from "@/domain/documents";
+import { instantToLocalDate } from "@/domain/dates";
+import { APP_TIMEZONE } from "@/server/config";
+import { getDocumentChecklist } from "@/server/services/documents";
 import { ClientStatusBadge } from "@/components/ui/badges";
 import { TaskTable } from "@/components/task-table";
 import { ConfirmAction } from "@/components/confirm-action";
@@ -21,11 +26,13 @@ import { orNotFound } from "@/server/page-utils";
 
 export const metadata = { title: "Painel do cliente" };
 
-export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ClientPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requireActor();
   const { id } = await params;
+  const sp = await searchParams;
+  const competence = isCompetence(sp.competencia) ? sp.competencia : previousCompetence(instantToLocalDate(new Date(), APP_TIMEZONE));
   const client = await orNotFound(getClient(actor, id));
-  const [running, extras, indicators, openTasks, recentDone, pendings, history] = await Promise.all([
+  const [running, extras, indicators, openTasks, recentDone, pendings, history, documents] = await Promise.all([
     getRunningTimer(actor),
     clientPanelExtras(actor, id),
     clientIndicators(actor, id),
@@ -33,6 +40,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
     listTasks(actor, { clientId: id, status: ["CONCLUIDA"], sort: "completed", pageSize: 5 }),
     listPendings(actor, { clientId: id }),
     clientHistory(actor, id),
+    getDocumentChecklist(actor, id, competence),
   ]);
   const manage = can(actor, "clients.manage");
   const finance = can(actor, "finance.view") ? await clientMonthSummary(actor, id) : null;
@@ -260,7 +268,16 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
             </Card>
           )}
 
-          <Card title="Projetos" actions={<Link className="text-sm text-brand-700 hover:underline" href={`/projetos/novo`}>Novo</Link>}>
+          <Card title="Documentos do cliente" description="O que o cliente precisa enviar por mês">
+            <DocumentChecklist
+              clientId={id}
+              competence={competence}
+              canConfigure={manage}
+              items={documents.map((d) => ({ ...d, receivedAt: d.receivedAt ? d.receivedAt.toISOString() : null }))}
+            />
+          </Card>
+
+          <Card title="Projetos" actions={<Link className="text-sm text-brand-700 hover:underline" href={`/projetos/novo?cliente=${client.id}`}>Implantação / novo</Link>}>
             {extras.projects.length ? (
               <ul className="divide-y divide-slate-100 text-sm">
                 {extras.projects.map((p) => (

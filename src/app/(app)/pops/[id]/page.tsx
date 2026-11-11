@@ -86,6 +86,24 @@ export default async function ProcedurePage({ params }: { params: Promise<{ id: 
               <dd>{proc.reviewedAtLocal ? fmtLocalDate(proc.reviewedAtLocal) : "—"}</dd>
             </div>
             <div>
+              <dt className="text-xs text-slate-500">Rotinas que usam este POP</dt>
+              <dd>
+                {proc.templates.length ? (
+                  <ul className="space-y-0.5">
+                    {proc.templates.map((t) => (
+                      <li key={t.id}>
+                        <Link className="text-brand-700 hover:underline" href={`/rotinas/modelos/${t.id}`}>
+                          {t.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  "—"
+                )}
+              </dd>
+            </div>
+            <div>
               <dt className="text-xs text-slate-500">Atualizado em</dt>
               <dd>{fmtDate(proc.updatedAt)}</dd>
             </div>

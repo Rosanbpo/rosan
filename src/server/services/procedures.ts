@@ -56,10 +56,22 @@ export async function listProcedures(actor: Actor, filters: ProcedureFilters = {
 export async function getProcedure(actor: Actor, id: string) {
   const row = await prisma.procedure.findFirst({
     where: { id, ...visibility(actor) },
-    include: { owner: { select: { id: true, name: true } } },
+    include: {
+      owner: { select: { id: true, name: true } },
+      templates: { where: { archivedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } },
+    },
   });
   if (!row) throw new NotFoundError("POP não encontrado.");
   return { ...row, reviewedAtLocal: row.reviewedAt ? dbDateToLocalDate(row.reviewedAt) : null };
+}
+
+/** POPs não arquivados, para vincular a modelos de rotina. */
+export async function procedureOptions(actor: Actor) {
+  return prisma.procedure.findMany({
+    where: { organizationId: actor.organizationId, status: { not: "ARQUIVADO" } },
+    select: { id: true, title: true },
+    orderBy: { title: "asc" },
+  });
 }
 
 /** POPs publicados de uma categoria, para sugerir na tarefa. */

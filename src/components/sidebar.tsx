@@ -13,6 +13,7 @@ import {
   Calculator,
   FileText,
   FileSignature,
+  FileCheck2,
   FolderKanban,
   Hourglass,
   LineChart,
@@ -41,6 +42,7 @@ const ICONS = {
   propostas: FileText,
   precificacao: Calculator,
   contratos: FileSignature,
+  documentos: FileCheck2,
 };
 
 export interface NavItem {

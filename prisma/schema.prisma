@@ -47,17 +47,18 @@ model Organization {
 }
 
 model User {
+  documentReceipts DocumentReceipt[] @relation("DocumentReceivedBy")
   runningTimer     RunningTimer?
   contractsCreated Contract[]
-  id               String        @id @default(cuid())
-  email            String        @unique
+  id               String            @id @default(cuid())
+  email            String            @unique
   name             String
   passwordHash     String
-  active           Boolean       @default(true)
+  active           Boolean           @default(true)
   /// Usuários criados pelo seed de demonstração. Bloqueados em produção.
-  isDemo           Boolean       @default(false)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  isDemo           Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   memberships        Membership[]
   clientMemberships  ClientMember[]
@@ -117,8 +118,9 @@ enum ClientStatus {
 }
 
 model Client {
+  documentRequirements  DocumentRequirement[]
   contracts             Contract[]
-  id                    String       @id @default(cuid())
+  id                    String                @id @default(cuid())
   organizationId        String
   legalName             String
   tradeName             String
@@ -127,18 +129,18 @@ model Client {
   contactEmail          String?
   contactPhone          String?
   contactChannels       String?
-  status                ClientStatus @default(IMPLANTACAO)
+  status                ClientStatus          @default(IMPLANTACAO)
   services              String[]
-  startDate             DateTime?    @db.Date
+  startDate             DateTime?             @db.Date
   notes                 String?
   /// Mensalidade contratada (R$) e dia de vencimento do boleto/fatura.
-  monthlyFee            Decimal?     @db.Decimal(12, 2)
+  monthlyFee            Decimal?              @db.Decimal(12, 2)
   billingDay            Int?
   responsibleOperatorId String?
   managerId             String?
   archivedAt            DateTime?
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
 
   organization        Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   responsibleOperator User?          @relation("ClientResponsible", fields: [responsibleOperatorId], references: [id])
@@ -233,15 +235,19 @@ model RoutineTemplate {
   leadDays           Int                @default(3)
   startOffsetDays    Int                @default(0)
   nonBusinessDayRule NonBusinessDayRule @default(POSTPONE)
+  /// POP que ensina a executar esta rotina (aparece nas tarefas geradas).
+  procedureId        String?
   archivedAt         DateTime?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
   organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  procedure      Procedure?              @relation(fields: [procedureId], references: [id], onDelete: SetNull)
   checklistItems TemplateChecklistItem[]
   recurrences    Recurrence[]
 
   @@index([organizationId, archivedAt])
+  @@index([procedureId])
 }
 
 model TemplateChecklistItem {
@@ -624,8 +630,9 @@ model Procedure {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner        User?        @relation("ProcedureOwner", fields: [ownerId], references: [id])
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User?             @relation("ProcedureOwner", fields: [ownerId], references: [id])
+  templates    RoutineTemplate[]
 
   @@index([organizationId, status])
   @@index([organizationId, category])
@@ -810,4 +817,41 @@ model RunningTimer {
   task         Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
+}
+
+// ---------------------------------------------------------------------------
+// Documentos recebidos dos clientes, por competência (mês)
+// ---------------------------------------------------------------------------
+
+model DocumentRequirement {
+  id             String    @id @default(cuid())
+  organizationId String
+  clientId       String
+  name           String
+  required       Boolean   @default(true)
+  position       Int       @default(0)
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  client   Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  receipts DocumentReceipt[]
+
+  @@index([clientId, archivedAt])
+  @@index([organizationId])
+}
+
+model DocumentReceipt {
+  id            String   @id @default(cuid())
+  requirementId String
+  /// Competência no formato AAAA-MM.
+  competence    String
+  receivedAt    DateTime @default(now())
+  receivedById  String?
+  note          String?
+
+  requirement DocumentRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  receivedBy  User?               @relation("DocumentReceivedBy", fields: [receivedById], references: [id])
+
+  @@unique([requirementId, competence])
+  @@index([competence])
 }

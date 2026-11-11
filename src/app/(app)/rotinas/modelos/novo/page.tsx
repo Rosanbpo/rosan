@@ -3,16 +3,19 @@ import { TemplateForm } from "@/components/routine-forms";
 import { DEFAULT_RULE } from "@/components/rule-fields";
 import { createTemplateAction } from "@/app/actions/routines";
 import { requirePermission } from "@/server/context";
+import { procedureOptions } from "@/server/services/procedures";
 
 export const metadata = { title: "Novo modelo" };
 
 export default async function NewTemplatePage() {
-  await requirePermission("templates.manage");
+  const actor = await requirePermission("templates.manage");
+  const procedures = await procedureOptions(actor);
   return (
     <>
       <PageHeader title="Novo modelo de rotina" breadcrumb={{ href: "/rotinas?aba=modelos", label: "Modelos" }} />
       <TemplateForm
         action={createTemplateAction}
+        procedures={procedures}
         submitLabel="Criar modelo"
         values={{
           ...DEFAULT_RULE,
