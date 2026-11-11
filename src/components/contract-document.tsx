@@ -81,17 +81,17 @@ function Paragraphs({ text }: { text: string }) {
 
 function Letterhead({ issuer, title, subtitle, number }: { issuer: IssuerData; title: string; subtitle: string; number: string }) {
   return (
-    <header className="mb-5 border-b-[0.6mm] border-[#b08d57] pb-4">
-      <div className="flex items-center justify-between">
-        <div className="rounded bg-[#0c1633] px-3 py-2">
-          <Image src="/logo.png" alt={issuer.name} width={620} height={530} unoptimized className="h-auto w-[24mm]" />
+    <header className="mb-6 overflow-hidden rounded-[1.5mm]">
+      <div className="flex items-center gap-5 bg-[#0c1633] px-6 py-4">
+        <Image src="/logo.png" alt={issuer.name} width={620} height={530} unoptimized className="h-auto w-[30mm] shrink-0" />
+        <div className="h-[22mm] w-px shrink-0 bg-gradient-to-b from-transparent via-[#b08d57] to-transparent" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[7pt] tracking-[0.3em] text-[#b08d57] uppercase">{subtitle}</p>
+          <h1 className="doc-serif mt-1 text-[14.5pt] leading-snug text-[#f3e7cc]">{title}</h1>
+          <p className="mt-1.5 text-[7.5pt] tracking-[0.2em] text-[#b08d57] uppercase">Instrumento nº {number}</p>
         </div>
-        <p className="text-right text-[7.5pt] tracking-[0.2em] text-[#7a5a30] uppercase">
-          Instrumento nº {number}
-        </p>
       </div>
-      <h1 className="doc-serif mt-4 text-center text-[16pt] leading-tight text-[#0c1633]">{title}</h1>
-      <p className="mt-1 text-center text-[9pt] tracking-[0.12em] text-[#7a5a30] uppercase">{subtitle}</p>
+      <div className="h-[0.9mm] bg-gradient-to-r from-[#b08d57] via-[#e6d1a5] to-[#b08d57]" />
     </header>
   );
 }
