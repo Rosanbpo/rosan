@@ -163,6 +163,7 @@ export const templateSchema = z
     estimatedMinutes: optionalInt(1, 100_000),
     requiresEvidence: checkbox,
     competenceRule: z.enum(COMPETENCE_RULES),
+    procedureId: optionalId,
     checklist: checklistDraftSchema.default([]),
     ...ruleFields,
   })
@@ -316,6 +317,12 @@ export const projectSchema = z
     path: ["dueDate"],
   });
 export type ProjectInput = z.infer<typeof projectSchema>;
+
+export const implantationSchema = z.object({
+  clientId: requiredText("Cliente", 100),
+  startDate: localDate,
+  ownerId: optionalId,
+});
 
 export const hourCostSchema = z.object({ hourCost: optionalMoney });
 

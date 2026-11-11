@@ -8,6 +8,7 @@ import { describeRule } from "@/domain/recurrence";
 import { CATEGORY_LABEL } from "@/domain/enums";
 import { requirePermission } from "@/server/context";
 import { getTemplate } from "@/server/services/templates";
+import { procedureOptions } from "@/server/services/procedures";
 import { orNotFound } from "@/server/page-utils";
 
 export const metadata = { title: "Modelo de rotina" };
@@ -17,6 +18,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const t = await orNotFound(getTemplate(actor, id));
   const editable = can(actor, "templates.manage");
+  const procedures = await procedureOptions(actor);
   return (
     <>
       <PageHeader
@@ -42,6 +44,7 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
           {editable ? (
             <TemplateForm
               action={updateTemplateAction.bind(null, id)}
+              procedures={procedures}
               submitLabel="Salvar modelo"
               values={{ ...t, checklist: t.checklistItems.map((c) => ({ label: c.label, required: c.required })) }}
             />
@@ -51,6 +54,11 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
               <p className="mt-1 text-xs text-slate-500">
                 {CATEGORY_LABEL[t.category]} · {describeRule(t)}
               </p>
+              {t.procedure && (
+                <p className="mt-2 text-xs text-slate-500">
+                  POP: <Link className="text-brand-700 hover:underline" href={`/pops/${t.procedure.id}`}>{t.procedure.title}</Link>
+                </p>
+              )}
               <ul className="mt-3 list-disc pl-5 text-sm">
                 {t.checklistItems.map((c) => (
                   <li key={c.id}>

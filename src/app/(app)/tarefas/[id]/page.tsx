@@ -40,6 +40,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
     getRunningTimer(actor),
     taskTrackedSeconds(id),
   ]);
+  const linkedPop = task.recurrence?.template.procedure && task.recurrence.template.procedure.status !== "ARQUIVADO" ? task.recurrence.template.procedure : null;
   const today = instantToLocalDate(new Date(), APP_TIMEZONE);
   const trackedMinutes = timeEntries.reduce((acc, e) => acc + e.minutes, 0);
   const status = task.status as TaskStatus;
@@ -347,7 +348,30 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
             </dl>
           </Card>
 
-          {pops.length > 0 && (
+          {linkedPop && (
+            <Card title="Como fazer (POP da rotina)" description={linkedPop.title}>
+              {linkedPop.objective && <p className="mb-3 text-sm text-slate-600">{linkedPop.objective}</p>}
+              <ol className="space-y-2 text-sm text-slate-800">
+                {linkedPop.content
+                  .split("\n")
+                  .map((l) => l.trim())
+                  .filter(Boolean)
+                  .map((line, i) => (
+                    <li key={i} className="flex gap-3">
+                      <span aria-hidden className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">
+                        {i + 1}
+                      </span>
+                      <span>{line}</span>
+                    </li>
+                  ))}
+              </ol>
+              <Link className="mt-3 inline-block text-xs text-brand-700 hover:underline" href={`/pops/${linkedPop.id}`}>
+                Abrir POP completo
+              </Link>
+            </Card>
+          )}
+
+          {!linkedPop && pops.length > 0 && (
             <Card title="Como fazer (POPs)" description="Procedimentos publicados desta área">
               <ul className="space-y-1 text-sm">
                 {pops.map((p) => (

@@ -21,3 +21,12 @@ export async function updateProjectAction(id: string, _: ActionState, fd: FormDa
   if (res?.ok) redirect(`/projetos/${id}`);
   return res;
 }
+
+export async function createImplantationAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  let id = "";
+  const res = await runAction(async (actor) => {
+    id = (await projects.createImplantationProject(actor, formObject(fd))).id;
+  });
+  if (res?.ok) redirect(`/projetos/${id}`);
+  return res;
+}

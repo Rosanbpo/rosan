@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { assertCan, can, ForbiddenError, NotFoundError, type Actor } from "@/domain/permissions";
+import { assertCan, can, ForbiddenError, NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
 import { prisma } from "../db";
 import { parseInput, templateSchema, type TemplateInput } from "../validation";
 import { diffFields, recordAudit } from "./audit";
@@ -25,6 +25,7 @@ export async function getTemplate(actor: Actor, id: string) {
   const template = await prisma.routineTemplate.findFirst({
     where: { id, organizationId: actor.organizationId },
     include: {
+      procedure: { select: { id: true, title: true } },
       checklistItems: { orderBy: { position: "asc" } },
       recurrences: {
         include: { client: { select: { id: true, tradeName: true } } },
@@ -36,8 +37,15 @@ export async function getTemplate(actor: Actor, id: string) {
   return template;
 }
 
+async function assertProcedure(actor: Actor, procedureId?: string) {
+  if (!procedureId) return;
+  const found = await prisma.procedure.findFirst({ where: { id: procedureId, organizationId: actor.organizationId } });
+  if (!found) throw new ValidationError("POP não encontrado.", { procedureId: "Selecione um POP válido." });
+}
+
 function toData(input: TemplateInput) {
   return {
+    procedureId: input.procedureId ?? null,
     name: input.name,
     title: input.title,
     description: input.description ?? null,
@@ -60,6 +68,7 @@ function toData(input: TemplateInput) {
 export async function createTemplate(actor: Actor, raw: unknown) {
   assertCan(actor, "templates.manage");
   const input = parseInput(templateSchema, raw);
+  await assertProcedure(actor, input.procedureId);
   return prisma.$transaction(async (tx) => {
     const template = await tx.routineTemplate.create({
       data: {
@@ -90,6 +99,7 @@ export async function updateTemplate(actor: Actor, id: string, raw: unknown) {
   assertCan(actor, "templates.manage");
   const before = await getTemplate(actor, id);
   const input = parseInput(templateSchema, raw);
+  await assertProcedure(actor, input.procedureId);
   const data = toData(input);
   const changes: Record<string, unknown> = diffFields(
     before as unknown as Record<string, unknown>,
