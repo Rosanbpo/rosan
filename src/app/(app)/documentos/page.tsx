@@ -46,7 +46,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
                 {pending.map((r) => (
                   <li key={r.id} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <Link href={`/clientes/${r.id}?competencia=${competence}`} className="font-medium hover:underline">
+                      <Link href={`/clientes/${r.id}?aba=documentos&competencia=${competence}`} className="font-medium hover:underline">
                         {r.tradeName}
                       </Link>
                       <p className="text-xs text-slate-500">Falta: {r.missing.join(", ")}</p>
@@ -68,7 +68,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
                   .filter((r) => r.receivedCount === r.requiredCount)
                   .map((r) => (
                     <li key={r.id}>
-                      <Link href={`/clientes/${r.id}?competencia=${competence}`} className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-800 hover:underline">
+                      <Link href={`/clientes/${r.id}?aba=documentos&competencia=${competence}`} className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-800 hover:underline">
                         {r.tradeName}
                       </Link>
                     </li>
@@ -81,7 +81,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
               <ul className="flex flex-wrap gap-2 text-sm">
                 {notConfigured.map((r) => (
                   <li key={r.id}>
-                    <Link href={`/clientes/${r.id}?competencia=${competence}`} className="rounded-full bg-slate-100 px-3 py-1 hover:underline">
+                    <Link href={`/clientes/${r.id}?aba=documentos&competencia=${competence}`} className="rounded-full bg-slate-100 px-3 py-1 hover:underline">
                       {r.tradeName}
                     </Link>
                   </li>
