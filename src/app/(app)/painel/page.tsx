@@ -110,16 +110,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: SP
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Card title="Tarefas atrasadas" description="Mais antigas primeiro" actions={<Link className="text-sm text-brand-700 hover:underline" href={taskLink("atrasadas=1")}>Ver todas</Link>} bodyClassName="p-0">
-          {data.overdue.rows.length ? <TaskTable rows={data.overdue.rows} compact caption="Tarefas atrasadas" /> : <div className="p-4"><EmptyState title="Nenhuma tarefa atrasada" description="Ótimo! Todas as tarefas abertas estão dentro do prazo." /></div>}
+          {data.overdue.rows.length ? <TaskTable rows={data.overdue.rows} compact showAssignee={false} caption="Tarefas atrasadas" /> : <div className="p-4"><EmptyState title="Nenhuma tarefa atrasada" description="Ótimo! Todas as tarefas abertas estão dentro do prazo." /></div>}
         </Card>
         <Card title="Vencem hoje" actions={<Link className="text-sm text-brand-700 hover:underline" href={taskLink("prazo=hoje")}>Ver todas</Link>} bodyClassName="p-0">
-          {data.dueToday.rows.length ? <TaskTable rows={data.dueToday.rows} compact caption="Tarefas com vencimento hoje" /> : <div className="p-4"><EmptyState title="Nada vence hoje" /></div>}
+          {data.dueToday.rows.length ? <TaskTable rows={data.dueToday.rows} compact showAssignee={false} caption="Tarefas com vencimento hoje" /> : <div className="p-4"><EmptyState title="Nada vence hoje" /></div>}
         </Card>
         <Card title="Em revisão" description="Aguardando aprovação do revisor" bodyClassName="p-0">
-          {data.review.rows.length ? <TaskTable rows={data.review.rows} compact caption="Tarefas em revisão" /> : <div className="p-4"><EmptyState title="Nenhuma tarefa em revisão" /></div>}
+          {data.review.rows.length ? <TaskTable rows={data.review.rows} compact showAssignee={false} caption="Tarefas em revisão" /> : <div className="p-4"><EmptyState title="Nenhuma tarefa em revisão" /></div>}
         </Card>
         <Card title="Aguardando cliente" actions={<Link className="text-sm text-brand-700 hover:underline" href="/pendencias">Pendências</Link>} bodyClassName="p-0">
-          {data.waitingClient.rows.length ? <TaskTable rows={data.waitingClient.rows} compact caption="Tarefas aguardando cliente" /> : <div className="p-4"><EmptyState title="Nenhuma tarefa aguardando cliente" /></div>}
+          {data.waitingClient.rows.length ? <TaskTable rows={data.waitingClient.rows} compact showAssignee={false} caption="Tarefas aguardando cliente" /> : <div className="p-4"><EmptyState title="Nenhuma tarefa aguardando cliente" /></div>}
         </Card>
 
         <Card title="Carga por operador" description="Tarefas abertas, atrasadas e horas estimadas (filtros aplicados)">

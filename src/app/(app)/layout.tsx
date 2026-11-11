@@ -7,12 +7,15 @@ import { APP_NAME } from "@/lib/app-config";
 import { requireActor } from "@/server/context";
 import { prisma } from "@/server/db";
 import { buildTaskWhere } from "@/server/services/tasks";
+import { getRunningTimer } from "@/server/services/timer";
+import { RunningTimerPill } from "@/components/task-timer";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const actor = await requireActor();
-  const [org, myOverdue] = await Promise.all([
+  const [org, myOverdue, running] = await Promise.all([
     prisma.organization.findUniqueOrThrow({ where: { id: actor.organizationId }, select: { name: true } }),
     prisma.task.count({ where: buildTaskWhere(actor, { assigneeId: actor.userId, overdue: true }) }),
+    getRunningTimer(actor),
   ]);
 
   const items: NavItem[] = [
@@ -60,6 +63,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <main id="conteudo" className="px-4 py-6 sm:px-6 lg:ml-64 lg:px-8">
         <div className="mx-auto max-w-7xl">{children}</div>
       </main>
+      {running && <RunningTimerPill taskId={running.taskId} taskTitle={running.taskTitle} clientName={running.clientName} startedAt={running.startedAt} />}
     </div>
   );
 }

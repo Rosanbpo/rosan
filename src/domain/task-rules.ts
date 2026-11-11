@@ -1,3 +1,4 @@
+import { can } from "./permissions";
 import { CLOSED_STATUSES, type Role, type TaskStatus } from "./enums";
 
 /** "Atrasada" é calculada: prazo vencido e tarefa ainda não concluída/cancelada. */
@@ -229,4 +230,28 @@ export function actionForTarget(from: TaskStatus, to: TaskStatus): TaskAction | 
     case "CANCELADA":
       return "CANCEL";
   }
+}
+
+export interface TaskRights {
+  canEdit: boolean;
+  canReschedule: boolean;
+  canDelete: boolean;
+  canTime: boolean;
+}
+
+/** O que a pessoa pode fazer com a tarefa nos botões rápidos (a regra final é reaplicada no servidor). */
+export function taskRights(
+  actor: { userId: string; role: Role },
+  t: { status: TaskStatus; assigneeId: string | null; reviewerId: string | null; createdById: string | null; origin: string },
+): TaskRights {
+  const manager = can(actor, "tasks.plan");
+  const involved = manager || t.assigneeId === actor.userId || t.reviewerId === actor.userId;
+  const open = !CLOSED_STATUSES.includes(t.status);
+  const waiting = t.status === "AGUARDANDO_CLIENTE" || t.status === "AGUARDANDO_TERCEIRO";
+  return {
+    canEdit: open && involved,
+    canReschedule: open && involved,
+    canDelete: manager || (t.createdById === actor.userId && t.origin === "MANUAL"),
+    canTime: open && !waiting && (involved || (t.assigneeId === null && t.status === "A_FAZER")),
+  };
 }

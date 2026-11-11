@@ -12,22 +12,23 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model Organization {
-  pricingSheet PricingSheet?
-  contracts    Contract[]
-  id           String        @id @default(cuid())
-  name         String
-  timezone     String        @default("America/Sao_Paulo")
+  runningTimers RunningTimer[]
+  pricingSheet  PricingSheet?
+  contracts     Contract[]
+  id            String         @id @default(cuid())
+  name          String
+  timezone      String         @default("America/Sao_Paulo")
   /// Custo médio da hora de trabalho (R$), usado na rentabilidade por cliente.
-  hourCost     Decimal?      @db.Decimal(10, 2)
+  hourCost      Decimal?       @db.Decimal(10, 2)
   /// Dados da empresa usados em propostas e contratos.
-  legalName    String?
-  cnpj         String?
-  email        String?
-  phone        String?
-  website      String?
-  city         String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  legalName     String?
+  cnpj          String?
+  email         String?
+  phone         String?
+  website       String?
+  city          String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   memberships   Membership[]
   leads         Lead[]
@@ -46,16 +47,17 @@ model Organization {
 }
 
 model User {
+  runningTimer     RunningTimer?
   contractsCreated Contract[]
-  id               String     @id @default(cuid())
-  email            String     @unique
+  id               String        @id @default(cuid())
+  email            String        @unique
   name             String
   passwordHash     String
-  active           Boolean    @default(true)
+  active           Boolean       @default(true)
   /// Usuários criados pelo seed de demonstração. Bloqueados em produção.
-  isDemo           Boolean    @default(false)
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  isDemo           Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   memberships        Membership[]
   clientMemberships  ClientMember[]
@@ -326,20 +328,21 @@ enum TaskOrigin {
 }
 
 model Task {
-  id               String       @id @default(cuid())
+  runningTimers    RunningTimer[]
+  id               String         @id @default(cuid())
   organizationId   String
   clientId         String
   title            String
   description      String?
   category         TaskCategory
-  status           TaskStatus   @default(A_FAZER)
-  priority         Priority     @default(NORMAL)
+  status           TaskStatus     @default(A_FAZER)
+  priority         Priority       @default(NORMAL)
   competence       String? // AAAA-MM
   startAt          DateTime?
   dueAt            DateTime
   estimatedMinutes Int?
-  requiresEvidence Boolean      @default(false)
-  origin           TaskOrigin   @default(MANUAL)
+  requiresEvidence Boolean        @default(false)
+  origin           TaskOrigin     @default(MANUAL)
   recurrenceId     String?
   projectId        String?
   /// Data nominal da ocorrência (antes de ajuste de dia útil). Chave de idempotência.
@@ -353,11 +356,11 @@ model Task {
   reviewedAt       DateTime?
   completedById    String?
   completedAt      DateTime?
-  returnCount      Int          @default(0)
+  returnCount      Int            @default(0)
   lastReturnReason String?
   archivedAt       DateTime?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -518,6 +521,8 @@ model TimeEntry {
   /// Dia trabalhado (data de calendário).
   workedOn       DateTime @db.Date
   minutes        Int
+  /// Duração exata quando veio do cronômetro.
+  seconds        Int?
   note           String?
   createdAt      DateTime @default(now())
 
@@ -790,4 +795,19 @@ model Contract {
   @@unique([organizationId, number])
   @@index([organizationId, status])
   @@index([clientId])
+}
+
+/// Cronômetro em andamento (no máximo um por pessoa).
+model RunningTimer {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String   @unique
+  taskId         String
+  startedAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task         Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
 }

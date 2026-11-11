@@ -21,6 +21,7 @@ import { fmtDateTime } from "@/lib/format";
 import { STATUS_DOT, cx } from "@/lib/ui";
 import { APP_TIMEZONE } from "@/server/config";
 import { requireActor } from "@/server/context";
+import { getRunningTimer } from "@/server/services/timer";
 import { clientOptions } from "@/server/services/clients";
 import { assignableUsers, listTasks, type TaskFilters } from "@/server/services/tasks";
 import { list, oneOf, pageOf, str } from "@/server/page-utils";
@@ -189,7 +190,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
 
 async function ListView({ actorFilters, sp }: { actorFilters: TaskFilters; sp: SP }) {
   const actor = await requireActor();
-  const result = await listTasks(actor, { ...actorFilters, page: pageOf(sp) });
+  const [result, running] = await Promise.all([listTasks(actor, { ...actorFilters, page: pageOf(sp) }), getRunningTimer(actor)]);
   if (result.total === 0) {
     return (
       <EmptyState
@@ -205,7 +206,7 @@ async function ListView({ actorFilters, sp }: { actorFilters: TaskFilters; sp: S
   }
   return (
     <div className="card">
-      <TaskTable rows={result.rows} caption="Lista de tarefas" />
+      <TaskTable rows={result.rows} caption="Lista de tarefas" actor={actor} running={running} />
       <div className="border-t border-slate-100 px-3">
         <Pagination total={result.total} page={result.page} pageSize={result.pageSize} searchParams={sp} basePath="/tarefas" />
       </div>

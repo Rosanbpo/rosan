@@ -7,13 +7,14 @@ import { MyTaskList } from "@/components/my-task-list";
 import { fmtLocalDate, waitingTime } from "@/lib/format";
 import { cx } from "@/lib/ui";
 import { requireActor } from "@/server/context";
+import { getRunningTimer } from "@/server/services/timer";
 import { myOperation } from "@/server/services/dashboard";
 
 export const metadata = { title: "Minha operação" };
 
 export default async function MyOperationPage() {
   const actor = await requireActor();
-  const data = await myOperation(actor);
+  const [data, running] = await Promise.all([myOperation(actor), getRunningTimer(actor)]);
   const now = new Date();
   return (
     <>
@@ -37,19 +38,19 @@ export default async function MyOperationPage() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Card title="Minhas tarefas atrasadas" className={cx(data.overdue.length > 0 && "border-red-200")}>
-          <MyTaskList rows={data.overdue} actor={actor} empty="Nenhuma tarefa atrasada." />
+          <MyTaskList rows={data.overdue} actor={actor} running={running} empty="Nenhuma tarefa atrasada." />
         </Card>
         <Card title="Minhas tarefas de hoje">
-          <MyTaskList rows={data.todayTasks} actor={actor} empty="Nada mais vence hoje." />
+          <MyTaskList rows={data.todayTasks} actor={actor} running={running} empty="Nada mais vence hoje." />
         </Card>
         {data.returned.length > 0 && (
           <Card title="Itens devolvidos pelo revisor" description="Corrija e reenvie para revisão">
-            <MyTaskList rows={data.returned} actor={actor} empty="" />
+            <MyTaskList rows={data.returned} actor={actor} running={running} empty="" />
           </Card>
         )}
         {data.toReview.length > 0 && (
           <Card title="Aguardando minha revisão">
-            <MyTaskList rows={data.toReview} actor={actor} empty="" />
+            <MyTaskList rows={data.toReview} actor={actor} running={running} empty="" />
           </Card>
         )}
         <Card title="Pendências que preciso acompanhar" description="Ordenadas pelo próximo acompanhamento">
@@ -80,7 +81,7 @@ export default async function MyOperationPage() {
           )}
         </Card>
         <Card title="Próximas tarefas" description="Próximos 15 dias">
-          <MyTaskList rows={data.upcoming} actor={actor} empty="Nenhuma tarefa prevista." />
+          <MyTaskList rows={data.upcoming} actor={actor} running={running} empty="Nenhuma tarefa prevista." />
         </Card>
       </div>
     </>
