@@ -130,3 +130,25 @@ describe("documentos por competência", () => {
     await expect(getDocumentChecklist(other.admin, s.client.id, "2026-10")).rejects.toThrow();
   });
 });
+
+describe("cadastro rápido de rotina no cliente", () => {
+  it("cria modelo + recorrência para dia útil, semana e mês; rejeita dados incompletos", async () => {
+    const { quickAddRoutine } = await import("@/server/services/recurrences");
+    const s = await scenario();
+    const base = { clientId: s.client.id, dueTime: "10:00" };
+    const d = await quickAddRoutine(s.gestor, { ...base, title: "Conciliar Santander", mode: "DAILY" });
+    const w = await quickAddRoutine(s.gestor, { ...base, title: "Enviar contas", mode: "WEEKLY", weekdays: ["1", "3"] });
+    const m = await quickAddRoutine(s.gestor, { ...base, title: "Fatura cartão", mode: "MONTHLY", monthDay: "13" });
+    const recs = await prisma.recurrence.findMany({ where: { clientId: s.client.id } });
+    expect(recs).toHaveLength(3);
+    expect(recs.find((r) => r.id === d.recurrence.id)?.frequency).toBe("DAILY_BUSINESS");
+    expect(recs.find((r) => r.id === w.recurrence.id)?.weekdays.sort()).toEqual([1, 3]);
+    expect(recs.find((r) => r.id === m.recurrence.id)?.monthDays).toEqual([13]);
+    expect(await prisma.routineTemplate.count()).toBe(3);
+
+    await expect(quickAddRoutine(s.gestor, { ...base, title: "Sem dias", mode: "WEEKLY", weekdays: [] })).rejects.toBeInstanceOf(ValidationError);
+    await expect(quickAddRoutine(s.gestor, { ...base, title: "", mode: "DAILY" })).rejects.toBeInstanceOf(ValidationError);
+    expect(await prisma.routineTemplate.count()).toBe(3); // nada criado pela metade
+    await expect(quickAddRoutine(s.op, { ...base, title: "X", mode: "DAILY" })).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});

@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { instantToLocalDate, localDateToDbDate } from "@/domain/dates";
+import { TASK_CATEGORIES, type Frequency, type TaskCategory } from "@/domain/enums";
 import { assertCan, NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
 import { APP_TIMEZONE } from "../config";
 import { prisma } from "../db";
@@ -176,4 +177,75 @@ export async function setRecurrenceStatus(actor: Actor, id: string, status: "ACT
     });
   });
   if (status === "ACTIVE") await generateNow(id);
+}
+
+export interface QuickRoutineInput {
+  clientId: string;
+  templateId?: string;
+  title?: string;
+  description?: string;
+  category?: string;
+  mode: "DAILY" | "WEEKLY" | "MONTHLY";
+  weekdays?: string[];
+  monthDay?: string;
+  dueTime: string;
+  assigneeId?: string;
+}
+
+/**
+ * Cadastro rápido de rotina direto no cliente: monta a regra a partir de
+ * "todo dia útil / dias da semana / dia do mês" e, sem modelo escolhido,
+ * cria um modelo novo automaticamente.
+ */
+export async function quickAddRoutine(actor: Actor, input: QuickRoutineInput) {
+  assertCan(actor, "recurrences.manage");
+  await assertClientAccess(actor, input.clientId);
+  const client = await prisma.client.findUniqueOrThrow({ where: { id: input.clientId }, select: { tradeName: true } });
+  const title = (input.title ?? "").trim();
+  if (!input.templateId && !title) throw new ValidationError("Informe o título da rotina.", { title: "Informe o título." });
+  if (title.length > 150) throw new ValidationError("Título muito longo.", { title: "Máximo de 150 caracteres." });
+
+  const rule =
+    input.mode === "DAILY"
+      ? { frequency: "DAILY_BUSINESS", weekdays: [], monthDays: [] }
+      : input.mode === "WEEKLY"
+        ? { frequency: "WEEKLY", weekdays: input.weekdays ?? [], monthDays: [] }
+        : { frequency: "MONTHLY_DAY", weekdays: [], monthDays: input.monthDay ? [input.monthDay] : [] };
+  const today = instantToLocalDate(new Date(), APP_TIMEZONE);
+  const recurrenceRaw = (templateId: string) => ({
+    ...rule,
+    clientId: input.clientId,
+    templateId,
+    startDate: today,
+    dueTime: input.dueTime,
+    leadDays: "0",
+    startOffsetDays: "0",
+    nonBusinessDayRule: "POSTPONE",
+    assigneeId: input.assigneeId ?? "",
+  });
+  // Valida a regra antes de criar qualquer coisa.
+  parseInput(recurrenceSchema, recurrenceRaw("pendente"));
+
+  let templateId = input.templateId;
+  if (!templateId) {
+    const category = (TASK_CATEGORIES as readonly string[]).includes(input.category ?? "") ? input.category! : "OUTRAS";
+    const t = await prisma.routineTemplate.create({
+      data: {
+        organizationId: actor.organizationId,
+        name: `${title} — ${client.tradeName}`,
+        title,
+        description: input.description?.trim() || null,
+        category: category as TaskCategory,
+        frequency: rule.frequency as Frequency,
+        weekdays: rule.weekdays.map(Number),
+        monthDays: rule.monthDays.map(Number),
+        dueTime: input.dueTime,
+        leadDays: 0,
+        startOffsetDays: 0,
+        nonBusinessDayRule: "POSTPONE",
+      },
+    });
+    templateId = t.id;
+  }
+  return createRecurrence(actor, recurrenceRaw(templateId));
 }

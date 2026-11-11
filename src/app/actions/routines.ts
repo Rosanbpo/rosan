@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/action-state";
 import { formObject, runAction } from "@/server/action-utils";
@@ -55,5 +56,25 @@ export async function setRecurrenceStatusAction(
   return runAction(async (actor) => {
     await recurrences.setRecurrenceStatus(actor, id, status);
     return status === "ACTIVE" ? "Recorrência reativada." : "Recorrência pausada.";
+  });
+}
+
+export async function quickAddRoutineAction(clientId: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    const str = (k: string) => String(fd.get(k) ?? "").trim();
+    await recurrences.quickAddRoutine(actor, {
+      clientId,
+      templateId: str("templateId") || undefined,
+      title: str("title"),
+      description: str("description"),
+      category: str("category") || undefined,
+      mode: (str("mode") || "DAILY") as "DAILY" | "WEEKLY" | "MONTHLY",
+      weekdays: fd.getAll("weekdays").map(String),
+      monthDay: str("monthDay"),
+      dueTime: str("dueTime") || "18:00",
+      assigneeId: str("assigneeId") || undefined,
+    });
+    revalidatePath(`/clientes/${clientId}`);
+    return "Rotina cadastrada.";
   });
 }
