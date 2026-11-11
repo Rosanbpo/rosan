@@ -31,255 +31,155 @@ export interface IssuerData {
   city: string | null;
 }
 
-function longDate(local: string) {
-  const [y, m, d] = local.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
-}
-
 function cnpjMask(v: string | null) {
   if (!v || v.length !== 14) return v ?? "";
   return `${v.slice(0, 2)}.${v.slice(2, 5)}.${v.slice(5, 8)}/${v.slice(8, 12)}-${v.slice(12)}`;
 }
 
-const TOTAL_PAGES = 4;
-
-function Header({ number }: { number: string }) {
-  return (
-    <header className="mb-8 flex items-center justify-between">
-      <span className="doc-serif text-[11pt] tracking-[0.35em] text-[#0c1633]">ROSAN</span>
-      <span className="text-[8pt] tracking-[0.2em] text-[#7a5a30] uppercase">Proposta nº {number}</span>
-    </header>
-  );
-}
-
-function Footer({ issuer, page }: { issuer: IssuerData; page: number }) {
-  const contact = [issuer.email, issuer.phone, issuer.website].filter(Boolean).join("  ·  ");
-  return (
-    <footer className="doc-footer">
-      <span>{contact || issuer.name}</span>
-      <span>
-        {page} / {TOTAL_PAGES}
-      </span>
-    </footer>
-  );
-}
-
+/** Proposta comercial em uma única folha A4, com a identidade da Rosan Finanças. */
 export function ProposalDocument({ proposal: p, issuer }: { proposal: ProposalDocData; issuer: IssuerData }) {
   const plan = findPlan(p.planName);
   const services = p.services.map(splitPair);
   const volumes = p.volumes.map(splitPair);
-  const hasMeeting = services.some((s) => /reuni/i.test(s.left));
+  // Conteúdo extenso usa tipografia um pouco menor para continuar cabendo em uma folha.
+  const dense = services.length > 10 || services.length + volumes.length > 18;
   const intro =
     p.intro ??
-    `Agradecemos a oportunidade. Esta proposta apresenta como a ${issuer.name} assume a rotina financeira da ${p.companyName}, para que você tenha números organizados e confiáveis e mais tempo para cuidar do que faz o negócio crescer.`;
-  const steps = [
-    { title: "Até o dia 5", text: "Você nos envia os documentos e acessos do mês." },
-    { title: "Ao longo do mês", text: "Lançamos, conciliamos e controlamos pagamentos e recebimentos, com atendimento remoto de segunda a sexta, das 9h às 17h." },
-    { title: "Até o 10º dia útil", text: "Entregamos o DRE gerencial e o fluxo de caixa do mês anterior." },
-    ...(hasMeeting ? [{ title: "Reunião de resultados", text: "Analisamos os números juntos e definimos os próximos passos." }] : []),
-  ];
+    `Agradecemos a oportunidade. Apresentamos como a ${issuer.name} assume a rotina financeira da ${p.companyName}, com números organizados e confiáveis para você decidir com segurança.`;
 
   const conditions = [
-    { label: "Pagamento", text: `Todo dia ${p.billingDay} de cada mês, por boleto ou PIX. O primeiro honorário é pago na assinatura do contrato.` },
-    { label: "Vigência", text: `${p.termMonths} meses, com renovação automática por iguais períodos.` },
-    { label: "Reajuste", text: `Anual, pela variação do IPCA, a partir do ${p.termMonths + 1}º mês de vigência.` },
-    { label: "Volumes", text: "Os serviços respeitam os limites mensais do plano. Volumes acima deles são orçados à parte, como horas adicionais." },
-    { label: "Cancelamento", text: "Qualquer das partes pode encerrar o contrato com aviso prévio de 30 dias." },
-    { label: "Sigilo e LGPD", text: "Sigilo absoluto das informações e tratamento dos dados conforme a Lei nº 13.709/2018." },
+    { label: "Pagamento", text: `Todo dia ${p.billingDay}, por boleto ou PIX. O primeiro honorário é pago na assinatura do contrato.` },
+    { label: "Vigência", text: `${p.termMonths} meses, com renovação automática. Aviso prévio de 30 dias para encerrar.` },
+    { label: "Reajuste", text: `Anual, pelo IPCA, a partir do ${p.termMonths + 1}º mês.` },
+    { label: "Entregas", text: "Com os documentos enviados até o dia 5, entregamos DRE gerencial e fluxo de caixa até o 10º dia útil." },
+    { label: "Atendimento", text: "Remoto, de segunda a sexta, das 9h às 17h." },
+    { label: "Sigilo e LGPD", text: "Sigilo das informações e tratamento de dados conforme a Lei nº 13.709/2018." },
   ];
 
+  const contact = [issuer.email, issuer.phone, issuer.website].filter(Boolean).join("  ·  ");
+
   return (
-    <>
-      {/* PÁGINA 1 — CAPA */}
-      <section className="doc-sheet doc-cover" aria-label="Capa">
-        <div className="doc-frame" />
-        <div className="flex w-full flex-1 flex-col items-center justify-center pt-[34mm]">
-          <Image src="/logo.png" alt={issuer.name} width={620} height={530} priority unoptimized className="h-auto w-[104mm]" />
+    <section className="doc-sheet doc-one" aria-label="Proposta comercial">
+      {/* Faixa de topo */}
+      <header className="flex h-[40mm] items-center justify-between bg-[#0c1633] px-[14mm] text-[#f3e7cc]">
+        <Image src="/logo.png" alt={issuer.name} width={620} height={530} priority unoptimized className="h-auto w-[38mm]" />
+        <div className="text-right">
+          <p className="text-[7.5pt] tracking-[0.3em] text-[#b08d57] uppercase">Proposta comercial · nº {p.number}</p>
+          <p className="doc-serif mt-[1.5mm] text-[19pt] leading-tight">{p.companyName}</p>
+          {p.contactName && <p className="mt-[0.5mm] text-[9pt] text-[#e6d1a5]">A/C {p.contactName}</p>}
+          <p className="mt-[2.5mm] text-[7.5pt] tracking-[0.12em] text-[#b08d57] uppercase">
+            Emitida em {fmtLocalDate(p.issuedOn)} · válida até {fmtLocalDate(p.validUntilLocal)}
+          </p>
         </div>
-        <div className="w-full px-[30mm] pb-[16mm] text-center">
-          <div className="mx-auto mb-[9mm] h-[0.3mm] w-[40mm] bg-[#b08d57]" />
-          <p className="doc-serif text-[20pt] tracking-[0.32em] text-[#f3e7cc]">PROPOSTA COMERCIAL</p>
-          <p className="mt-[2mm] text-[9pt] tracking-[0.26em] text-[#b08d57] uppercase">Apoio administrativo financeiro · BPO</p>
+      </header>
+      <div className="h-[0.8mm] bg-gradient-to-r from-[#b08d57] via-[#e6d1a5] to-[#b08d57]" />
 
-          <p className="mt-[16mm] text-[8pt] tracking-[0.3em] text-[#b08d57] uppercase">Preparada para</p>
-          <p className="doc-serif mt-[2mm] text-[22pt] leading-tight text-[#f3e7cc]">{p.companyName}</p>
-          {p.contactName && <p className="mt-[1mm] text-[10pt] text-[#e6d1a5]">A/C {p.contactName}</p>}
-
-          <div className="mt-[18mm] grid grid-cols-3 gap-[6mm] border-t border-[#b08d57]/40 pt-[5mm] text-[8.5pt]">
-            <div>
-              <p className="tracking-[0.2em] text-[#b08d57] uppercase">Proposta</p>
-              <p className="mt-0.5 text-[#f3e7cc]">nº {p.number}</p>
-            </div>
-            <div>
-              <p className="tracking-[0.2em] text-[#b08d57] uppercase">Emitida em</p>
-              <p className="mt-0.5 text-[#f3e7cc]">{longDate(p.issuedOn)}</p>
-            </div>
-            <div>
-              <p className="tracking-[0.2em] text-[#b08d57] uppercase">Válida até</p>
-              <p className="mt-0.5 text-[#f3e7cc]">{fmtLocalDate(p.validUntilLocal)}</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* PÁGINA 2 — NOSSA PROPOSTA */}
-      <section className="doc-sheet" aria-label="Nossa proposta">
-        <div className="doc-body">
-          <Header number={p.number} />
-          <p className="doc-eyebrow">01 · Nossa proposta</p>
-          <h2 className="doc-h2">Finanças em ordem,<br />decisões com segurança</h2>
-          <div className="doc-rule mt-4 w-[60mm]" />
-
-          <p className="doc-serif mt-6 border-l-[1mm] border-[#b08d57] pl-5 text-[12.5pt] leading-relaxed text-[#0c1633]">{intro}</p>
-
-          {plan && (
-            <div className="doc-card mt-8">
-              <p className="text-[8pt] font-semibold tracking-[0.2em] text-[#7a5a30] uppercase">{p.planName}</p>
-              <p className="mt-1 text-[10pt]">{plan.audience}</p>
-            </div>
-          )}
-
-          <p className="doc-eyebrow mt-10">02 · Seu mês com a {issuer.name}</p>
-          <h2 className="doc-h2 !text-[17pt]">Uma rotina simples e previsível</h2>
-          <ol className="mt-6 space-y-5">
-            {steps.map((s, i) => (
-              <li key={s.title} className="flex gap-4" style={{ breakInside: "avoid" }}>
-                <span className="doc-step-num">{i + 1}</span>
-                <div>
-                  <p className="text-[10.5pt] font-semibold text-[#0c1633]">{s.title}</p>
-                  <p className="text-[9.5pt] text-[#4a5272]">{s.text}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-        <Footer issuer={issuer} page={2} />
-      </section>
-
-      {/* PÁGINA 3 — ESCOPO */}
-      <section className="doc-sheet" aria-label="Escopo">
-        <div className="doc-body">
-          <Header number={p.number} />
-          <p className="doc-eyebrow">03 · Escopo</p>
-          <h2 className="doc-h2">O que está incluído</h2>
-          <div className="doc-rule mt-4 w-[60mm]" />
-
-          <ul className="mt-6 grid grid-cols-2 gap-[3mm]">
-            {services.map((s) => (
-              <li key={s.left} className="doc-card flex gap-3">
-                <span className="mt-0.5 flex h-[5mm] w-[5mm] shrink-0 items-center justify-center rounded-full bg-[#0c1633] text-[#e6d1a5]">
-                  <Check aria-hidden className="h-[3mm] w-[3mm]" strokeWidth={3} />
-                </span>
-                <div>
-                  <p className="text-[9.5pt] font-semibold leading-snug text-[#0c1633]">{s.left}</p>
-                  {s.right && <p className="mt-0.5 text-[8.5pt] leading-snug text-[#4a5272]">{s.right}</p>}
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          {volumes.length > 0 && (
-            <div className="mt-7" style={{ breakInside: "avoid" }}>
-              <p className="doc-eyebrow">Limites mensais do plano</p>
-              <div className="mt-2 grid grid-cols-2 gap-x-6">
-                {[volumes.slice(0, Math.ceil(volumes.length / 2)), volumes.slice(Math.ceil(volumes.length / 2))].map((col, c) => (
-                  <ul key={c}>
-                    {col.map((v, i) => (
-                      <li key={v.left} className={`flex justify-between gap-3 px-3 py-1.5 text-[8.8pt] ${i % 2 === 0 ? "bg-[#faf4e8]" : ""}`}>
-                        <span className="text-[#2b3350]">{v.left}</span>
-                        <span className="shrink-0 font-semibold text-[#0c1633]">{v.right}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ))}
-              </div>
-              <p className="mt-2 text-[8pt] text-[#7a5a30]">Volumes acima dos limites são orçados separadamente.</p>
-            </div>
-          )}
-
-        </div>
-        <Footer issuer={issuer} page={3} />
-      </section>
-
-      {/* PÁGINA 4 — INVESTIMENTO */}
-      <section className="doc-sheet" aria-label="Investimento">
-        <div className="doc-body">
-          <Header number={p.number} />
-          <p className="doc-eyebrow">04 · Investimento</p>
-          <h2 className="doc-h2">Seu plano e condições</h2>
-          <div className="doc-rule mt-4 w-[60mm]" />
-
-          <div className="mt-6 flex items-end justify-between rounded-[2mm] bg-[#0c1633] px-[9mm] py-[8mm] text-[#f3e7cc]">
-            <div>
-              <p className="text-[8pt] tracking-[0.3em] text-[#b08d57] uppercase">Investimento mensal</p>
-              <p className="doc-serif mt-1 text-[34pt] leading-none">{fmtMoney(p.monthlyFee)}</p>
-              <p className="mt-2 text-[9pt] text-[#e6d1a5]">
-                {p.planName} · vigência de {p.termMonths} meses
+      <div className="px-[14mm] pt-[5mm]">
+        {/* Abertura + investimento */}
+        <div className="grid grid-cols-[1fr_64mm] gap-[6mm]">
+          <div>
+            <p className="doc-eyebrow">Nossa proposta</p>
+            <p className="doc-serif mt-[1.5mm] border-l-[1mm] border-[#b08d57] pl-[4mm] text-[10.5pt] leading-snug text-[#0c1633]">{intro}</p>
+            {plan && (
+              <p className="mt-[3mm] text-[8.3pt] leading-snug text-[#4a5272]">
+                <span className="font-semibold text-[#7a5a30]">{p.planName}: </span>
+                {plan.audience}
               </p>
-            </div>
-            <div className="text-right">
-              <p className="text-[8pt] tracking-[0.2em] text-[#b08d57] uppercase">Proposta válida até</p>
-              <p className="doc-serif mt-0.5 text-[13pt]">{fmtLocalDate(p.validUntilLocal)}</p>
-            </div>
+            )}
           </div>
+          <div className="rounded-[1.5mm] bg-[#0c1633] px-[5mm] py-[4.5mm] text-[#f3e7cc]">
+            <p className="text-[7pt] tracking-[0.28em] text-[#b08d57] uppercase">Investimento mensal</p>
+            <p className="doc-serif mt-[1mm] text-[25pt] leading-none">{fmtMoney(p.monthlyFee)}</p>
+            <p className="mt-[1.8mm] text-[8pt] text-[#e6d1a5]">
+              {p.planName} · {p.termMonths} meses
+            </p>
+          </div>
+        </div>
 
-          <p className="doc-eyebrow mt-8">Condições comerciais</p>
-          <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-4">
-            {conditions.map((c) => (
-              <div key={c.label} style={{ breakInside: "avoid" }}>
-                <dt className="text-[9pt] font-semibold text-[#0c1633]">{c.label}</dt>
-                <dd className="text-[8.8pt] leading-snug text-[#4a5272]">{c.text}</dd>
+        {/* Serviços */}
+        <p className="doc-eyebrow mt-[5mm]">O que está incluído</p>
+        <ul className={`mt-[2mm] grid grid-cols-2 ${dense ? "gap-[1.6mm]" : "gap-[2.2mm]"}`}>
+          {services.map((s) => (
+            <li key={s.left} className={`doc-card flex items-start gap-[2.5mm] ${dense ? "!px-[3mm] !py-[1.3mm]" : "!px-[3mm] !py-[1.9mm]"}`}>
+              <span className="mt-[0.4mm] flex h-[4mm] w-[4mm] shrink-0 items-center justify-center rounded-full bg-[#0c1633] text-[#e6d1a5]">
+                <Check aria-hidden className="h-[2.5mm] w-[2.5mm]" strokeWidth={3.2} />
+              </span>
+              <div>
+                <p className={`${dense ? "text-[8.3pt]" : "text-[8.8pt]"} font-semibold leading-tight text-[#0c1633]`}>{s.left}</p>
+                {s.right && <p className={`${dense ? "text-[7.3pt]" : "text-[7.8pt]"} leading-tight text-[#4a5272]`}>{s.right}</p>}
               </div>
-            ))}
-          </dl>
+            </li>
+          ))}
+        </ul>
 
-          {p.exclusions.length > 0 && (
-            <div className="mt-8" style={{ breakInside: "avoid" }}>
-              <p className="doc-eyebrow">Fora do escopo</p>
-              <ul className="mt-2 space-y-1">
-                {p.exclusions.map((e) => (
-                  <li key={e} className="flex gap-2 text-[9pt] text-[#4a5272]">
-                    <X aria-hidden className="mt-[1.2mm] h-[3mm] w-[3mm] shrink-0 text-[#b08d57]" strokeWidth={3} />
-                    {e}
+        {/* Limites + condições */}
+        <div className="mt-[5mm] grid grid-cols-2 gap-[7mm]">
+          <div>
+            <p className="doc-eyebrow">Limites mensais do plano</p>
+            {volumes.length > 0 ? (
+              <ul className="mt-[2mm]">
+                {volumes.map((v, i) => (
+                  <li key={v.left} className={`flex justify-between gap-3 px-[2.5mm] ${dense ? "py-[0.7mm] text-[7.8pt]" : "py-[1mm] text-[8.3pt]"} ${i % 2 === 0 ? "bg-[#faf4e8]" : ""}`}>
+                    <span className="text-[#2b3350]">{v.left}</span>
+                    <span className="shrink-0 font-semibold text-[#0c1633]">{v.right}</span>
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
-          {p.notes && (
-            <div className="doc-card mt-6">
-              <p className="text-[8pt] font-semibold tracking-[0.2em] text-[#7a5a30] uppercase">Observações</p>
-              <p className="mt-1 text-[9pt] whitespace-pre-wrap">{p.notes}</p>
-            </div>
-          )}
-
-          <p className="doc-eyebrow mt-8">Próximos passos</p>
-          <ol className="mt-3 flex gap-4">
-            {["Aceite desta proposta", "Assinatura do contrato", "Início da rotina com a nossa equipe"].map((t, i) => (
-              <li key={t} className="flex flex-1 items-start gap-3">
-                <span className="doc-step-num">{i + 1}</span>
-                <span className="pt-0.5 text-[9.3pt] leading-snug text-[#2b3350]">{t}</span>
-              </li>
-            ))}
-          </ol>
-
-          <div className="mt-12 grid grid-cols-2 gap-14" style={{ breakInside: "avoid" }}>
-            <div>
-              <div className="h-[0.3mm] bg-[#0c1633]" />
-              <p className="mt-1 text-[9pt] font-semibold text-[#0c1633]">De acordo — {p.companyName}</p>
-              <p className="text-[8pt] text-[#7a5a30]">Nome, cargo e data</p>
-            </div>
-            <div>
-              <div className="h-[0.3mm] bg-[#0c1633]" />
-              <p className="mt-1 text-[9pt] font-semibold text-[#0c1633]">{issuer.legalName ?? issuer.name}</p>
-              <p className="text-[8pt] text-[#7a5a30]">
-                {[issuer.cnpj && `CNPJ ${cnpjMask(issuer.cnpj)}`, issuer.city].filter(Boolean).join(" · ") || "Contratada"}
-              </p>
-            </div>
+            ) : (
+              <p className="mt-[2mm] text-[8.3pt] text-[#4a5272]">Definidos em contrato.</p>
+            )}
+            <p className="mt-[1.5mm] text-[7.3pt] text-[#7a5a30]">Volumes acima dos limites são orçados à parte.</p>
+          </div>
+          <div>
+            <p className="doc-eyebrow">Condições comerciais</p>
+            <dl className="mt-[2mm] space-y-[1.8mm]">
+              {conditions.map((c) => (
+                <div key={c.label}>
+                  <dt className={`${dense ? "text-[7.8pt]" : "text-[8.3pt]"} font-semibold leading-tight text-[#0c1633]`}>{c.label}</dt>
+                  <dd className={`${dense ? "text-[7.3pt]" : "text-[7.8pt]"} leading-tight text-[#4a5272]`}>{c.text}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </div>
-        <Footer issuer={issuer} page={4} />
-      </section>
-    </>
+
+        {/* Fora do escopo + observações */}
+        {p.exclusions.length > 0 && (
+          <div className="mt-[3.5mm]">
+            <p className="doc-eyebrow">Fora do escopo</p>
+            <ul className="mt-[1.5mm] grid grid-cols-2 gap-x-[7mm] gap-y-[0.6mm]">
+              {p.exclusions.map((e) => (
+                <li key={e} className="flex gap-[1.5mm] text-[7.6pt] leading-tight text-[#4a5272]">
+                  <X aria-hidden className="mt-[0.5mm] h-[2.6mm] w-[2.6mm] shrink-0 text-[#b08d57]" strokeWidth={3.2} />
+                  {e}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {p.notes && <p className="mt-[3mm] border-l-[1mm] border-[#e6d1a5] pl-[3mm] text-[7.8pt] whitespace-pre-wrap text-[#4a5272]">{p.notes}</p>}
+
+        {/* Aceite */}
+        <div className="mt-[6mm] grid grid-cols-2 gap-[14mm]">
+          <div>
+            <div className="h-[0.3mm] bg-[#0c1633]" />
+            <p className="mt-[1mm] text-[8.3pt] font-semibold text-[#0c1633]">De acordo — {p.companyName}</p>
+            <p className="text-[7.3pt] text-[#7a5a30]">Nome, cargo e data</p>
+          </div>
+          <div>
+            <div className="h-[0.3mm] bg-[#0c1633]" />
+            <p className="mt-[1mm] text-[8.3pt] font-semibold text-[#0c1633]">{issuer.legalName ?? issuer.name}</p>
+            <p className="text-[7.3pt] text-[#7a5a30]">
+              {[issuer.cnpj && `CNPJ ${cnpjMask(issuer.cnpj)}`, issuer.city].filter(Boolean).join(" · ") || "Contratada"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <footer className="doc-footer !right-[14mm] !left-[14mm] !bottom-[7mm]">
+        <span>{contact || issuer.name}</span>
+        <span>Proposta nº {p.number}</span>
+      </footer>
+    </section>
   );
 }

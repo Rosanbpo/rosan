@@ -84,6 +84,11 @@
 .doc-serif {
   font-family: Georgia, "Times New Roman", serif;
 }
+/* Proposta de uma página: altura fixa de A4 para nunca gerar página extra. */
+.doc-one {
+  height: 296mm;
+  min-height: 296mm;
+}
 .doc-cover {
   display: flex;
   flex-direction: column;
