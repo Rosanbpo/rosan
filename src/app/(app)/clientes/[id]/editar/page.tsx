@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/ui/layout";
 import { ClientForm } from "@/components/client-form";
 import { updateClientAction } from "@/app/actions/clients";
 import { dbDateToLocalDate } from "@/domain/dates";
+import { moneyInput } from "@/lib/format";
 import { requirePermission } from "@/server/context";
 import { getClient } from "@/server/services/clients";
 import { assignableUsers } from "@/server/services/tasks";
@@ -23,6 +24,7 @@ export default async function EditClientPage({ params }: { params: Promise<{ id:
         cancelHref={`/clientes/${id}`}
         values={{
           ...client,
+          monthlyFee: moneyInput(client.monthlyFee === null ? null : Number(client.monthlyFee)),
           startDate: client.startDate ? dbDateToLocalDate(client.startDate) : null,
           memberIds: client.members.map((m) => m.userId),
         }}

@@ -9,6 +9,7 @@ import { prisma } from "../db";
 import { parseInput, taskCreateSchema, taskUpdateSchema, urlSchema } from "../validation";
 import { assertClientAccess, assertTaskAccess, assertUserInOrg, taskScope } from "./access";
 import { diffFields, recordAudit } from "./audit";
+import { assertProjectForTask } from "./projects";
 
 export interface TaskFilters {
   q?: string;
@@ -108,6 +109,7 @@ export async function getTaskDetail(actor: Actor, taskId: string) {
         include: { createdBy: { select: { name: true } }, resolvedBy: { select: { name: true } } },
       },
       auditEvents: { orderBy: { createdAt: "desc" }, include: { actor: { select: { name: true } } } },
+      project: { select: { id: true, name: true } },
     },
   });
 }
@@ -157,6 +159,7 @@ export async function createTask(actor: Actor, raw: unknown) {
     assigneeId = actor.userId;
   }
   await validatePeople(actor, input.clientId, assigneeId, input.reviewerId);
+  await assertProjectForTask(actor, input.projectId, input.clientId);
   const { dueAt, startAt } = timing(input);
 
   return prisma.$transaction(async (tx) => {
@@ -175,6 +178,7 @@ export async function createTask(actor: Actor, raw: unknown) {
         requiresEvidence: input.requiresEvidence,
         assigneeId: assigneeId ?? null,
         reviewerId: input.reviewerId ?? null,
+        projectId: input.projectId ?? null,
         createdById: actor.userId,
         origin: "MANUAL",
         checklistItems: {
@@ -208,6 +212,7 @@ const UPDATE_FIELDS = [
   "requiresEvidence",
   "assigneeId",
   "reviewerId",
+  "projectId",
 ] as const;
 const OPERATOR_EDITABLE = new Set(["title", "description", "estimatedMinutes", "competence"]);
 
@@ -229,7 +234,9 @@ export async function updateTask(actor: Actor, taskId: string, raw: unknown) {
     requiresEvidence: input.requiresEvidence,
     assigneeId: input.assigneeId ?? null,
     reviewerId: input.reviewerId ?? null,
+    projectId: input.projectId ?? null,
   };
+  if (data.projectId !== before.projectId) await assertProjectForTask(actor, data.projectId, before.clientId);
   const changes = diffFields(before as unknown as Record<string, unknown>, data, UPDATE_FIELDS);
   if (Object.keys(changes).length === 0) return before;
   if (!isManager(actor)) {

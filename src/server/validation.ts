@@ -5,8 +5,12 @@ import {
   CLIENT_STATUSES,
   COMPETENCE_RULES,
   FREQUENCIES,
+  LEAD_ACTIVITY_KINDS,
+  LEAD_STAGES,
   NON_BUSINESS_RULES,
   PRIORITIES,
+  PROCEDURE_STATUSES,
+  PROJECT_STATUSES,
   ROLES,
   TASK_CATEGORIES,
 } from "@/domain/enums";
@@ -29,6 +33,27 @@ const optionalInt = (min: number, max: number) =>
   );
 const checkbox = z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean());
 const intArray = z.array(z.coerce.number().int());
+
+/** Valor em reais: aceita "1500", "1.500,00", "R$ 1.500,50". Vazio vira indefinido. */
+export function parseMoney(v: unknown): unknown {
+  if (v === "" || v === null || v === undefined) return undefined;
+  if (typeof v === "number") return v;
+  const text = String(v).trim();
+  if (text === "") return undefined;
+  const cleaned = text.replace(/[^\d,.-]/g, "");
+  if (!cleaned) return NaN;
+  let normalized: string;
+  if (cleaned.includes(",")) normalized = cleaned.replace(/\./g, "").replace(",", ".");
+  // "2.500" ou "1.250.000" sem vírgula: pontos são separadores de milhar.
+  else if (/^\d{1,3}(\.\d{3})+$/.test(cleaned)) normalized = cleaned.replace(/\./g, "");
+  else normalized = cleaned;
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : NaN;
+}
+const optionalMoney = z.preprocess(
+  parseMoney,
+  z.number({ invalid_type_error: "Valor inválido." }).min(0, "O valor não pode ser negativo.").max(100_000_000).optional(),
+);
 
 /** Valida CNPJ (apenas dígitos verificadores; não consulta a Receita). */
 export function isValidCnpj(value: string): boolean {
@@ -62,6 +87,8 @@ export const clientSchema = z.object({
   services: z.array(z.string().trim().min(1).max(100)).max(30).default([]),
   startDate: optionalLocalDate,
   notes: optionalText(5000),
+  monthlyFee: optionalMoney,
+  billingDay: optionalInt(1, 31),
   responsibleOperatorId: optionalId,
   managerId: optionalId,
   memberIds: z.array(z.string().min(1)).default([]),
@@ -90,6 +117,7 @@ export const taskCreateSchema = z.object({
   dueTime: timeOfDay,
   estimatedMinutes: optionalInt(1, 100_000),
   requiresEvidence: checkbox,
+  projectId: optionalId,
   checklist: checklistDraftSchema.default([]),
 });
 export type TaskCreateInput = z.infer<typeof taskCreateSchema>;
@@ -192,3 +220,100 @@ export function parseInput<T extends z.ZodTypeAny>(schema: T, data: unknown): z.
   }
   return result.data;
 }
+
+
+// ---------------------------------------------------------------------------
+// Escritório virtual
+// ---------------------------------------------------------------------------
+
+/** Duração digitada como "90" (minutos), "1:30" ou "1,5" (horas) — sempre devolve minutos. */
+export function parseDuration(v: unknown): unknown {
+  if (v === "" || v === null || v === undefined) return undefined;
+  if (typeof v === "number") return Math.round(v);
+  const text = String(v).trim().toLowerCase();
+  const hm = text.match(/^(\d{1,3}):([0-5]\d)$/);
+  if (hm) return Number(hm[1]) * 60 + Number(hm[2]);
+  if (/^\d+$/.test(text)) return Number(text);
+  const hours = Number(text.replace(",", "."));
+  return Number.isFinite(hours) ? Math.round(hours * 60) : NaN;
+}
+
+export const timeEntrySchema = z.object({
+  taskId: optionalId,
+  clientId: optionalId,
+  workedOn: localDate,
+  minutes: z.preprocess(
+    parseDuration,
+    z
+      .number({ required_error: "Informe o tempo.", invalid_type_error: "Tempo inválido. Use 1:30, 90 (min) ou 1,5 (horas)." })
+      .int()
+      .min(1, "Informe ao menos 1 minuto.")
+      .max(24 * 60, "Máximo de 24 horas por lançamento."),
+  ),
+  note: optionalText(500),
+});
+export type TimeEntryInput = z.infer<typeof timeEntrySchema>;
+
+export const leadSchema = z.object({
+  companyName: requiredText("Empresa"),
+  contactName: optionalText(200),
+  contactEmail: z.preprocess(emptyToUndefined, z.string().trim().email("E-mail inválido.").optional()),
+  contactPhone: optionalText(50),
+  cnpj: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .refine(isValidCnpj, "CNPJ inválido.")
+      .transform((v) => v.replace(/\D/g, ""))
+      .optional(),
+  ),
+  source: optionalText(100),
+  expectedFee: optionalMoney,
+  servicesInterest: z.array(z.string().trim().min(1).max(100)).max(30).default([]),
+  ownerId: optionalId,
+  nextActionAt: optionalLocalDate,
+  nextAction: optionalText(300),
+  notes: optionalText(5000),
+});
+export type LeadInput = z.infer<typeof leadSchema>;
+
+export const leadStageSchema = z.object({
+  stage: z.enum(LEAD_STAGES),
+  lostReason: optionalText(500),
+});
+
+export const leadActivitySchema = z.object({
+  kind: z.enum(LEAD_ACTIVITY_KINDS),
+  body: z.string({ required_error: "Escreva o registro." }).trim().min(2, "Escreva o registro.").max(3000),
+});
+
+export const procedureSchema = z.object({
+  title: requiredText("Título", 200),
+  category: z.enum(TASK_CATEGORIES),
+  status: z.enum(PROCEDURE_STATUSES),
+  objective: optionalText(1000),
+  content: z.string({ required_error: "Descreva o passo a passo." }).trim().min(5, "Descreva o passo a passo.").max(30_000),
+  tools: optionalText(500),
+  responsible: optionalText(200),
+  ownerId: optionalId,
+  reviewedAt: optionalLocalDate,
+});
+export type ProcedureInput = z.infer<typeof procedureSchema>;
+
+export const projectSchema = z
+  .object({
+    name: requiredText("Nome do projeto"),
+    description: optionalText(5000),
+    clientId: optionalId,
+    status: z.enum(PROJECT_STATUSES),
+    startDate: optionalLocalDate,
+    dueDate: optionalLocalDate,
+    ownerId: optionalId,
+  })
+  .refine((v) => !v.startDate || !v.dueDate || v.dueDate >= v.startDate, {
+    message: "O prazo não pode ser anterior ao início.",
+    path: ["dueDate"],
+  });
+export type ProjectInput = z.infer<typeof projectSchema>;
+
+export const hourCostSchema = z.object({ hourCost: optionalMoney });

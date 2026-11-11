@@ -127,3 +127,59 @@ export const SERVICE_OPTIONS = [
   "Emissão de notas fiscais",
   "Gestão de documentos",
 ] as const;
+
+// ---------------------------------------------------------------------------
+// Escritório virtual: CRM, POPs, projetos
+// ---------------------------------------------------------------------------
+
+export const LEAD_STAGES = ["NOVO", "CONTATO", "REUNIAO", "PROPOSTA", "NEGOCIACAO", "GANHO", "PERDIDO"] as const;
+export type LeadStage = (typeof LEAD_STAGES)[number];
+export const LEAD_STAGE_LABEL: Record<LeadStage, string> = {
+  NOVO: "Novo lead",
+  CONTATO: "Em contato",
+  REUNIAO: "Reunião",
+  PROPOSTA: "Proposta enviada",
+  NEGOCIACAO: "Negociação",
+  GANHO: "Ganho",
+  PERDIDO: "Perdido",
+};
+export const OPEN_LEAD_STAGES: readonly LeadStage[] = ["NOVO", "CONTATO", "REUNIAO", "PROPOSTA", "NEGOCIACAO"];
+/** Probabilidade padrão de fechamento por etapa, usada na previsão ponderada. */
+export const LEAD_STAGE_PROBABILITY: Record<LeadStage, number> = {
+  NOVO: 0.1,
+  CONTATO: 0.2,
+  REUNIAO: 0.35,
+  PROPOSTA: 0.5,
+  NEGOCIACAO: 0.7,
+  GANHO: 1,
+  PERDIDO: 0,
+};
+export const LEAD_SOURCES = ["Indicação", "Instagram", "LinkedIn", "Site", "WhatsApp", "Evento", "Contador parceiro", "Outro"] as const;
+export const LEAD_ACTIVITY_KINDS = ["NOTA", "LIGACAO", "REUNIAO", "EMAIL", "WHATSAPP"] as const;
+export type LeadActivityKind = (typeof LEAD_ACTIVITY_KINDS)[number];
+export const LEAD_ACTIVITY_LABEL: Record<LeadActivityKind | "ETAPA", string> = {
+  NOTA: "Anotação",
+  LIGACAO: "Ligação",
+  REUNIAO: "Reunião",
+  EMAIL: "E-mail",
+  WHATSAPP: "WhatsApp",
+  ETAPA: "Mudança de etapa",
+};
+
+export const PROCEDURE_STATUSES = ["RASCUNHO", "PUBLICADO", "ARQUIVADO"] as const;
+export type ProcedureStatus = (typeof PROCEDURE_STATUSES)[number];
+export const PROCEDURE_STATUS_LABEL: Record<ProcedureStatus, string> = {
+  RASCUNHO: "Rascunho",
+  PUBLICADO: "Publicado",
+  ARQUIVADO: "Arquivado",
+};
+
+export const PROJECT_STATUSES = ["PLANEJADO", "EM_ANDAMENTO", "PAUSADO", "CONCLUIDO", "CANCELADO"] as const;
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
+  PLANEJADO: "Planejado",
+  EM_ANDAMENTO: "Em andamento",
+  PAUSADO: "Pausado",
+  CONCLUIDO: "Concluído",
+  CANCELADO: "Cancelado",
+};

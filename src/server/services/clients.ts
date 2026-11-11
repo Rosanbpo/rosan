@@ -127,6 +127,8 @@ function toData(input: ClientInput) {
     services: input.services,
     startDate: input.startDate ? localDateToDbDate(input.startDate) : null,
     notes: input.notes ?? null,
+    monthlyFee: input.monthlyFee ?? null,
+    billingDay: input.billingDay ?? null,
     responsibleOperatorId: input.responsibleOperatorId ?? null,
     managerId: input.managerId ?? null,
   };

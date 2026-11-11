@@ -104,6 +104,19 @@ Regras garantidas (com testes):
 
 Modelos iniciais (no seed, editáveis): Conciliação bancária diária, Preparação da agenda de pagamentos, Acompanhamento de recebimentos, Cobrança de inadimplentes, Atualização do fluxo de caixa, Solicitação de documentos, Fechamento financeiro mensal, Preparação de relatório gerencial e Reunião mensal de resultados.
 
+### Escritório virtual (Rosan Finanças)
+
+Módulos comerciais e de gestão do negócio, além da operação:
+
+- **Carteira e rentabilidade** (`/carteira`, administrador e gestor): mensalidade de cada cliente × horas apontadas no mês × custo médio da hora (definido em Configurações). Mostra MRR, ticket médio, margem por cliente e faixas de saúde da margem.
+- **Apontamento de horas**: na página da tarefa, qualquer pessoa com acesso registra o tempo (`1:30`, `90` min ou `1,5` h). Não aceita data futura.
+- **CRM comercial** (`/crm`, administrador e gestor): funil Novo lead → Contato → Reunião → Proposta → Negociação → Ganho/Perdido, histórico de contatos, próxima ação, previsão ponderada e conversão. “Converter em cliente” (administrador) cria o cliente em implantação com a mensalidade esperada.
+- **Processos e POPs** (`/pops`): passo a passo por área, com versão (sobe quando o conteúdo muda). Operadores só enxergam POPs publicados; a tarefa sugere os POPs da sua área.
+- **Projetos** (`/projetos`): implantações e iniciativas (de cliente ou internas) com prazo, progresso e tarefas vinculadas.
+- Clientes ganharam **mensalidade** e **dia de vencimento**; valores só aparecem para quem tem a permissão `finance.view` (administrador e gestor).
+
+Ainda não implementados: calculadora de precificação e gerador de proposta/contrato (dependem dos modelos da empresa).
+
 ### Telas
 - **Painel do gestor:** vencem hoje, atrasadas, aguardando cliente (e terceiros), em revisão, próximos 7 dias, carga por operador (abertas, atrasadas, horas estimadas), top 5 clientes com atrasos e % de entregas no prazo. Filtros por período, cliente, responsável, categoria e prioridade. O período e as fórmulas aparecem na tela.
   - *Entregas no prazo* = tarefas concluídas no período com `concluída em ≤ prazo` ÷ tarefas concluídas no período.

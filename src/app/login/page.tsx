@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getActor } from "@/server/context";
 import { APP_NAME } from "@/lib/app-config";
@@ -15,14 +16,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const showDemo = process.env.NODE_ENV !== "production";
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 via-white to-slate-100 px-4">
+    <main className="flex min-h-screen items-center justify-center bg-brand-900 px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-lg font-bold text-white">
-            {APP_NAME.slice(0, 1)}
-          </div>
-          <h1 className="text-xl font-semibold text-slate-900">{APP_NAME}</h1>
-          <p className="text-sm text-slate-600">Operação de BPO Financeiro</p>
+        <div className="mb-6 flex flex-col items-center text-center">
+          <Image src="/logo.png" alt={APP_NAME} width={620} height={530} priority className="h-auto w-56" />
+          <p className="-mt-2 text-xs tracking-[0.2em] text-brand-200/80 uppercase">Escritório virtual</p>
         </div>
         {configurado && (
           <p role="status" className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -33,7 +31,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <LoginForm />
         </div>
         {showDemo && (
-          <p className="mt-4 text-center text-xs text-slate-500">
+          <p className="mt-4 text-center text-xs text-slate-400">
             Ambiente de desenvolvimento: após rodar o seed, use <code>admin@demo.centralbpo.test</code> /{" "}
             <code>demo1234</code> (veja o README).
           </p>

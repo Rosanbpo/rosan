@@ -15,10 +15,16 @@ model Organization {
   id        String   @id @default(cuid())
   name      String
   timezone  String   @default("America/Sao_Paulo")
+  /// Custo médio da hora de trabalho (R$), usado na rentabilidade por cliente.
+  hourCost  Decimal? @db.Decimal(10, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   memberships   Membership[]
+  leads         Lead[]
+  procedures    Procedure[]
+  projects      Project[]
+  timeEntries   TimeEntry[]
   clients       Client[]
   templates     RoutineTemplate[]
   recurrences   Recurrence[]
@@ -58,6 +64,11 @@ model User {
   pendingsResolved   Pending[]      @relation("PendingResolvedBy")
   recurrenceAssignee Recurrence[]   @relation("RecurrenceAssignee")
   recurrenceReviewer Recurrence[]   @relation("RecurrenceReviewer")
+  timeEntries        TimeEntry[]
+  ownedLeads         Lead[]         @relation("LeadOwner")
+  leadActivities     LeadActivity[]
+  ownedProcedures    Procedure[]    @relation("ProcedureOwner")
+  ownedProjects      Project[]      @relation("ProjectOwner")
 }
 
 enum Role {
@@ -105,6 +116,9 @@ model Client {
   services              String[]
   startDate             DateTime?    @db.Date
   notes                 String?
+  /// Mensalidade contratada (R$) e dia de vencimento do boleto/fatura.
+  monthlyFee            Decimal?     @db.Decimal(12, 2)
+  billingDay            Int?
   responsibleOperatorId String?
   managerId             String?
   archivedAt            DateTime?
@@ -118,6 +132,9 @@ model Client {
   tasks               Task[]
   recurrences         Recurrence[]
   pendings            Pending[]
+  timeEntries         TimeEntry[]
+  projects            Project[]
+  leadOrigin          Lead[]
 
   @@unique([organizationId, cnpj])
   @@index([organizationId, status])
@@ -311,6 +328,7 @@ model Task {
   requiresEvidence Boolean      @default(false)
   origin           TaskOrigin   @default(MANUAL)
   recurrenceId     String?
+  projectId        String?
   /// Data nominal da ocorrência (antes de ajuste de dia útil). Chave de idempotência.
   occurrenceKey    String?
   assigneeId       String?
@@ -331,6 +349,8 @@ model Task {
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
   recurrence     Recurrence?     @relation(fields: [recurrenceId], references: [id], onDelete: SetNull)
+  project        Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  timeEntries    TimeEntry[]
   assignee       User?           @relation("TaskAssignee", fields: [assigneeId], references: [id])
   reviewer       User?           @relation("TaskReviewer", fields: [reviewerId], references: [id])
   createdBy      User?           @relation("TaskCreator", fields: [createdById], references: [id])
@@ -350,6 +370,7 @@ model Task {
   @@index([organizationId, reviewerId, status])
   @@index([organizationId, category])
   @@index([organizationId, completedAt])
+  @@index([projectId])
 }
 
 model ChecklistItem {
@@ -469,4 +490,158 @@ model SchedulerLock {
   id          String    @id
   lockedUntil DateTime?
   holder      String?
+}
+
+// ---------------------------------------------------------------------------
+// Apontamento de horas
+// ---------------------------------------------------------------------------
+
+model TimeEntry {
+  id             String   @id @default(cuid())
+  organizationId String
+  clientId       String
+  taskId         String?
+  userId         String
+  /// Dia trabalhado (data de calendário).
+  workedOn       DateTime @db.Date
+  minutes        Int
+  note           String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  task         Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, workedOn])
+  @@index([clientId, workedOn])
+  @@index([taskId])
+  @@index([userId, workedOn])
+}
+
+// ---------------------------------------------------------------------------
+// CRM comercial
+// ---------------------------------------------------------------------------
+
+enum LeadStage {
+  NOVO
+  CONTATO
+  REUNIAO
+  PROPOSTA
+  NEGOCIACAO
+  GANHO
+  PERDIDO
+}
+
+model Lead {
+  id                String    @id @default(cuid())
+  organizationId    String
+  companyName       String
+  contactName       String?
+  contactEmail      String?
+  contactPhone      String?
+  cnpj              String?
+  source            String?
+  stage             LeadStage @default(NOVO)
+  expectedFee       Decimal?  @db.Decimal(12, 2)
+  servicesInterest  String[]
+  ownerId           String?
+  nextActionAt      DateTime? @db.Date
+  nextAction        String?
+  lostReason        String?
+  notes             String?
+  convertedClientId String?
+  closedAt          DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner           User?          @relation("LeadOwner", fields: [ownerId], references: [id])
+  convertedClient Client?        @relation(fields: [convertedClientId], references: [id], onDelete: SetNull)
+  activities      LeadActivity[]
+
+  @@index([organizationId, stage])
+  @@index([organizationId, nextActionAt])
+}
+
+model LeadActivity {
+  id        String   @id @default(cuid())
+  leadId    String
+  authorId  String
+  kind      String // NOTA, LIGACAO, REUNIAO, EMAIL, WHATSAPP, ETAPA
+  body      String
+  createdAt DateTime @default(now())
+
+  lead   Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([leadId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Processos e POPs
+// ---------------------------------------------------------------------------
+
+enum ProcedureStatus {
+  RASCUNHO
+  PUBLICADO
+  ARQUIVADO
+}
+
+model Procedure {
+  id             String          @id @default(cuid())
+  organizationId String
+  title          String
+  category       TaskCategory
+  status         ProcedureStatus @default(RASCUNHO)
+  objective      String?
+  /// Passo a passo em texto simples (uma linha por passo ou parágrafos).
+  content        String
+  tools          String?
+  responsible    String?
+  version        Int             @default(1)
+  ownerId        String?
+  reviewedAt     DateTime?       @db.Date
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User?        @relation("ProcedureOwner", fields: [ownerId], references: [id])
+
+  @@index([organizationId, status])
+  @@index([organizationId, category])
+}
+
+// ---------------------------------------------------------------------------
+// Projetos
+// ---------------------------------------------------------------------------
+
+enum ProjectStatus {
+  PLANEJADO
+  EM_ANDAMENTO
+  PAUSADO
+  CONCLUIDO
+  CANCELADO
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  organizationId String
+  clientId       String?
+  name           String
+  description    String?
+  status         ProjectStatus @default(PLANEJADO)
+  startDate      DateTime?     @db.Date
+  dueDate        DateTime?     @db.Date
+  ownerId        String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  owner        User?        @relation("ProjectOwner", fields: [ownerId], references: [id])
+  tasks        Task[]
+
+  @@index([organizationId, status])
+  @@index([clientId])
 }

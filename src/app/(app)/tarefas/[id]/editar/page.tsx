@@ -7,6 +7,7 @@ import { can } from "@/domain/permissions";
 import { APP_TIMEZONE } from "@/server/config";
 import { requireActor } from "@/server/context";
 import { getTaskDetail, peopleWithClients } from "@/server/services/tasks";
+import { projectOptions } from "@/server/services/projects";
 import { orNotFound } from "@/server/page-utils";
 
 export const metadata = { title: "Editar tarefa" };
@@ -18,7 +19,7 @@ export default async function EditTaskPage({ params }: { params: Promise<{ id: s
   const manager = can(actor, "tasks.plan");
   if (task.status === "CONCLUIDA" || task.status === "CANCELADA") redirect(`/tarefas/${id}`);
   if (!manager && task.assigneeId !== actor.userId && task.reviewerId !== actor.userId) redirect(`/tarefas/${id}`);
-  const people = await peopleWithClients(actor);
+  const [people, projects] = await Promise.all([peopleWithClients(actor), projectOptions(actor, task.clientId)]);
   return (
     <>
       <PageHeader title="Editar tarefa" breadcrumb={{ href: `/tarefas/${id}`, label: task.title }} />
@@ -26,6 +27,7 @@ export default async function EditTaskPage({ params }: { params: Promise<{ id: s
         action={updateTaskAction.bind(null, id)}
         clients={[{ id: task.client.id, tradeName: task.client.tradeName }]}
         people={people}
+        projects={projects}
         mode="edit"
         canPlan={manager}
         selfId={actor.userId}
@@ -45,6 +47,7 @@ export default async function EditTaskPage({ params }: { params: Promise<{ id: s
           startTime: task.startAt ? instantToLocalTime(task.startAt, APP_TIMEZONE) : undefined,
           estimatedMinutes: task.estimatedMinutes,
           requiresEvidence: task.requiresEvidence,
+          projectId: task.projectId,
         }}
       />
     </>

@@ -13,6 +13,8 @@ export interface ClientFormValues {
   status?: string;
   services?: string[];
   startDate?: string | null;
+  monthlyFee?: string;
+  billingDay?: number | null;
   notes?: string | null;
   responsibleOperatorId?: string | null;
   managerId?: string | null;
@@ -59,6 +61,12 @@ export function ClientForm({
         </Field>
         <Field label="Data de início" name="startDate">
           <input id="startDate" type="date" name="startDate" className="input" defaultValue={values.startDate ?? ""} />
+        </Field>
+        <Field label="Mensalidade (R$)" name="monthlyFee" hint="Valor mensal do contrato. Alimenta a carteira e a rentabilidade.">
+          <input id="monthlyFee" name="monthlyFee" inputMode="decimal" className="input" defaultValue={values.monthlyFee ?? ""} placeholder="2.500,00" />
+        </Field>
+        <Field label="Dia de vencimento" name="billingDay" hint="Dia do mês em que a mensalidade é cobrada (1 a 31).">
+          <input id="billingDay" name="billingDay" type="number" min={1} max={31} className="input" defaultValue={values.billingDay ?? ""} />
         </Field>
       </section>
 

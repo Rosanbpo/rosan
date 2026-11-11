@@ -21,6 +21,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/tarefas", label: "Tarefas", icon: "tarefas" },
     { href: "/pendencias", label: "Pendências", icon: "pendencias" },
     { href: "/clientes", label: "Clientes", icon: "clientes" },
+    ...(can(actor, "finance.view") ? [{ href: "/carteira", label: "Carteira e rentabilidade", icon: "carteira" as const }] : []),
+    ...(can(actor, "crm.manage") ? [{ href: "/crm", label: "CRM comercial", icon: "crm" as const }] : []),
+    { href: "/projetos", label: "Projetos", icon: "projetos" },
+    { href: "/pops", label: "Processos e POPs", icon: "pops" },
     ...(can(actor, "recurrences.manage") ? [{ href: "/rotinas", label: "Modelos e recorrências", icon: "rotinas" as const }] : []),
     ...(can(actor, "org.settings") ? [{ href: "/configuracoes", label: "Configurações", icon: "config" as const }] : []),
     { href: "/conta", label: "Minha conta", icon: "conta" },
@@ -44,7 +48,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               await signOut({ redirectTo: "/login" });
             }}
           >
-            <button type="submit" className="btn-ghost btn-sm -ml-2">
+            <button type="submit" className="btn btn-sm -ml-2 text-slate-300 hover:bg-white/10 hover:text-white">
               <LogOut aria-hidden className="h-3.5 w-3.5" /> Sair
             </button>
           </form>
