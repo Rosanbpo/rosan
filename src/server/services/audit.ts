@@ -5,7 +5,7 @@ type Db = Prisma.TransactionClient;
 export interface AuditInput {
   organizationId: string;
   actorId: string | null;
-  entityType: "Task" | "Client" | "RoutineTemplate" | "Recurrence" | "User" | "Holiday" | "Organization" | "Lead" | "Procedure" | "Project" | "TimeEntry";
+  entityType: "Task" | "Client" | "RoutineTemplate" | "Recurrence" | "User" | "Holiday" | "Organization" | "Lead" | "Procedure" | "Project" | "TimeEntry" | "Contract";
   entityId: string;
   action: string;
   summary: string;

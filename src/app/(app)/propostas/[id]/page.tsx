@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FileText, Pencil } from "lucide-react";
+import { FileSignature, FileText, Pencil } from "lucide-react";
 import { instantToLocalDate } from "@/domain/dates";
 import { PROPOSAL_STATUS_LABEL, isProposalExpired, type ProposalStatus } from "@/domain/proposal";
 import { Card, PageHeader, Stat } from "@/components/ui/layout";
@@ -32,6 +32,9 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
           <>
             <Link href={`/documento/proposta/${id}`} className="btn-primary" target="_blank">
               <FileText aria-hidden className="h-4 w-4" /> Ver documento / PDF
+            </Link>
+            <Link href={`/contratos/novo?proposta=${id}`} className="btn-secondary">
+              <FileSignature aria-hidden className="h-4 w-4" /> Gerar contrato
             </Link>
             {status !== "ACEITA" && (
               <Link href={`/propostas/${id}/editar`} className="btn-secondary">

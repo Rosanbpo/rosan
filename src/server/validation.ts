@@ -355,3 +355,80 @@ export const orgProfileSchema = z.object({
   website: optionalText(200),
   city: optionalText(100),
 });
+
+const decimal = (label: string, min: number, max: number) =>
+  z.preprocess(
+    parseMoney,
+    z.number({ required_error: `Informe ${label}.`, invalid_type_error: `${label}: valor inválido.` }).min(min, `${label}: mínimo ${min}.`).max(max, `${label}: máximo ${max}.`),
+  );
+
+export const pricingSchema = z.object({
+  costs: z.array(z.object({ label: requiredText("Nome do custo"), amount: decimal("o valor do custo", 0, 100_000_000) })).max(60, "Máximo de 60 custos."),
+  hoursPerDay: decimal("as horas por dia", 0.5, 24),
+  daysPerMonth: decimal("os dias por mês", 1, 31),
+  safetyFactor: decimal("a margem de segurança", 1, 5),
+  markup: decimal("a margem de lucro", 1, 10),
+  /** Em percentual (6 = 6%). */
+  taxPercent: decimal("o imposto", 0, 50),
+  plans: z
+    .array(
+      z.object({
+        name: requiredText("Nome do plano", 100),
+        finalPrice: z.preprocess(parseMoney, z.number({ invalid_type_error: "Preço inválido." }).min(0).max(100_000_000).optional()),
+        tasks: z
+          .array(z.object({ name: requiredText("Nome da tarefa"), minutes: decimal("os minutos da tarefa", 0, 100_000) }))
+          .max(60, "Máximo de 60 tarefas por plano."),
+      }),
+    )
+    .max(12, "Máximo de 12 planos."),
+});
+export type PricingFormInput = z.infer<typeof pricingSchema>;
+
+const clausesField = z
+  .array(
+    z.object({
+      section: optionalText(200),
+      title: requiredText("Título da cláusula", 200),
+      text: z.string().trim().min(1, "Cada cláusula precisa de texto.").max(8000, "Texto de cláusula muito longo."),
+      block: z.enum(["services", "fee", "volumes", "values"]).optional().nullable(),
+      footnote: z.string().trim().max(2000).optional().nullable(),
+    }),
+  )
+  .min(1, "O contrato precisa de ao menos uma cláusula.")
+  .max(60, "Máximo de 60 cláusulas.");
+
+export const contractSchema = z.object({
+  proposalId: optionalId,
+  clientId: optionalId,
+  partyName: requiredText("Razão social da contratante"),
+  partyDocument: optionalText(30),
+  partyAddress: optionalText(300),
+  repName: optionalText(200),
+  repCpf: optionalText(20),
+  issuerRepName: optionalText(200),
+  issuerRepRole: optionalText(100),
+  issuerRepCpf: optionalText(20),
+  monthlyFee: z.preprocess(
+    parseMoney,
+    z.number({ required_error: "Informe a mensalidade.", invalid_type_error: "Valor inválido." }).min(1, "Informe a mensalidade."),
+  ),
+  billingDay: optionalInt(1, 31).transform((v) => v ?? 10),
+  termMonths: optionalInt(1, 60).transform((v) => v ?? 6),
+  startDate: optionalLocalDate,
+  signDate: optionalLocalDate,
+  signCity: optionalText(100),
+  services: linesField("serviços", 1),
+  volumes: linesField("limites"),
+  clauses: clausesField,
+});
+export type ContractInput = z.infer<typeof contractSchema>;
+
+export const distratoSchema = z.object({
+  endDate: optionalLocalDate,
+  pendingMonthly: optionalMoney,
+  unbilled: optionalMoney,
+  credits: optionalMoney,
+  settleDays: optionalInt(1, 365),
+  distratoClauses: clausesField,
+});
+export type DistratoInput = z.infer<typeof distratoSchema>;

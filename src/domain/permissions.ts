@@ -24,7 +24,9 @@ export type Permission =
   | "finance.view" // mensalidades, rentabilidade e valores comerciais
   | "crm.manage" // leads, funil comercial
   | "procedures.manage" // criar/editar POPs
-  | "projects.manage"; // criar/editar projetos
+  | "projects.manage" // criar/editar projetos
+  | "pricing.manage" // precificação
+  | "contracts.manage"; // contratos e distratos
 
 const MATRIX: Record<Role, readonly Permission[]> = {
   ADMIN: [
@@ -41,6 +43,8 @@ const MATRIX: Record<Role, readonly Permission[]> = {
     "crm.manage",
     "procedures.manage",
     "projects.manage",
+    "pricing.manage",
+    "contracts.manage",
   ],
   GESTOR: [
     "recurrences.manage",
@@ -52,6 +56,8 @@ const MATRIX: Record<Role, readonly Permission[]> = {
     "crm.manage",
     "procedures.manage",
     "projects.manage",
+    "pricing.manage",
+    "contracts.manage",
   ],
   OPERADOR: ["tasks.create"],
 };

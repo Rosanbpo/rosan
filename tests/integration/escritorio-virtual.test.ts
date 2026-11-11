@@ -204,3 +204,130 @@ describe("propostas", () => {
     expect((await listProposals(b.admin)).length).toBe(0);
   });
 });
+
+import { applyHourCost, getPricing, savePricing } from "@/server/services/pricing";
+import { buildContractClauses, buildDistratoClauses } from "@/domain/contract";
+import { contractDefaults, createContract, getContract, listContracts, removeDistrato, setContractStatus, startDistrato, updateContract, updateDistrato } from "@/server/services/contracts";
+
+describe("precificação salva", () => {
+  const form = {
+    costs: [{ label: "Pró-labore", amount: "5.000,00" }, { label: "Internet", amount: "150" }],
+    hoursPerDay: "6",
+    daysPerMonth: "21",
+    safetyFactor: "1,1",
+    markup: "1,6",
+    taxPercent: "6",
+    plans: [{ name: "Plano Teste", finalPrice: "800,00", tasks: [{ name: "Conciliação", minutes: "120" }] }],
+  };
+
+  it("usa a planilha da Rosan antes de salvar e persiste depois", async () => {
+    const s = await setupOrg();
+    const first = await getPricing(s.admin);
+    expect(first.saved).toBe(false);
+    expect(first.result.hourCost).toBe(74.56);
+
+    await savePricing(s.admin, form);
+    const saved = await getPricing(s.admin);
+    expect(saved.saved).toBe(true);
+    expect(saved.input.costs).toHaveLength(2);
+    expect(saved.input.taxRate).toBeCloseTo(0.06);
+    expect(saved.result.plans[0].price).toBe(800);
+    // (5150 / 126) * 1,1 = 44,96
+    expect(saved.result.hourCost).toBeCloseTo(44.96, 1);
+  });
+
+  it("aplica o custo da hora (só admin) e bloqueia operador", async () => {
+    const s = await setupOrg();
+    await expect(applyHourCost(s.admin)).rejects.toBeInstanceOf(ValidationError);
+    await savePricing(s.admin, form);
+    await applyHourCost(s.admin);
+    const org = await prisma.organization.findUniqueOrThrow({ where: { id: s.admin.organizationId } });
+    expect(Number(org.hourCost)).toBeCloseTo(44.96, 1);
+    await expect(applyHourCost(s.gestor)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(getPricing(s.op)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("rejeita valores inválidos", async () => {
+    const s = await setupOrg();
+    await expect(savePricing(s.admin, { ...form, hoursPerDay: "abc" })).rejects.toBeInstanceOf(ValidationError);
+    await expect(savePricing(s.admin, { ...form, markup: "0,5" })).rejects.toBeInstanceOf(ValidationError);
+  });
+});
+
+describe("contratos e distratos", () => {
+  const proposal = {
+    planName: "Plano Intermediário",
+    companyName: "Padaria Pão Quente",
+    services: "Contas a pagar | Controle\nContas a receber | Controle",
+    volumes: "Notas fiscais por mês | até 100",
+    exclusions: "Decisões gerenciais",
+    monthlyFee: "1.000,00",
+    validUntil: "2099-12-31",
+  };
+  const form = (extra: Record<string, unknown> = {}) => ({
+    partyName: "Padaria Pão Quente Ltda",
+    monthlyFee: "1.000,00",
+    billingDay: "10",
+    termMonths: "6",
+    services: "Contas a pagar | Controle",
+    volumes: "Notas fiscais por mês | até 100",
+    clauses: buildContractClauses(),
+    ...extra,
+  });
+
+  it("pré-preenche a partir da proposta, numera e lista", async () => {
+    const s = await setupOrg();
+    const p = await createProposal(s.admin, proposal);
+    const d = await contractDefaults(s.admin, p.id);
+    expect(d.partyName).toBe("Padaria Pão Quente");
+    expect(d.monthlyFee).toBe(1000);
+    expect(d.services).toHaveLength(2);
+
+    const a = await createContract(s.gestor, form({ proposalId: p.id }));
+    const b = await createContract(s.gestor, form({ partyName: "Outra Empresa" }));
+    const year = new Date().getFullYear();
+    expect(a.number).toBe(`${year}-001`);
+    expect(b.number).toBe(`${year}-002`);
+    expect((await listContracts(s.gestor)).length).toBe(2);
+  });
+
+  it("edita rascunho, trava depois de assinado e permite reabrir", async () => {
+    const s = await setupOrg();
+    const c = await createContract(s.admin, form());
+    await updateContract(s.admin, c.id, form({ partyName: "Nome Novo", clauses: [{ title: "Única", text: "Texto livre." }] }));
+    const edited = await getContract(s.admin, c.id);
+    expect(edited.partyName).toBe("Nome Novo");
+    expect(edited.clauses).toHaveLength(1);
+
+    await setContractStatus(s.admin, c.id, "ASSINADO");
+    expect((await getContract(s.admin, c.id)).signDate).not.toBeNull();
+    await expect(updateContract(s.admin, c.id, form())).rejects.toBeInstanceOf(ValidationError);
+    await setContractStatus(s.admin, c.id, "RASCUNHO");
+    await updateContract(s.admin, c.id, form({ partyName: "Depois de reabrir" }));
+    expect((await getContract(s.admin, c.id)).partyName).toBe("Depois de reabrir");
+  });
+
+  it("gera, edita e descarta o distrato", async () => {
+    const s = await setupOrg();
+    const c = await createContract(s.admin, form());
+    await expect(updateDistrato(s.admin, c.id, { distratoClauses: buildDistratoClauses() })).rejects.toBeInstanceOf(ValidationError);
+    await startDistrato(s.admin, c.id);
+    await updateDistrato(s.admin, c.id, { endDate: "2027-01-31", pendingMonthly: "1.000,00", unbilled: "", credits: "200", settleDays: "10", distratoClauses: buildDistratoClauses() });
+    const d = await getContract(s.admin, c.id);
+    expect(d.endDate).toBe("2027-01-31");
+    expect(d.pendingMonthly).toBe(1000);
+    expect(d.credits).toBe(200);
+    expect(d.settleDays).toBe(10);
+    await removeDistrato(s.admin, c.id);
+    expect((await getContract(s.admin, c.id)).distratoClauses).toBeNull();
+  });
+
+  it("valida cláusulas, isola empresas e bloqueia operador", async () => {
+    const a = await setupOrg();
+    const b = await setupOrg();
+    await expect(createContract(a.admin, form({ clauses: [] }))).rejects.toBeInstanceOf(ValidationError);
+    const c = await createContract(a.admin, form());
+    await expect(getContract(b.admin, c.id)).rejects.toThrow();
+    await expect(listContracts(a.op)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});

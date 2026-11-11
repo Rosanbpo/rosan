@@ -24,6 +24,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(can(actor, "finance.view") ? [{ href: "/carteira", label: "Carteira e rentabilidade", icon: "carteira" as const }] : []),
     ...(can(actor, "crm.manage") ? [{ href: "/crm", label: "CRM comercial", icon: "crm" as const }] : []),
     ...(can(actor, "crm.manage") ? [{ href: "/propostas", label: "Propostas", icon: "propostas" as const }] : []),
+    ...(can(actor, "contracts.manage") ? [{ href: "/contratos", label: "Contratos", icon: "contratos" as const }] : []),
+    ...(can(actor, "pricing.manage") ? [{ href: "/precificacao", label: "Precificação", icon: "precificacao" as const }] : []),
     { href: "/projetos", label: "Projetos", icon: "projetos" },
     { href: "/pops", label: "Processos e POPs", icon: "pops" },
     ...(can(actor, "recurrences.manage") ? [{ href: "/rotinas", label: "Modelos e recorrências", icon: "rotinas" as const }] : []),

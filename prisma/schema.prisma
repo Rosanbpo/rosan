@@ -12,20 +12,22 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  timezone  String   @default("America/Sao_Paulo")
+  pricingSheet PricingSheet?
+  contracts    Contract[]
+  id           String        @id @default(cuid())
+  name         String
+  timezone     String        @default("America/Sao_Paulo")
   /// Custo médio da hora de trabalho (R$), usado na rentabilidade por cliente.
-  hourCost  Decimal? @db.Decimal(10, 2)
+  hourCost     Decimal?      @db.Decimal(10, 2)
   /// Dados da empresa usados em propostas e contratos.
-  legalName String?
-  cnpj      String?
-  email     String?
-  phone     String?
-  website   String?
-  city      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  legalName    String?
+  cnpj         String?
+  email        String?
+  phone        String?
+  website      String?
+  city         String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   memberships   Membership[]
   leads         Lead[]
@@ -44,39 +46,40 @@ model Organization {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  active       Boolean  @default(true)
+  contractsCreated Contract[]
+  id               String     @id @default(cuid())
+  email            String     @unique
+  name             String
+  passwordHash     String
+  active           Boolean    @default(true)
   /// Usuários criados pelo seed de demonstração. Bloqueados em produção.
-  isDemo       Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isDemo           Boolean    @default(false)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   memberships        Membership[]
   clientMemberships  ClientMember[]
-  responsibleClients Client[]       @relation("ClientResponsible")
-  managedClients     Client[]       @relation("ClientManager")
-  assignedTasks      Task[]         @relation("TaskAssignee")
-  reviewTasks        Task[]         @relation("TaskReviewer")
-  createdTasks       Task[]         @relation("TaskCreator")
-  completedTasks     Task[]         @relation("TaskCompletedBy")
-  reviewedTasks      Task[]         @relation("TaskReviewedBy")
-  executedTasks      Task[]         @relation("TaskExecutedBy")
+  responsibleClients Client[]        @relation("ClientResponsible")
+  managedClients     Client[]        @relation("ClientManager")
+  assignedTasks      Task[]          @relation("TaskAssignee")
+  reviewTasks        Task[]          @relation("TaskReviewer")
+  createdTasks       Task[]          @relation("TaskCreator")
+  completedTasks     Task[]          @relation("TaskCompletedBy")
+  reviewedTasks      Task[]          @relation("TaskReviewedBy")
+  executedTasks      Task[]          @relation("TaskExecutedBy")
   comments           Comment[]
   evidences          Evidence[]
   checklistDone      ChecklistItem[]
   auditEvents        AuditEvent[]
-  pendingsCreated    Pending[]      @relation("PendingCreatedBy")
-  pendingsResolved   Pending[]      @relation("PendingResolvedBy")
-  recurrenceAssignee Recurrence[]   @relation("RecurrenceAssignee")
-  recurrenceReviewer Recurrence[]   @relation("RecurrenceReviewer")
+  pendingsCreated    Pending[]       @relation("PendingCreatedBy")
+  pendingsResolved   Pending[]       @relation("PendingResolvedBy")
+  recurrenceAssignee Recurrence[]    @relation("RecurrenceAssignee")
+  recurrenceReviewer Recurrence[]    @relation("RecurrenceReviewer")
   timeEntries        TimeEntry[]
-  ownedLeads         Lead[]         @relation("LeadOwner")
+  ownedLeads         Lead[]          @relation("LeadOwner")
   leadActivities     LeadActivity[]
-  ownedProcedures    Procedure[]    @relation("ProcedureOwner")
-  ownedProjects      Project[]      @relation("ProjectOwner")
+  ownedProcedures    Procedure[]     @relation("ProcedureOwner")
+  ownedProjects      Project[]       @relation("ProjectOwner")
   proposals          Proposal[]
 }
 
@@ -112,6 +115,7 @@ enum ClientStatus {
 }
 
 model Client {
+  contracts             Contract[]
   id                    String       @id @default(cuid())
   organizationId        String
   legalName             String
@@ -383,16 +387,16 @@ model Task {
 }
 
 model ChecklistItem {
-  id         String    @id @default(cuid())
-  taskId     String
-  label      String
-  required   Boolean   @default(false)
-  done       Boolean   @default(false)
-  doneById   String?
-  doneAt     DateTime?
-  position   Int       @default(0)
-  task       Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  doneBy     User?     @relation(fields: [doneById], references: [id])
+  id       String    @id @default(cuid())
+  taskId   String
+  label    String
+  required Boolean   @default(false)
+  done     Boolean   @default(false)
+  doneById String?
+  doneAt   DateTime?
+  position Int       @default(0)
+  task     Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  doneBy   User?     @relation(fields: [doneById], references: [id])
 
   @@index([taskId, position])
 }
@@ -668,6 +672,7 @@ enum ProposalStatus {
 }
 
 model Proposal {
+  contracts      Contract[]
   id             String         @id @default(cuid())
   organizationId String
   /// Número sequencial por ano: 2026-001
@@ -703,4 +708,86 @@ model Proposal {
   @@unique([organizationId, number])
   @@index([organizationId, status])
   @@index([leadId])
+}
+
+/// Planilha de precificação da empresa (uma por organização), editável.
+model PricingSheet {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  /// [{ "label": "Aluguel", "amount": 500 }]
+  costs          Json
+  hoursPerDay    Decimal  @db.Decimal(5, 2)
+  daysPerMonth   Int
+  /// Margem de segurança sobre o custo/hora (1,10 = +10%).
+  safetyFactor   Decimal  @db.Decimal(5, 2)
+  /// Multiplicador de lucro (1,60 = 60%).
+  markup         Decimal  @db.Decimal(5, 2)
+  /// Imposto sobre o faturamento, em fração (0,06 = 6%).
+  taxRate        Decimal  @db.Decimal(6, 4)
+  /// [{ "name": "Plano Básico", "tasks": [{ "name": "...", "minutes": 30 }], "finalPrice": 500 }]
+  plans          Json
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+enum ContractStatus {
+  RASCUNHO
+  ASSINADO
+  ENCERRADO
+}
+
+/// Contrato de prestação de serviços (e o distrato correspondente).
+model Contract {
+  id             String         @id @default(cuid())
+  organizationId String
+  /// Número sequencial por ano: 2026-001
+  number         String
+  proposalId     String?
+  clientId       String?
+  status         ContractStatus @default(RASCUNHO)
+
+  partyName     String
+  partyDocument String?
+  partyAddress  String?
+  repName       String?
+  repCpf        String?
+
+  issuerRepName String?
+  issuerRepRole String?
+  issuerRepCpf  String?
+
+  monthlyFee Decimal   @db.Decimal(12, 2)
+  billingDay Int       @default(10)
+  termMonths Int       @default(6)
+  startDate  DateTime? @db.Date
+  signDate   DateTime? @db.Date
+  signCity   String?
+
+  /// "Serviço | Descrição" e "Descrição | Limite".
+  services String[]
+  volumes  String[]
+  /// [{ "section": "II — DO OBJETO", "title": "Do Objeto", "text": "...", "block": "services" }]
+  clauses  Json
+
+  // Distrato
+  endDate         DateTime? @db.Date
+  pendingMonthly  Decimal?  @db.Decimal(12, 2)
+  unbilled        Decimal?  @db.Decimal(12, 2)
+  credits         Decimal?  @db.Decimal(12, 2)
+  settleDays      Int?
+  distratoClauses Json?
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  proposal     Proposal?    @relation(fields: [proposalId], references: [id], onDelete: SetNull)
+  client       Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy    User         @relation(fields: [createdById], references: [id])
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+  @@index([clientId])
 }

@@ -45,3 +45,9 @@ export const PROPOSAL_STYLE: Record<"RASCUNHO" | "ENVIADA" | "ACEITA" | "RECUSAD
   RECUSADA: "bg-zinc-100 text-zinc-500 ring-zinc-200",
   VENCIDA: "bg-amber-50 text-amber-800 ring-amber-200",
 };
+
+export const CONTRACT_STYLE: Record<"RASCUNHO" | "ASSINADO" | "ENCERRADO", string> = {
+  RASCUNHO: "bg-slate-100 text-slate-700 ring-slate-300",
+  ASSINADO: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  ENCERRADO: "bg-amber-50 text-amber-800 ring-amber-200",
+};

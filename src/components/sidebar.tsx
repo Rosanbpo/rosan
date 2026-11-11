@@ -10,7 +10,9 @@ import {
   Briefcase,
   CalendarClock,
   ClipboardList,
+  Calculator,
   FileText,
+  FileSignature,
   FolderKanban,
   Hourglass,
   LineChart,
@@ -37,6 +39,8 @@ const ICONS = {
   pops: BookOpen,
   projetos: FolderKanban,
   propostas: FileText,
+  precificacao: Calculator,
+  contratos: FileSignature,
 };
 
 export interface NavItem {

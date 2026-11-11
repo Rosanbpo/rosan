@@ -84,6 +84,26 @@
 .doc-serif {
   font-family: Georgia, "Times New Roman", serif;
 }
+/* Documentos longos (contrato, distrato): texto corrido com margens de página. */
+.doc-flow {
+  width: 210mm;
+  max-width: 100%;
+  margin: 0 auto 8mm;
+  background: #fff;
+  box-shadow: 0 1px 8px rgb(0 0 0 / 0.25);
+  padding: 16mm 18mm 18mm;
+  color: #1b2340;
+  font-size: 9.6pt;
+  line-height: 1.5;
+}
+.doc-flow h3,
+.doc-flow .doc-keep {
+  break-after: avoid;
+}
+.doc-flow .doc-clause,
+.doc-flow .doc-sign {
+  break-inside: avoid;
+}
 /* Proposta de uma página: altura fixa de A4 para nunca gerar página extra. */
 .doc-one {
   height: 296mm;
@@ -178,5 +198,16 @@
   }
   .doc-sheet:last-child {
     break-after: auto;
+  }
+  @page legal {
+    size: A4;
+    margin: 16mm 18mm 18mm;
+  }
+  .doc-flow {
+    page: legal;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
   }
 }
