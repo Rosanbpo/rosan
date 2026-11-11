@@ -178,6 +178,7 @@ export const recurrenceSchema = z
     endDate: optionalLocalDate,
     assigneeId: optionalId,
     reviewerId: optionalId,
+    projectId: optionalId,
     ...ruleFields,
   })
   .superRefine(ruleRefinement);

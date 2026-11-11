@@ -126,6 +126,7 @@ export interface RecurrenceFormValues extends RuleValues {
   endDate: string | null;
   assigneeId: string | null;
   reviewerId: string | null;
+  projectId?: string | null;
 }
 
 export function RecurrenceForm({
@@ -134,10 +135,12 @@ export function RecurrenceForm({
   clients,
   templates,
   people,
+  projects = [],
   mode,
 }: {
   action: Action;
   values: RecurrenceFormValues;
+  projects?: Array<{ id: string; name: string; clientId: string | null }>;
   clients: Array<{ id: string; tradeName: string }>;
   templates: Array<{ id: string; name: string; rule: RuleValues }>;
   people: Array<{ id: string; name: string; role: Role; clientIds: string[] | null }>;
@@ -190,6 +193,18 @@ export function RecurrenceForm({
                 {p.name} ({ROLE_LABEL[p.role]})
               </option>
             ))}
+          </select>
+        </Field>
+        <Field label="Projeto" name="projectId" hint="As tarefas geradas entram neste projeto, e as já geradas também.">
+          <select id="projectId" name="projectId" className="input" defaultValue={values.projectId ?? ""}>
+            <option value="">Sem projeto</option>
+            {projects
+              .filter((p) => !p.clientId || p.clientId === clientId)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
           </select>
         </Field>
         <Field label="Início da recorrência" name="startDate" required>

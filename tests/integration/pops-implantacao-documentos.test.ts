@@ -152,3 +152,34 @@ describe("cadastro rápido de rotina no cliente", () => {
     await expect(quickAddRoutine(s.op, { ...base, title: "X", mode: "DAILY" })).rejects.toBeInstanceOf(ForbiddenError);
   });
 });
+
+describe("rotina vinculada a projeto", () => {
+  it("tarefas geradas entram no projeto; trocar o projeto leva as já geradas; projeto de outro cliente é rejeitado", async () => {
+    const { quickAddRoutine, updateRecurrence } = await import("@/server/services/recurrences");
+    const { createProject } = await import("@/server/services/projects");
+    const s = await scenario();
+    const other = await createClient(s.admin, { legalName: "Outro Ltda", tradeName: "Outro", status: "ATIVO", services: [], responsibleOperatorId: s.op.userId, managerId: s.gestor.userId, memberIds: [] });
+    const proj = await createProject(s.gestor, { name: "Rotina financeira", clientId: s.client.id, status: "EM_ANDAMENTO" });
+    const foreign = await createProject(s.gestor, { name: "Do outro", clientId: other.id, status: "EM_ANDAMENTO" });
+    const base = { clientId: s.client.id, dueTime: "10:00", mode: "DAILY" as const };
+
+    await expect(quickAddRoutine(s.gestor, { ...base, title: "X", projectId: foreign.id })).rejects.toBeInstanceOf(ValidationError);
+
+    const { recurrence } = await quickAddRoutine(s.gestor, { ...base, title: "Conciliar", projectId: proj.id });
+    const tasks = await prisma.task.findMany({ where: { recurrenceId: recurrence.id } });
+    expect(tasks.length).toBeGreaterThan(0);
+    expect(tasks.every((t) => t.projectId === proj.id)).toBe(true);
+
+    // rotina sem projeto, depois vinculada: as tarefas existentes entram no projeto
+    const { recurrence: r2 } = await quickAddRoutine(s.gestor, { ...base, title: "Fechar", mode: "MONTHLY", monthDay: "28" });
+    const before = await prisma.task.findMany({ where: { recurrenceId: r2.id } });
+    expect(before.every((t) => t.projectId === null)).toBe(true);
+    const full = await prisma.recurrence.findUniqueOrThrow({ where: { id: r2.id } });
+    await updateRecurrence(s.gestor, r2.id, {
+      frequency: full.frequency, monthDays: full.monthDays.map(String), weekdays: [], dueTime: full.dueTime, leadDays: String(full.leadDays),
+      startOffsetDays: "0", nonBusinessDayRule: full.nonBusinessDayRule, startDate: instantToLocalDate(full.startDate, "UTC"), projectId: proj.id,
+    });
+    const after = await prisma.task.findMany({ where: { recurrenceId: r2.id } });
+    expect(after.every((t) => t.projectId === proj.id)).toBe(true);
+  });
+});

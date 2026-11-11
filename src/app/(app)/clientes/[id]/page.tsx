@@ -27,6 +27,7 @@ import { can } from "@/domain/permissions";
 import { Card, EmptyState, Stat } from "@/components/ui/layout";
 import { ClientRoutineAgenda } from "@/components/client-routine-agenda";
 import { ClientRoutineForm } from "@/components/client-routine-form";
+import { projectOptions } from "@/server/services/projects";
 import { listTemplates } from "@/server/services/templates";
 import { assignableUsers } from "@/server/services/tasks";
 import { DocumentChecklist } from "@/components/document-checklist";
@@ -146,6 +147,10 @@ export default async function ClientPage({
           people: (await assignableUsers(actor, id)).map((u) => ({
             id: u.id,
             name: u.name,
+          })),
+          projects: (await projectOptions(actor, id)).map((p) => ({
+            id: p.id,
+            name: p.name,
           })),
         }
       : null;
@@ -683,6 +688,7 @@ export default async function ClientPage({
                 clientId={id}
                 templates={routineForm.templates}
                 people={routineForm.people}
+                projects={routineForm.projects}
               />
             </Card>
           )}

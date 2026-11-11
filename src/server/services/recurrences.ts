@@ -66,7 +66,19 @@ function ruleData(input: RecurrenceInput) {
     endDate: input.endDate ? localDateToDbDate(input.endDate) : null,
     assigneeId: input.assigneeId ?? null,
     reviewerId: input.reviewerId ?? null,
+    projectId: input.projectId ?? null,
   };
+}
+
+/** O projeto precisa ser da empresa e do mesmo cliente (ou interno). */
+async function validateProject(actor: Actor, input: RecurrenceInput) {
+  if (!input.projectId) return;
+  const project = await prisma.project.findFirst({
+    where: { id: input.projectId, organizationId: actor.organizationId, status: { notIn: ["CANCELADO"] } },
+  });
+  if (!project || (project.clientId && project.clientId !== input.clientId)) {
+    throw new ValidationError("Projeto inválido para este cliente.", { projectId: "Selecione um projeto do cliente." });
+  }
 }
 
 async function validatePeople(actor: Actor, input: RecurrenceInput) {
@@ -96,6 +108,7 @@ export async function createRecurrence(actor: Actor, raw: unknown) {
   });
   if (!template) throw new ValidationError("Modelo inválido ou arquivado.", { templateId: "Selecione um modelo ativo." });
   await validatePeople(actor, input);
+  await validateProject(actor, input);
   const recurrence = await prisma.$transaction(async (tx) => {
     const r = await tx.recurrence.create({
       data: {
@@ -116,6 +129,7 @@ export async function createRecurrence(actor: Actor, raw: unknown) {
       action: "recurrence.created",
       summary: `Rotina "${template.name}" vinculada ao cliente`,
     });
+    if (input.projectId) await tx.task.updateMany({ where: { recurrenceId: r.id, archivedAt: null }, data: { projectId: input.projectId } });
     return r;
   });
   // Gera imediatamente as ocorrências que já estão dentro da antecedência.
@@ -132,6 +146,7 @@ export async function updateRecurrence(actor: Actor, id: string, raw: unknown) {
   const before = await getRecurrence(actor, id);
   const input = parseInput(recurrenceSchema, { ...(raw as object), clientId: before.clientId, templateId: before.templateId });
   await validatePeople(actor, input);
+  await validateProject(actor, { ...input, clientId: before.clientId });
   const data = ruleData(input);
   const changes = diffFields(before as unknown as Record<string, unknown>, data, Object.keys(data));
   if (Object.keys(changes).length === 0) return before;
@@ -141,6 +156,10 @@ export async function updateRecurrence(actor: Actor, id: string, raw: unknown) {
       where: { id },
       data: { ...data, generationFloor: before.generationFloor > today ? before.generationFloor : today },
     });
+    // Trocar o projeto leva junto as tarefas que esta rotina já gerou (histórico incluso).
+    if (data.projectId !== before.projectId) {
+      await tx.task.updateMany({ where: { recurrenceId: id, archivedAt: null }, data: { projectId: data.projectId } });
+    }
     await recordAudit(tx, {
       organizationId: actor.organizationId,
       actorId: actor.userId,
@@ -190,6 +209,7 @@ export interface QuickRoutineInput {
   monthDay?: string;
   dueTime: string;
   assigneeId?: string;
+  projectId?: string;
 }
 
 /**
@@ -222,6 +242,7 @@ export async function quickAddRoutine(actor: Actor, input: QuickRoutineInput) {
     startOffsetDays: "0",
     nonBusinessDayRule: "POSTPONE",
     assigneeId: input.assigneeId ?? "",
+    projectId: input.projectId ?? "",
   });
   // Valida a regra antes de criar qualquer coisa.
   parseInput(recurrenceSchema, recurrenceRaw("pendente"));
