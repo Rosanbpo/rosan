@@ -134,7 +134,7 @@ describe("proposta comercial", () => {
       expect(ok.data.services).toHaveLength(2);
       expect(ok.data.monthlyFee).toBe(1000);
       expect(ok.data.billingDay).toBe(10);
-      expect(ok.data.termMonths).toBe(12);
+      expect(ok.data.termMonths).toBe(6);
     }
     expect(proposalSchema.safeParse({ planName: "x", companyName: "Empresa", services: "", monthlyFee: "100", validUntil: "2026-11-26" }).success).toBe(false);
     expect(proposalSchema.safeParse({ planName: "Plano", companyName: "Empresa", services: "a | b", monthlyFee: "0", validUntil: "2026-11-26" }).success).toBe(false);

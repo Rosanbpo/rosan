@@ -1,6 +1,5 @@
 import Image from "next/image";
 import { Check, X } from "lucide-react";
-import { findPlan } from "@/domain/plans";
 import { splitPair } from "@/domain/proposal";
 import { fmtLocalDate, fmtMoney } from "@/lib/format";
 
@@ -38,7 +37,6 @@ function cnpjMask(v: string | null) {
 
 /** Proposta comercial em uma única folha A4, com a identidade da Rosan Finanças. */
 export function ProposalDocument({ proposal: p, issuer }: { proposal: ProposalDocData; issuer: IssuerData }) {
-  const plan = findPlan(p.planName);
   const services = p.services.map(splitPair);
   const volumes = p.volumes.map(splitPair);
   // Conteúdo extenso usa tipografia um pouco menor para continuar cabendo em uma folha.
@@ -49,9 +47,9 @@ export function ProposalDocument({ proposal: p, issuer }: { proposal: ProposalDo
 
   const conditions = [
     { label: "Pagamento", text: `Todo dia ${p.billingDay}, por boleto ou PIX. O primeiro honorário é pago na assinatura do contrato.` },
-    { label: "Vigência", text: `${p.termMonths} meses, com renovação automática. Aviso prévio de 30 dias para encerrar.` },
-    { label: "Reajuste", text: `Anual, pelo IPCA, a partir do ${p.termMonths + 1}º mês.` },
-    { label: "Entregas", text: "Com os documentos enviados até o dia 5, entregamos DRE gerencial e fluxo de caixa até o 10º dia útil." },
+    { label: "Vigência", text: `Contrato inicial de ${p.termMonths} meses, com renovação automática. Aviso prévio de 30 dias para encerrar.` },
+    { label: "Revisão do plano", text: "Após 3 meses, analisamos juntos os limites do plano e os ajustamos, se necessário." },
+    { label: "Reajuste", text: `Anual, pelo IPCA, a partir do 13º mês de contrato.` },
     { label: "Atendimento", text: "Remoto, de segunda a sexta, das 9h às 17h." },
     { label: "Sigilo e LGPD", text: "Sigilo das informações e tratamento de dados conforme a Lei nº 13.709/2018." },
   ];
@@ -80,18 +78,12 @@ export function ProposalDocument({ proposal: p, issuer }: { proposal: ProposalDo
           <div>
             <p className="doc-eyebrow">Nossa proposta</p>
             <p className="doc-serif mt-[1.5mm] border-l-[1mm] border-[#b08d57] pl-[4mm] text-[10.5pt] leading-snug text-[#0c1633]">{intro}</p>
-            {plan && (
-              <p className="mt-[3mm] text-[8.3pt] leading-snug text-[#4a5272]">
-                <span className="font-semibold text-[#7a5a30]">{p.planName}: </span>
-                {plan.audience}
-              </p>
-            )}
           </div>
           <div className="rounded-[1.5mm] bg-[#0c1633] px-[5mm] py-[4.5mm] text-[#f3e7cc]">
             <p className="text-[7pt] tracking-[0.28em] text-[#b08d57] uppercase">Investimento mensal</p>
             <p className="doc-serif mt-[1mm] text-[25pt] leading-none">{fmtMoney(p.monthlyFee)}</p>
             <p className="mt-[1.8mm] text-[8pt] text-[#e6d1a5]">
-              {p.planName} · {p.termMonths} meses
+              Contrato inicial de {p.termMonths} meses
             </p>
           </div>
         </div>

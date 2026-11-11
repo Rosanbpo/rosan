@@ -106,7 +106,7 @@ export function ProposalForm({
           <input id="billingDay" name="billingDay" type="number" min={1} max={31} className="input" defaultValue={values.billingDay ?? 10} />
         </Field>
         <Field label="Vigência (meses)" name="termMonths">
-          <input id="termMonths" name="termMonths" type="number" min={1} max={60} className="input" defaultValue={values.termMonths ?? 12} />
+          <input id="termMonths" name="termMonths" type="number" min={1} max={60} className="input" defaultValue={values.termMonths ?? 6} />
         </Field>
       </section>
 

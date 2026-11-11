@@ -340,7 +340,7 @@ export const proposalSchema = z.object({
     z.number({ required_error: "Informe a mensalidade.", invalid_type_error: "Valor inválido." }).min(1, "Informe a mensalidade."),
   ),
   billingDay: optionalInt(1, 31).transform((v) => v ?? 10),
-  termMonths: optionalInt(1, 60).transform((v) => v ?? 12),
+  termMonths: optionalInt(1, 60).transform((v) => v ?? 6),
   validUntil: localDate,
   notes: optionalText(3000),
 });
