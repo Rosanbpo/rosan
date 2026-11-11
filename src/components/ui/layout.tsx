@@ -144,24 +144,24 @@ export function Stat({
   href?: string;
 }) {
   const tones = {
-    default: "text-slate-900",
-    danger: "text-red-700",
-    warning: "text-amber-700",
-    info: "text-violet-700",
-    success: "text-emerald-700",
-  };
+    default: { value: "text-slate-900", card: "border-t-brand-500 bg-white", label: "text-brand-900/60" },
+    danger: { value: "text-red-700", card: "border-t-red-500 bg-gradient-to-br from-red-50 to-white", label: "text-red-800/70" },
+    warning: { value: "text-amber-700", card: "border-t-amber-500 bg-gradient-to-br from-amber-50 to-white", label: "text-amber-800/70" },
+    info: { value: "text-violet-700", card: "border-t-violet-500 bg-gradient-to-br from-violet-50 to-white", label: "text-violet-800/70" },
+    success: { value: "text-emerald-700", card: "border-t-emerald-500 bg-gradient-to-br from-emerald-50 to-white", label: "text-emerald-800/70" },
+  }[tone];
   const body = (
     <>
-      <p className="text-[11px] font-semibold tracking-wider text-brand-900/60 uppercase">{label}</p>
-      <p className={cx("mt-1.5 text-[1.65rem] leading-none font-semibold tabular-nums", tones[tone])}>{value}</p>
+      <p className={cx("text-[11px] font-semibold tracking-wider uppercase", tones.label)}>{label}</p>
+      <p className={cx("mt-1.5 text-[1.65rem] leading-none font-semibold tabular-nums", tones.value)}>{value}</p>
       {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
     </>
   );
   return href ? (
-    <Link href={href} className="card block border-t-2 border-t-brand-500 p-4 transition-shadow hover:shadow-md">
+    <Link href={href} className={cx("card block border-t-[3px] p-4 transition-shadow hover:shadow-md", tones.card)}>
       {body}
     </Link>
   ) : (
-    <div className="card border-t-2 border-t-brand-500 p-4">{body}</div>
+    <div className={cx("card border-t-[3px] p-4", tones.card)}>{body}</div>
   );
 }

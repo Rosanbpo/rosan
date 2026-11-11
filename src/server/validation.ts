@@ -10,6 +10,7 @@ import {
   NON_BUSINESS_RULES,
   PRIORITIES,
   PROCEDURE_STATUSES,
+  JOURNEY_STAGES,
   PROJECT_STATUSES,
   ROLES,
   TASK_CATEGORIES,
@@ -164,6 +165,7 @@ export const templateSchema = z
     requiresEvidence: checkbox,
     competenceRule: z.enum(COMPETENCE_RULES),
     procedureId: optionalId,
+    stage: z.preprocess(emptyToUndefined, z.enum(JOURNEY_STAGES).optional()),
     checklist: checklistDraftSchema.default([]),
     ...ruleFields,
   })
@@ -323,6 +325,15 @@ export const implantationSchema = z.object({
   clientId: requiredText("Cliente", 100),
   startDate: localDate,
   ownerId: optionalId,
+});
+
+export const esteiraApplySchema = z.object({
+  slug: requiredText("Esteira", 80),
+  clientId: requiredText("Cliente", 100),
+  startDate: localDate,
+  ownerId: optionalId,
+  keys: z.array(z.string().min(1)).min(1, "Selecione ao menos uma tarefa."),
+  createProject: z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean()),
 });
 
 export const hourCostSchema = z.object({ hourCost: optionalMoney });

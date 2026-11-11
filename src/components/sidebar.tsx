@@ -14,6 +14,7 @@ import {
   FileText,
   FileSignature,
   FileCheck2,
+  Workflow,
   FolderKanban,
   Hourglass,
   LineChart,
@@ -25,6 +26,27 @@ import {
   X,
 } from "lucide-react";
 import { cx } from "@/lib/ui";
+
+/** Cor de cada ícone do menu (identidade Rosan + toques de cor para leitura rápida). */
+const ICON_COLOR: Record<keyof typeof ICONS, string> = {
+  painel: "bg-sky-500/20 text-sky-300",
+  operacao: "bg-emerald-500/20 text-emerald-300",
+  tarefas: "bg-emerald-500/20 text-emerald-300",
+  pendencias: "bg-orange-500/20 text-orange-300",
+  documentos: "bg-teal-500/20 text-teal-300",
+  clientes: "bg-brand-500/25 text-brand-200",
+  carteira: "bg-brand-500/25 text-brand-200",
+  crm: "bg-sky-500/20 text-sky-300",
+  propostas: "bg-sky-500/20 text-sky-300",
+  contratos: "bg-sky-500/20 text-sky-300",
+  precificacao: "bg-sky-500/20 text-sky-300",
+  projetos: "bg-violet-500/20 text-violet-300",
+  esteiras: "bg-violet-500/20 text-violet-300",
+  pops: "bg-amber-500/20 text-amber-300",
+  rotinas: "bg-violet-500/20 text-violet-300",
+  config: "bg-slate-500/25 text-slate-300",
+  conta: "bg-slate-500/25 text-slate-300",
+};
 
 const ICONS = {
   painel: BarChart3,
@@ -43,9 +65,11 @@ const ICONS = {
   precificacao: Calculator,
   contratos: FileSignature,
   documentos: FileCheck2,
+  esteiras: Workflow,
 };
 
 export interface NavItem {
+  group?: string;
   href: string;
   label: string;
   icon: keyof typeof ICONS;
@@ -72,28 +96,33 @@ export function Sidebar({
 
   const nav = (
     <nav aria-label="Menu principal" className="flex flex-1 flex-col gap-0.5 px-3">
-      {items.map((item) => {
+      {items.map((item, idx) => {
         const Icon = ICONS[item.icon];
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const heading = item.group && item.group !== items[idx - 1]?.group ? item.group : null;
         return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={() => setOpen(false)}
-            aria-current={active ? "page" : undefined}
-            className={cx(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              active ? "bg-white/10 text-brand-200 shadow-[inset_3px_0_0_#b08d57]" : "text-slate-300 hover:bg-white/5 hover:text-white",
-            )}
-          >
-            <Icon aria-hidden className="h-4 w-4 shrink-0" />
-            <span className="flex-1">{item.label}</span>
-            {!!item.badge && (
-              <span className="rounded-full bg-red-100 px-1.5 text-xs font-semibold text-red-700" aria-label={`${item.badge} itens`}>
-                {item.badge}
+          <div key={item.href} className="flex flex-col">
+            {heading && <p className="mt-3 mb-1 px-3 text-[10px] font-semibold tracking-[0.18em] text-brand-200/60 uppercase">{heading}</p>}
+            <Link
+              href={item.href}
+              onClick={() => setOpen(false)}
+              aria-current={active ? "page" : undefined}
+              className={cx(
+                "flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors",
+                active ? "bg-white/10 text-white shadow-[inset_3px_0_0_#b08d57]" : "text-slate-300 hover:bg-white/5 hover:text-white",
+              )}
+            >
+              <span className={cx("flex h-7 w-7 shrink-0 items-center justify-center rounded-md", ICON_COLOR[item.icon])}>
+                <Icon aria-hidden className="h-4 w-4" />
               </span>
-            )}
-          </Link>
+              <span className="flex-1">{item.label}</span>
+              {!!item.badge && (
+                <span className="rounded-full bg-red-100 px-1.5 text-xs font-semibold text-red-700" aria-label={`${item.badge} itens`}>
+                  {item.badge}
+                </span>
+              )}
+            </Link>
+          </div>
         );
       })}
     </nav>

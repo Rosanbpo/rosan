@@ -79,3 +79,11 @@ export async function quickAddRoutineAction(clientId: string, _: ActionState, fd
     return "Rotina cadastrada.";
   });
 }
+
+export async function importTemplateLibraryAction(_: ActionState): Promise<ActionState> {
+  return runAction(async (actor) => {
+    const r = await templates.importTemplateLibrary(actor);
+    revalidatePath("/rotinas");
+    return r.created ? `${r.created} modelo(s) importado(s).` : "Todos os modelos da biblioteca já estavam importados.";
+  });
+}

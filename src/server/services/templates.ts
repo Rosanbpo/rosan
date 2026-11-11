@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { TEMPLATE_LIBRARY } from "@/domain/template-library";
 import { assertCan, can, ForbiddenError, NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
 import { prisma } from "../db";
 import { parseInput, templateSchema, type TemplateInput } from "../validation";
@@ -46,6 +47,7 @@ async function assertProcedure(actor: Actor, procedureId?: string) {
 function toData(input: TemplateInput) {
   return {
     procedureId: input.procedureId ?? null,
+    stage: input.stage ?? null,
     name: input.name,
     title: input.title,
     description: input.description ?? null,
@@ -152,4 +154,44 @@ export async function setTemplateArchived(actor: Actor, id: string, archived: bo
         : `Modelo "${template.name}" reativado`,
     });
   });
+}
+
+/** Importa a biblioteca de modelos prontos; ignora os que já existem (pelo nome). */
+export async function importTemplateLibrary(actor: Actor) {
+  assertCan(actor, "templates.manage");
+  const existing = await prisma.routineTemplate.findMany({ where: { organizationId: actor.organizationId }, select: { name: true } });
+  const have = new Set(existing.map((e) => e.name.toLowerCase()));
+  const missing = TEMPLATE_LIBRARY.filter((t) => !have.has(t.name.toLowerCase()));
+  if (!missing.length) return { created: 0, skipped: TEMPLATE_LIBRARY.length };
+  await prisma.$transaction(async (tx) => {
+    for (const t of missing) {
+      await tx.routineTemplate.create({
+        data: {
+          organizationId: actor.organizationId,
+          name: t.name,
+          title: t.title,
+          category: t.category,
+          stage: t.stage,
+          priority: t.priority ?? "NORMAL",
+          estimatedMinutes: t.minutes,
+          competenceRule: t.competence ?? "NONE",
+          frequency: t.frequency,
+          weekdays: t.weekdays ?? [],
+          monthDays: t.monthDays ?? [],
+          nthBusinessDay: t.nthBusinessDay ?? null,
+          dueTime: t.dueTime ?? "18:00",
+          checklistItems: { create: t.items.map((label, position) => ({ label, position })) },
+        },
+      });
+    }
+    await recordAudit(tx, {
+      organizationId: actor.organizationId,
+      actorId: actor.userId,
+      entityType: "RoutineTemplate",
+      entityId: "library",
+      action: "template.library_imported",
+      summary: `Biblioteca importada: ${missing.length} modelo(s)`,
+    });
+  });
+  return { created: missing.length, skipped: TEMPLATE_LIBRARY.length - missing.length };
 }

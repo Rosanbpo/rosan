@@ -29,6 +29,9 @@ export const TASK_CATEGORIES = [
   "RELATORIOS_GERENCIAIS",
   "REUNIAO_CLIENTE",
   "IMPLANTACAO",
+  "EMISSAO_NF",
+  "RELACIONAMENTO",
+  "ESTRATEGICO",
   "OUTRAS",
 ] as const;
 export type TaskCategory = (typeof TASK_CATEGORIES)[number];
@@ -43,7 +46,32 @@ export const CATEGORY_LABEL: Record<TaskCategory, string> = {
   RELATORIOS_GERENCIAIS: "Relatórios gerenciais",
   REUNIAO_CLIENTE: "Reunião com cliente",
   IMPLANTACAO: "Implantação",
+  EMISSAO_NF: "Emissão de notas fiscais",
+  RELACIONAMENTO: "Relacionamento",
+  ESTRATEGICO: "Estratégico",
   OUTRAS: "Outras",
+};
+
+export const JOURNEY_STAGES = [
+  "COMERCIAL",
+  "PRE_ONBOARDING",
+  "ONBOARDING",
+  "IMPLANTACAO",
+  "OPERACIONAL",
+  "ESTRATEGICO",
+  "ACOMPANHAMENTO",
+  "ENCERRAMENTO",
+] as const;
+export type JourneyStage = (typeof JOURNEY_STAGES)[number];
+export const STAGE_LABEL: Record<JourneyStage, string> = {
+  COMERCIAL: "Comercial",
+  PRE_ONBOARDING: "Pré-onboarding",
+  ONBOARDING: "Onboarding",
+  IMPLANTACAO: "Implantação",
+  OPERACIONAL: "Operacional",
+  ESTRATEGICO: "Estratégico",
+  ACOMPANHAMENTO: "Acompanhamento",
+  ENCERRAMENTO: "Encerramento",
 };
 
 export const PRIORITIES = ["BAIXA", "NORMAL", "ALTA", "CRITICA"] as const;

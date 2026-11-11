@@ -186,7 +186,21 @@ enum TaskCategory {
   RELATORIOS_GERENCIAIS
   REUNIAO_CLIENTE
   IMPLANTACAO
+  EMISSAO_NF
+  RELACIONAMENTO
+  ESTRATEGICO
   OUTRAS
+}
+
+enum JourneyStage {
+  COMERCIAL
+  PRE_ONBOARDING
+  ONBOARDING
+  IMPLANTACAO
+  OPERACIONAL
+  ESTRATEGICO
+  ACOMPANHAMENTO
+  ENCERRAMENTO
 }
 
 enum Priority {
@@ -237,6 +251,8 @@ model RoutineTemplate {
   nonBusinessDayRule NonBusinessDayRule @default(POSTPONE)
   /// POP que ensina a executar esta rotina (aparece nas tarefas geradas).
   procedureId        String?
+  /// Etapa da jornada do cliente a que o modelo pertence (opcional).
+  stage              JourneyStage?
   archivedAt         DateTime?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
@@ -354,6 +370,8 @@ model Task {
   origin           TaskOrigin     @default(MANUAL)
   recurrenceId     String?
   projectId        String?
+  /// Esteira que originou a tarefa: "slug:etapa:tarefa" (ex.: "onboarding:0:2").
+  journeyKey       String?
   /// Data nominal da ocorrência (antes de ajuste de dia útil). Chave de idempotência.
   occurrenceKey    String?
   assigneeId       String?
@@ -396,6 +414,7 @@ model Task {
   @@index([organizationId, category])
   @@index([organizationId, completedAt])
   @@index([projectId])
+  @@index([clientId, journeyKey])
 }
 
 model ChecklistItem {

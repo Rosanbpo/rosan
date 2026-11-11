@@ -5,6 +5,8 @@ import {
   CATEGORY_LABEL,
   COMPETENCE_RULES,
   COMPETENCE_RULE_LABEL,
+  JOURNEY_STAGES,
+  STAGE_LABEL,
   PRIORITIES,
   PRIORITY_LABEL,
   ROLE_LABEL,
@@ -28,6 +30,7 @@ export interface TemplateValues extends RuleValues {
   requiresEvidence: boolean;
   competenceRule: string;
   procedureId?: string | null;
+  stage?: string | null;
   checklist: ChecklistDraftItem[];
 }
 
@@ -60,6 +63,16 @@ export function TemplateForm({
             {TASK_CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {CATEGORY_LABEL[c]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Etapa da jornada" name="stage" hint="Agrupa o modelo na biblioteca (Comercial, Onboarding, Operacional…).">
+          <select id="stage" name="stage" className="input" defaultValue={values.stage ?? ""}>
+            <option value="">Sem etapa</option>
+            {JOURNEY_STAGES.map((st) => (
+              <option key={st} value={st}>
+                {STAGE_LABEL[st]}
               </option>
             ))}
           </select>
