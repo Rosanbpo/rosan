@@ -17,8 +17,10 @@ export function ClientRoutineForm({
   clientId,
   templates,
   people,
+  projects = [],
 }: {
   clientId: string;
+  projects?: Array<{ id: string; name: string }>;
   templates: Array<{ id: string; name: string }>;
   people: Array<{ id: string; name: string }>;
 }) {
@@ -56,6 +58,16 @@ export function ClientRoutineForm({
         <select id="assigneeId" name="assigneeId" className="input" defaultValue="">
           <option value="">Responsável do cliente</option>
           {people.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Projeto" name="projectId" hint="Opcional: reúne as tarefas desta rotina em um projeto.">
+        <select id="projectId" name="projectId" className="input" defaultValue="">
+          <option value="">Sem projeto</option>
+          {projects.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>

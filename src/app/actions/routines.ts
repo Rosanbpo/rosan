@@ -73,6 +73,7 @@ export async function quickAddRoutineAction(clientId: string, _: ActionState, fd
       monthDay: str("monthDay"),
       dueTime: str("dueTime") || "18:00",
       assigneeId: str("assigneeId") || undefined,
+      projectId: str("projectId") || undefined,
     });
     revalidatePath(`/clientes/${clientId}`);
     return "Rotina cadastrada.";

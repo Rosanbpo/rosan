@@ -118,6 +118,7 @@ export async function generateForRecurrence(
             requiresEvidence: t.requiresEvidence,
             origin: "RECORRENTE",
             recurrenceId: r.id,
+            projectId: r.projectId,
             occurrenceKey: occurrence.key,
             assigneeId,
             reviewerId: r.reviewerId && r.reviewerId !== assigneeId ? r.reviewerId : null,

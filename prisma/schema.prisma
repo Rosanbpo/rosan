@@ -288,6 +288,8 @@ model Recurrence {
   generationFloor    DateTime           @db.Date
   assigneeId         String?
   reviewerId         String?
+  /// Projeto que recebe as tarefas geradas por esta rotina.
+  projectId          String?
   lastGeneratedAt    DateTime?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
@@ -297,6 +299,7 @@ model Recurrence {
   template     RoutineTemplate @relation(fields: [templateId], references: [id])
   assignee     User?           @relation("RecurrenceAssignee", fields: [assigneeId], references: [id])
   reviewer     User?           @relation("RecurrenceReviewer", fields: [reviewerId], references: [id])
+  project      Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
   tasks        Task[]
 
   @@index([organizationId, status])
@@ -667,6 +670,7 @@ model Project {
   client       Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
   owner        User?        @relation("ProjectOwner", fields: [ownerId], references: [id])
   tasks        Task[]
+  recurrences  Recurrence[]
 
   @@index([organizationId, status])
   @@index([clientId])

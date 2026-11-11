@@ -66,14 +66,14 @@ export async function listProjects(actor: Actor, filters: ProjectFilters = {}) {
   });
 }
 
-export async function getProject(actor: Actor, id: string) {
+export async function getProject(actor: Actor, id: string, range?: { from: Date; to: Date }) {
   const project = await prisma.project.findFirst({
     where: { id, ...projectScope(actor) },
     include: { client: { select: { id: true, tradeName: true } }, owner: { select: { id: true, name: true } } },
   });
   if (!project) throw new NotFoundError("Projeto não encontrado.");
   const tasks = await prisma.task.findMany({
-    where: { projectId: id, archivedAt: null },
+    where: { projectId: id, archivedAt: null, ...(range ? { dueAt: { gte: range.from, lt: range.to } } : {}) },
     orderBy: [{ dueAt: "asc" }],
     select: {
       id: true,
@@ -86,7 +86,9 @@ export async function getProject(actor: Actor, id: string) {
     },
   });
   const minutes = await prisma.timeEntry.aggregate({ where: { task: { projectId: id } }, _sum: { minutes: true } });
+  const recurring = await prisma.task.count({ where: { projectId: id, archivedAt: null, origin: "RECORRENTE" } });
   return {
+    recurring: recurring > 0,
     project: {
       ...project,
       startLocal: project.startDate ? dbDateToLocalDate(project.startDate) : null,

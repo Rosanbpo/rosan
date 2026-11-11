@@ -10,6 +10,7 @@ import type { TaskStatus } from "@/domain/enums";
 import { fmtDateTime, fmtLocalDate } from "@/lib/format";
 import { requirePermission } from "@/server/context";
 import { getRecurrence } from "@/server/services/recurrences";
+import { projectOptions } from "@/server/services/projects";
 import { peopleWithClients } from "@/server/services/tasks";
 import { orNotFound } from "@/server/page-utils";
 
@@ -19,7 +20,7 @@ export default async function RecurrencePage({ params, searchParams }: { params:
   const actor = await requirePermission("recurrences.manage");
   const { id } = await params;
   const sp = await searchParams;
-  const [r, people] = await Promise.all([orNotFound(getRecurrence(actor, id)), peopleWithClients(actor)]);
+  const [r, people, projects] = await Promise.all([orNotFound(getRecurrence(actor, id)), peopleWithClients(actor), projectOptions(actor)]);
   return (
     <>
       <PageHeader
@@ -56,6 +57,7 @@ export default async function RecurrencePage({ params, searchParams }: { params:
             clients={[{ id: r.client.id, tradeName: r.client.tradeName }]}
             templates={[{ id: r.templateId, name: r.template.name, rule: r }]}
             people={people}
+            projects={projects}
             values={{
               ...r,
               startDate: dbDateToLocalDate(r.startDate),

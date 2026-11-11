@@ -8,6 +8,7 @@ import { requirePermission } from "@/server/context";
 import { clientOptions } from "@/server/services/clients";
 import { peopleWithClients } from "@/server/services/tasks";
 import { templateOptions } from "@/server/services/routine-options";
+import { projectOptions } from "@/server/services/projects";
 import { str } from "@/server/page-utils";
 
 export const metadata = { title: "Nova recorrência" };
@@ -15,7 +16,7 @@ export const metadata = { title: "Nova recorrência" };
 export default async function NewRecurrencePage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requirePermission("recurrences.manage");
   const sp = await searchParams;
-  const [clients, templates, people] = await Promise.all([clientOptions(actor), templateOptions(actor), peopleWithClients(actor)]);
+  const [clients, templates, people, projects] = await Promise.all([clientOptions(actor), templateOptions(actor), peopleWithClients(actor), projectOptions(actor)]);
   const templateId = str(sp, "templateId") ?? "";
   const template = templates.find((t) => t.id === templateId);
   return (
@@ -31,6 +32,7 @@ export default async function NewRecurrencePage({ searchParams }: { searchParams
         clients={clients}
         templates={templates}
         people={people}
+        projects={projects}
         values={{
           ...(template?.rule ?? DEFAULT_RULE),
           clientId: str(sp, "clientId") ?? "",
