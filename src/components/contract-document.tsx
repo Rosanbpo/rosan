@@ -79,19 +79,22 @@ function Paragraphs({ text }: { text: string }) {
   );
 }
 
-function Letterhead({ issuer, title, subtitle, number }: { issuer: IssuerData; title: string; subtitle: string; number: string }) {
+function Letterhead({ issuer, title, subtitle, number, party }: { issuer: IssuerData; title: string; subtitle: string; number: string; party: string }) {
   return (
-    <header className="mb-6 overflow-hidden rounded-[1.5mm]">
-      <div className="flex items-center gap-5 bg-[#0c1633] px-6 py-4">
-        <Image src="/logo.png" alt={issuer.name} width={620} height={530} unoptimized className="h-auto w-[30mm] shrink-0" />
-        <div className="h-[22mm] w-px shrink-0 bg-gradient-to-b from-transparent via-[#b08d57] to-transparent" />
+    <header className="mb-6 overflow-hidden rounded-[1.5mm] border border-[#0c1633]">
+      <div className="flex items-center gap-6 bg-[#0c1633] px-7 py-5">
+        <Image src="/logo.png" alt={issuer.name} width={620} height={530} unoptimized className="h-auto w-[30mm] shrink-0 mix-blend-lighten" />
+        <div className="h-[24mm] w-[0.3mm] shrink-0 bg-[#b08d57]" />
         <div className="min-w-0 flex-1">
-          <p className="text-[7pt] tracking-[0.3em] text-[#b08d57] uppercase">{subtitle}</p>
-          <h1 className="doc-serif mt-1 text-[14.5pt] leading-snug text-[#f3e7cc]">{title}</h1>
-          <p className="mt-1.5 text-[7.5pt] tracking-[0.2em] text-[#b08d57] uppercase">Instrumento nº {number}</p>
+          <p className="text-[7pt] font-semibold tracking-[0.32em] text-[#b08d57] uppercase">{subtitle}</p>
+          <h1 className="mt-1.5 text-[12.5pt] leading-snug font-semibold tracking-[0.06em] text-[#f3e7cc] uppercase">{title}</h1>
         </div>
       </div>
-      <div className="h-[0.9mm] bg-gradient-to-r from-[#b08d57] via-[#e6d1a5] to-[#b08d57]" />
+      <div className="h-[0.8mm] bg-[#b08d57]" />
+      <div className="flex items-center justify-between gap-4 bg-white px-7 py-2 text-[7.5pt] font-semibold tracking-[0.18em] text-[#0c1633] uppercase">
+        <span>Instrumento nº {number}</span>
+        <span className="truncate text-[#7a5a30]">{party}</span>
+      </div>
     </header>
   );
 }
@@ -99,7 +102,7 @@ function Letterhead({ issuer, title, subtitle, number }: { issuer: IssuerData; t
 function Parties({ c, issuer }: { c: ContractDocData; issuer: IssuerData }) {
   return (
     <section className="doc-clause">
-      <h2 className="doc-keep mt-2 text-[9.6pt] font-bold tracking-wide text-[#0c1633]">I — DAS PARTES</h2>
+      <h2 className="doc-keep mt-2 text-[9.6pt] font-bold tracking-wide text-[#0c1633] uppercase">I — DAS PARTES</h2>
       <p className="mt-2">
         <strong>CONTRATANTE:</strong> <strong>{c.partyName}</strong>, inscrita no CNPJ/CPF sob o nº {blank(c.partyDocument, "____________________")}, com endereço em {blank(c.partyAddress, "______________________________________")}, neste ato representada por {blank(c.repName, "______________________")}, CPF nº {blank(c.repCpf, "______________")}.
       </p>
@@ -123,7 +126,7 @@ function Table({ head, rows }: { head: [string, string]; rows: [string, string][
       </thead>
       <tbody>
         {rows.map(([a, b], i) => (
-          <tr key={`${a}-${i}`} className={i % 2 === 0 ? "bg-[#faf4e8]" : ""}>
+          <tr key={`${a}-${i}`} className={i % 2 === 0 ? "bg-[#eef0f6]" : ""}>
             <td className="px-2 py-1">{a}</td>
             <td className="px-2 py-1">{b}</td>
           </tr>
@@ -186,8 +189,8 @@ function Clauses({ clauses, c, vars }: { clauses: Clause[]; c: ContractDocData; 
     <>
       {clauses.map((cl, i) => (
         <section key={i} className="doc-clause">
-          {cl.section && <h2 className="doc-keep mt-5 text-[9.6pt] font-bold tracking-wide text-[#0c1633]">{cl.section}</h2>}
-          <h3 className="mt-3 font-semibold text-[#7a5a30]">
+          {cl.section && <h2 className="doc-keep mt-5 border-b border-[#b08d57] pb-0.5 text-[9.6pt] font-bold tracking-wide text-[#0c1633] uppercase">{cl.section}</h2>}
+          <h3 className="mt-3 font-semibold tracking-wide text-[#7a5a30] uppercase">
             CLÁUSULA {i + 1}ª — {cl.title}
           </h3>
           <div className="mt-0.5 text-justify">
@@ -243,7 +246,7 @@ export function ContractDocument({ contract: c, issuer }: { contract: ContractDo
   };
   return (
     <article className="doc-flow" aria-label="Contrato de prestação de serviços">
-      <Letterhead issuer={issuer} number={c.number} title="Contrato de Prestação de Serviços de Apoio Administrativo Financeiro" subtitle="Instrumento particular" />
+      <Letterhead issuer={issuer} number={c.number} title="Contrato de Prestação de Serviços de Apoio Administrativo Financeiro" subtitle="Instrumento particular" party={c.partyName} />
       <Parties c={c} issuer={issuer} />
       <Clauses clauses={c.clauses} c={c} vars={vars} />
       <Signatures c={c} issuer={issuer} />
@@ -260,7 +263,7 @@ export function DistratoDocument({ contract: c, issuer }: { contract: ContractDo
   };
   return (
     <article className="doc-flow" aria-label="Distrato">
-      <Letterhead issuer={issuer} number={c.number} title="Distrato de Contrato de Prestação de Serviços de Apoio Administrativo Financeiro" subtitle="Rescisão amigável — instrumento particular" />
+      <Letterhead issuer={issuer} number={c.number} title="Distrato de Contrato de Prestação de Serviços de Apoio Administrativo Financeiro" subtitle="Rescisão amigável — instrumento particular" party={c.partyName} />
       <Parties c={c} issuer={issuer} />
       <Clauses clauses={c.distratoClauses ?? []} c={c} vars={vars} />
       <section className="doc-sign mt-8">
