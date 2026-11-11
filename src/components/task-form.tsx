@@ -28,12 +28,14 @@ export interface TaskFormValues {
   dueTime?: string;
   estimatedMinutes?: number | null;
   requiresEvidence?: boolean;
+  projectId?: string | null;
 }
 
 export function TaskForm({
   action,
   clients,
   people,
+  projects = [],
   values = {},
   mode,
   canPlan,
@@ -43,6 +45,7 @@ export function TaskForm({
   action: (state: ActionState, fd: FormData) => Promise<ActionState>;
   clients: Array<{ id: string; tradeName: string }>;
   people: Person[];
+  projects?: Array<{ id: string; name: string; clientId: string | null }>;
   values?: TaskFormValues;
   mode: "create" | "edit";
   canPlan: boolean;
@@ -82,6 +85,19 @@ export function TaskForm({
             ))}
           </select>
           {lockPlanning && mode === "edit" && <input type="hidden" name="category" value={values.category} />}
+        </Field>
+        <Field label="Projeto (opcional)" name="projectId" hint="Vincule a tarefa a uma implantação ou iniciativa.">
+          <select id="projectId" name="projectId" className="input" defaultValue={values.projectId ?? ""} disabled={lockPlanning && mode === "edit"}>
+            <option value="">Sem projeto</option>
+            {projects
+              .filter((p) => !clientId || p.clientId === null || p.clientId === clientId)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+          </select>
+          {lockPlanning && mode === "edit" && <input type="hidden" name="projectId" value={values.projectId ?? ""} />}
         </Field>
         <Field label="Título" name="title" required className="md:col-span-2">
           <input id="title" name="title" required minLength={2} maxLength={200} className="input" defaultValue={values.title} />

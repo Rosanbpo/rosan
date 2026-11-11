@@ -8,11 +8,12 @@ import { ClientStatusBadge } from "@/components/ui/badges";
 import { TaskTable } from "@/components/task-table";
 import { ConfirmAction } from "@/components/confirm-action";
 import { archiveClientAction } from "@/app/actions/clients";
-import { fmtCnpj, fmtDateTime, fmtLocalDate, fmtPercent, waitingTime } from "@/lib/format";
+import { fmtCnpj, fmtDateTime, fmtHours, fmtLocalDate, fmtMoney, fmtPercent, waitingTime } from "@/lib/format";
 import { requireActor } from "@/server/context";
 import { clientHistory, clientIndicators, getClient } from "@/server/services/clients";
 import { listTasks } from "@/server/services/tasks";
 import { listPendings } from "@/server/services/pendings";
+import { clientMonthSummary } from "@/server/services/portfolio";
 import { orNotFound } from "@/server/page-utils";
 
 export const metadata = { title: "Cliente" };
@@ -29,6 +30,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
     clientHistory(actor, id),
   ]);
   const manage = can(actor, "clients.manage");
+  const finance = can(actor, "finance.view") ? await clientMonthSummary(actor, id) : null;
   const now = new Date();
 
   return (
@@ -144,6 +146,24 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
         </div>
 
         <div className="space-y-6">
+          {finance && (
+            <Card title="Contrato e rentabilidade" description="Mês atual">
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+                <dt className="text-slate-500">Mensalidade</dt>
+                <dd className="font-medium">{fmtMoney(finance.monthlyFee)}</dd>
+                <dt className="text-slate-500">Vencimento</dt>
+                <dd>{finance.billingDay ? `Dia ${finance.billingDay}` : "—"}</dd>
+                <dt className="text-slate-500">Horas no mês</dt>
+                <dd>{fmtHours(finance.minutes)}</dd>
+                <dt className="text-slate-500">Custo</dt>
+                <dd>{fmtMoney(finance.cost)}</dd>
+                <dt className="text-slate-500">Margem</dt>
+                <dd className={finance.margin !== null && finance.margin < 0 ? "font-semibold text-red-700" : "font-medium"}>
+                  {fmtMoney(finance.margin)} {finance.marginPct !== null && <span className="text-xs text-slate-500">({fmtPercent(finance.marginPct)})</span>}
+                </dd>
+              </dl>
+            </Card>
+          )}
           <Card title="Cadastro">
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
               <dt className="text-slate-500">Contato</dt>

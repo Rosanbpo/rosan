@@ -5,7 +5,7 @@ type Db = Prisma.TransactionClient;
 export interface AuditInput {
   organizationId: string;
   actorId: string | null;
-  entityType: "Task" | "Client" | "RoutineTemplate" | "Recurrence" | "User" | "Holiday" | "Organization";
+  entityType: "Task" | "Client" | "RoutineTemplate" | "Recurrence" | "User" | "Holiday" | "Organization" | "Lead" | "Procedure" | "Project" | "TimeEntry" | "Contract";
   entityId: string;
   action: string;
   summary: string;
@@ -21,6 +21,7 @@ export async function recordAudit(db: Db, input: AuditInput) {
 function normalize(value: unknown): unknown {
   if (value instanceof Date) return value.toISOString();
   if (Array.isArray(value)) return value.map(normalize);
+  if (value && typeof value === "object" && "toNumber" in value) return (value as { toNumber(): number }).toNumber();
   return value ?? null;
 }
 

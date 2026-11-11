@@ -7,6 +7,7 @@ import { APP_TIMEZONE } from "@/server/config";
 import { requireActor } from "@/server/context";
 import { clientOptions } from "@/server/services/clients";
 import { peopleWithClients } from "@/server/services/tasks";
+import { projectOptions } from "@/server/services/projects";
 import { str } from "@/server/page-utils";
 
 export const metadata = { title: "Nova tarefa" };
@@ -14,7 +15,7 @@ export const metadata = { title: "Nova tarefa" };
 export default async function NewTaskPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const actor = await requireActor();
   const sp = await searchParams;
-  const [clients, people] = await Promise.all([clientOptions(actor), peopleWithClients(actor)]);
+  const [clients, people, projects] = await Promise.all([clientOptions(actor), peopleWithClients(actor), projectOptions(actor)]);
   return (
     <>
       <PageHeader title="Nova tarefa" breadcrumb={{ href: "/tarefas", label: "Tarefas" }} />
@@ -27,11 +28,12 @@ export default async function NewTaskPage({ searchParams }: { searchParams: Prom
           action={createTaskAction}
           clients={clients}
           people={people}
+          projects={projects}
           mode="create"
           canPlan={can(actor, "tasks.plan")}
           selfId={actor.userId}
           cancelHref="/tarefas"
-          values={{ clientId: str(sp, "clientId"), dueDate: instantToLocalDate(new Date(), APP_TIMEZONE) }}
+          values={{ clientId: str(sp, "clientId"), projectId: str(sp, "projectId"), dueDate: instantToLocalDate(new Date(), APP_TIMEZONE) }}
         />
       )}
     </>

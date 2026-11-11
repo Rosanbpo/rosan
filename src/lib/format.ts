@@ -67,3 +67,17 @@ export function fmtCnpj(value: string | null | undefined): string {
   if (d.length !== 14) return value;
   return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
 }
+
+export function fmtMoney(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+/** Valor para preencher um campo de texto de dinheiro (1500,5 → "1500,50"). */
+export function moneyInput(value: number | null | undefined): string {
+  return value === null || value === undefined ? "" : value.toFixed(2).replace(".", ",");
+}
+
+export function fmtHours(minutes: number): string {
+  return `${(minutes / 60).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} h`;
+}

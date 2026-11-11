@@ -20,7 +20,13 @@ export type Permission =
   | "tasks.plan" // atribuir responsável/revisor, alterar prazos e prioridade de qualquer tarefa acessível
   | "tasks.create"
   | "dashboard.view"
-  | "audit.view";
+  | "audit.view"
+  | "finance.view" // mensalidades, rentabilidade e valores comerciais
+  | "crm.manage" // leads, funil comercial
+  | "procedures.manage" // criar/editar POPs
+  | "projects.manage" // criar/editar projetos
+  | "pricing.manage" // precificação
+  | "contracts.manage"; // contratos e distratos
 
 const MATRIX: Record<Role, readonly Permission[]> = {
   ADMIN: [
@@ -33,8 +39,26 @@ const MATRIX: Record<Role, readonly Permission[]> = {
     "tasks.create",
     "dashboard.view",
     "audit.view",
+    "finance.view",
+    "crm.manage",
+    "procedures.manage",
+    "projects.manage",
+    "pricing.manage",
+    "contracts.manage",
   ],
-  GESTOR: ["recurrences.manage", "tasks.plan", "tasks.create", "dashboard.view", "audit.view"],
+  GESTOR: [
+    "recurrences.manage",
+    "tasks.plan",
+    "tasks.create",
+    "dashboard.view",
+    "audit.view",
+    "finance.view",
+    "crm.manage",
+    "procedures.manage",
+    "projects.manage",
+    "pricing.manage",
+    "contracts.manage",
+  ],
   OPERADOR: ["tasks.create"],
 };
 

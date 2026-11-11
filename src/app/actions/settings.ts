@@ -5,6 +5,8 @@ import type { ActionState } from "@/lib/action-state";
 import { formObject, runAction } from "@/server/action-utils";
 import * as holidays from "@/server/services/holidays";
 import * as users from "@/server/services/users";
+import { hourCostSchema, parseInput } from "@/server/validation";
+import { setHourCost } from "@/server/services/portfolio";
 import { runScheduler } from "@/server/services/generator";
 
 export async function createUserAction(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -40,7 +42,7 @@ export async function changeOwnPasswordAction(_: ActionState, fd: FormData): Pro
 
 export async function updateOrganizationAction(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async (actor) => {
-    await users.updateOrganization(actor, String(fd.get("name") ?? ""));
+    await users.updateOrganizationProfile(actor, formObject(fd));
     return "Dados da empresa atualizados.";
   });
 }
@@ -79,5 +81,13 @@ export async function runSchedulerNowAction(_: ActionState): Promise<ActionState
     return `Geração concluída: ${res.created} tarefa(s) criada(s), ${res.skipped} já existente(s)${
       res.errors.length ? `, ${res.errors.length} erro(s)` : ""
     }.`;
+  });
+}
+
+export async function updateHourCostAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    const input = parseInput(hourCostSchema, formObject(fd));
+    await setHourCost(actor, input.hourCost);
+    return "Custo da hora atualizado.";
   });
 }

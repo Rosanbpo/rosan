@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import type { Prisma } from "@prisma/client";
 import { assertCan, ForbiddenError, NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
 import { prisma } from "../db";
-import { parseInput, userCreateSchema, userUpdateSchema } from "../validation";
+import { orgProfileSchema, parseInput, userCreateSchema, userUpdateSchema } from "../validation";
 import { diffFields, recordAudit } from "./audit";
 
 export async function listUsers(actor: Actor) {
@@ -110,4 +110,22 @@ export async function updateOrganization(actor: Actor, name: string) {
   const trimmed = name.trim();
   if (trimmed.length < 2) throw new ValidationError("Informe o nome da empresa.");
   await prisma.organization.update({ where: { id: actor.organizationId }, data: { name: trimmed } });
+}
+
+/** Dados da empresa (nome e perfil usado em propostas e contratos). */
+export async function updateOrganizationProfile(actor: Actor, raw: unknown) {
+  assertCan(actor, "org.settings");
+  const input = parseInput(orgProfileSchema, raw);
+  await prisma.organization.update({
+    where: { id: actor.organizationId },
+    data: {
+      name: input.name,
+      legalName: input.legalName ?? null,
+      cnpj: input.cnpj ?? null,
+      email: input.email ?? null,
+      phone: input.phone ?? null,
+      website: input.website ?? null,
+      city: input.city ?? null,
+    },
+  });
 }

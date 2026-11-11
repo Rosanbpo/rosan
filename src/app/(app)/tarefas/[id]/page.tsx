@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { AlertTriangle, ExternalLink, Pencil, Repeat, Undo2 } from "lucide-react";
-import { dbDateToLocalDate } from "@/domain/dates";
+import { dbDateToLocalDate, instantToLocalDate } from "@/domain/dates";
 import { CATEGORY_LABEL, PENDING_TYPE_LABEL, type Priority, type TaskCategory, type TaskStatus } from "@/domain/enums";
 import { can } from "@/domain/permissions";
 import { availableActions, completionBlockers, isOverdue } from "@/domain/task-rules";
 import { Card, PageHeader } from "@/components/ui/layout";
 import { OverdueBadge, PriorityBadge, StatusBadge, DueDate } from "@/components/ui/badges";
 import { TaskActions } from "@/components/task-actions";
+import { DeleteTimeButton, LogTimeForm } from "@/components/time-entry";
 import {
   AddChecklistItemForm,
   AddEvidenceForm,
@@ -16,8 +17,11 @@ import {
   RemoveEvidenceButton,
 } from "@/components/task-work";
 import { fmtCompetence, fmtDateTime, fmtLocalDate, fmtMinutes, waitingTime } from "@/lib/format";
+import { APP_TIMEZONE } from "@/server/config";
 import { requireActor } from "@/server/context";
 import { getTaskDetail } from "@/server/services/tasks";
+import { publishedByCategory } from "@/server/services/procedures";
+import { listTaskTime } from "@/server/services/time";
 import { orNotFound } from "@/server/page-utils";
 
 export const metadata = { title: "Tarefa" };
@@ -27,6 +31,9 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   const { id } = await params;
   const sp = await searchParams;
   const task = await orNotFound(getTaskDetail(actor, id));
+  const [timeEntries, pops] = await Promise.all([listTaskTime(actor, id), publishedByCategory(actor, task.category as TaskCategory)]);
+  const today = instantToLocalDate(new Date(), APP_TIMEZONE);
+  const trackedMinutes = timeEntries.reduce((acc, e) => acc + e.minutes, 0);
   const status = task.status as TaskStatus;
   const now = new Date();
   const overdue = isOverdue({ status, dueAt: task.dueAt }, now);
@@ -192,6 +199,28 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
             {canWork && !closed && <AddEvidenceForm taskId={task.id} />}
           </Card>
 
+          <Card
+            title="Horas apontadas"
+            description={timeEntries.length ? `Total: ${fmtMinutes(trackedMinutes)}${task.estimatedMinutes ? ` de ${fmtMinutes(task.estimatedMinutes)} estimados` : ""}` : "Registre o tempo trabalhado para medir a rentabilidade do cliente."}
+          >
+            {timeEntries.length > 0 && (
+              <ul className="divide-y divide-slate-100">
+                {timeEntries.map((e) => (
+                  <li key={e.id} className="flex items-center gap-3 py-2 text-sm">
+                    <span className="w-20 shrink-0 tabular-nums text-slate-500">{fmtLocalDate(e.workedOn)}</span>
+                    <span className="w-16 shrink-0 font-medium tabular-nums">{fmtMinutes(e.minutes)}</span>
+                    <span className="min-w-0 flex-1 truncate text-slate-600">
+                      {e.userName}
+                      {e.note && ` · ${e.note}`}
+                    </span>
+                    {(manager || e.userId === actor.userId) && <DeleteTimeButton id={e.id} />}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {canWork && <LogTimeForm taskId={task.id} today={today} />}
+          </Card>
+
           <Card title="Comentários">
             {task.comments.length ? (
               <ul className="space-y-3">
@@ -224,6 +253,16 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
               <dd>{fmtDateTime(task.dueAt)}</dd>
               <dt className="text-slate-500">Estimativa</dt>
               <dd>{fmtMinutes(task.estimatedMinutes)}</dd>
+              <dt className="text-slate-500">Projeto</dt>
+              <dd>
+                {task.project ? (
+                  <Link className="text-brand-700 hover:underline" href={`/projetos/${task.project.id}`}>
+                    {task.project.name}
+                  </Link>
+                ) : (
+                  "—"
+                )}
+              </dd>
               <dt className="text-slate-500">Origem</dt>
               <dd>
                 {task.origin === "RECORRENTE" ? (
@@ -277,6 +316,20 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
               )}
             </dl>
           </Card>
+
+          {pops.length > 0 && (
+            <Card title="Como fazer (POPs)" description="Procedimentos publicados desta área">
+              <ul className="space-y-1 text-sm">
+                {pops.map((p) => (
+                  <li key={p.id}>
+                    <Link className="text-brand-700 hover:underline" href={`/pops/${p.id}`}>
+                      {p.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
 
           {task.pendings.length > 0 && (
             <Card title="Pendências">
