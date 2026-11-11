@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { dbDateToLocalDate } from "@/domain/dates";
 import {
-  FREQUENCY_LABEL,
   PENDING_TYPE_LABEL,
   PROJECT_STATUS_LABEL,
   type ProjectStatus,
@@ -26,6 +25,10 @@ import { CONTRACT_STATUS_LABEL } from "@/domain/contract";
 import { PROPOSAL_STATUS_LABEL, type ProposalStatus } from "@/domain/proposal";
 import { can } from "@/domain/permissions";
 import { Card, EmptyState, Stat } from "@/components/ui/layout";
+import { ClientRoutineAgenda } from "@/components/client-routine-agenda";
+import { ClientRoutineForm } from "@/components/client-routine-form";
+import { listTemplates } from "@/server/services/templates";
+import { assignableUsers } from "@/server/services/tasks";
 import { DocumentChecklist } from "@/components/document-checklist";
 import { isCompetence, previousCompetence } from "@/domain/documents";
 import { instantToLocalDate } from "@/domain/dates";
@@ -133,6 +136,19 @@ export default async function ClientPage({
     clientHistory(actor, id),
     getDocumentChecklist(actor, id, competence),
   ]);
+  const routineForm =
+    aba === "rotinas" && can(actor, "recurrences.manage")
+      ? {
+          templates: (await listTemplates(actor)).map((t) => ({
+            id: t.id,
+            name: t.name,
+          })),
+          people: (await assignableUsers(actor, id)).map((u) => ({
+            id: u.id,
+            name: u.name,
+          })),
+        }
+      : null;
   const manage = can(actor, "clients.manage");
   const finance = can(actor, "finance.view")
     ? await clientMonthSummary(actor, id)
@@ -619,57 +635,57 @@ export default async function ClientPage({
       )}
 
       {aba === "rotinas" && (
-        <div className="max-w-2xl">
+        <div className="space-y-6">
+          <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-4 text-sm text-slate-700">
+            <p className="font-semibold text-brand-900">
+              O que é a rotina do cliente?
+            </p>
+            <p className="mt-1">
+              É a agenda fixa deste cliente: o que precisa ser feito, em que dia
+              e horário. Cadastrada aqui, a rotina gera as tarefas sozinha, no
+              dia e horário certos.
+            </p>
+          </div>
           <Card
-            title="Rotinas vinculadas"
+            title="Agenda de rotinas"
             actions={
               can(actor, "recurrences.manage") && (
                 <Link
                   className="text-sm text-brand-700 hover:underline"
                   href={`/rotinas/recorrencias/nova?clientId=${id}`}
                 >
-                  Vincular
+                  Cadastro avançado
                 </Link>
               )
             }
           >
-            {client.recurrences.length ? (
-              <ul className="space-y-2 text-sm">
-                {client.recurrences.map((r) => (
-                  <li
-                    key={r.id}
-                    className="flex items-start justify-between gap-2"
-                  >
-                    <div>
-                      {can(actor, "recurrences.manage") ? (
-                        <Link
-                          className="font-medium hover:underline"
-                          href={`/rotinas/recorrencias/${r.id}`}
-                        >
-                          {r.template.name}
-                        </Link>
-                      ) : (
-                        <span className="font-medium">{r.template.name}</span>
-                      )}
-                      <p className="text-xs text-slate-500">
-                        {FREQUENCY_LABEL[r.frequency]} ·{" "}
-                        {r.assignee?.name ?? "responsável do cliente"}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-xs ${r.status === "ACTIVE" ? "text-emerald-700" : "text-amber-700"}`}
-                    >
-                      {r.status === "ACTIVE" ? "Ativa" : "Pausada"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-slate-500">
-                Nenhuma rotina vinculada.
-              </p>
-            )}
+            <ClientRoutineAgenda
+              editable={can(actor, "recurrences.manage")}
+              routines={client.recurrences.map((r) => ({
+                id: r.id,
+                name: r.template.title,
+                frequency: r.frequency,
+                weekdays: r.weekdays,
+                monthDays: r.monthDays,
+                nthBusinessDay: r.nthBusinessDay,
+                dueTime: r.dueTime,
+                status: r.status,
+                assignee: r.assignee?.name ?? null,
+              }))}
+            />
           </Card>
+          {routineForm && (
+            <Card
+              title="Nova rotina"
+              description="Cadastro rápido: dia, horário e pronto."
+            >
+              <ClientRoutineForm
+                clientId={id}
+                templates={routineForm.templates}
+                people={routineForm.people}
+              />
+            </Card>
+          )}
         </div>
       )}
 

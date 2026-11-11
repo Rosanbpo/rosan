@@ -88,7 +88,7 @@ export async function getClient(actor: Actor, clientId: string) {
       manager: { select: { id: true, name: true } },
       members: { include: { user: { select: { id: true, name: true, email: true } } } },
       recurrences: {
-        include: { template: { select: { name: true } }, assignee: { select: { name: true } } },
+        include: { template: { select: { name: true, title: true } }, assignee: { select: { name: true } } },
         orderBy: { createdAt: "asc" },
       },
     },
