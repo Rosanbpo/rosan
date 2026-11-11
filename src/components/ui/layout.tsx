@@ -22,7 +22,8 @@ export function PageHeader({
             ← {breadcrumb.label}
           </Link>
         )}
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
+        <h1 className="page-title mt-1">{title}</h1>
+        <span aria-hidden className="mt-2 block h-0.5 w-10 rounded bg-brand-500" />
         {description && <p className="mt-1 text-sm text-slate-600">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -48,22 +49,22 @@ export function Card({
   return (
     <section className={cx("card", className)}>
       {(title || actions) && (
-        <header className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
+        <header className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
           <div>
-            {title && <h2 className="text-sm font-semibold text-slate-900">{title}</h2>}
+            {title && <h2 className="text-[13px] font-semibold tracking-wide text-brand-900 uppercase">{title}</h2>}
             {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
           </div>
           {actions}
         </header>
       )}
-      <div className={cx("p-4", bodyClassName)}>{children}</div>
+      <div className={cx("p-5", bodyClassName)}>{children}</div>
     </section>
   );
 }
 
 export function EmptyState({ title, description, action }: { title: string; description?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
       <Inbox aria-hidden className="h-8 w-8 text-slate-400" />
       <p className="mt-3 text-sm font-medium text-slate-800">{title}</p>
       {description && <p className="mt-1 max-w-md text-sm text-slate-500">{description}</p>}
@@ -151,16 +152,16 @@ export function Stat({
   };
   const body = (
     <>
-      <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">{label}</p>
-      <p className={cx("mt-1 text-2xl font-semibold tabular-nums", tones[tone])}>{value}</p>
+      <p className="text-[11px] font-semibold tracking-wider text-brand-900/60 uppercase">{label}</p>
+      <p className={cx("mt-1.5 text-[1.65rem] leading-none font-semibold tabular-nums", tones[tone])}>{value}</p>
       {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
     </>
   );
   return href ? (
-    <Link href={href} className="card block p-4 transition-shadow hover:shadow-md">
+    <Link href={href} className="card block border-t-2 border-t-brand-500 p-4 transition-shadow hover:shadow-md">
       {body}
     </Link>
   ) : (
-    <div className="card p-4">{body}</div>
+    <div className="card border-t-2 border-t-brand-500 p-4">{body}</div>
   );
 }

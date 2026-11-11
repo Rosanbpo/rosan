@@ -27,7 +27,7 @@ export async function assertClientAccess(actor: Actor, clientId: string) {
 }
 
 export async function assertTaskAccess(actor: Actor, taskId: string) {
-  const task = await prisma.task.findFirst({ where: { id: taskId, ...taskScope(actor) } });
+  const task = await prisma.task.findFirst({ where: { id: taskId, archivedAt: null, ...taskScope(actor) } });
   if (!task) throw new NotFoundError("Tarefa não encontrada ou sem permissão de acesso.");
   return task;
 }

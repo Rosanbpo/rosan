@@ -81,7 +81,7 @@ export function Sidebar({
             aria-current={active ? "page" : undefined}
             className={cx(
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              active ? "bg-white/10 text-brand-200" : "text-slate-300 hover:bg-white/5 hover:text-white",
+              active ? "bg-white/10 text-brand-200 shadow-[inset_3px_0_0_#b08d57]" : "text-slate-300 hover:bg-white/5 hover:text-white",
             )}
           >
             <Icon aria-hidden className="h-4 w-4 shrink-0" />

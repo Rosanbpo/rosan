@@ -3,7 +3,9 @@ import { AlertTriangle, ExternalLink, Pencil, Repeat, Undo2 } from "lucide-react
 import { dbDateToLocalDate, instantToLocalDate } from "@/domain/dates";
 import { CATEGORY_LABEL, PENDING_TYPE_LABEL, type Priority, type TaskCategory, type TaskStatus } from "@/domain/enums";
 import { can } from "@/domain/permissions";
-import { availableActions, completionBlockers, isOverdue } from "@/domain/task-rules";
+import { availableActions, completionBlockers, isOverdue, taskRights } from "@/domain/task-rules";
+import { TaskTimer } from "@/components/task-timer";
+import { DeleteTaskButton, RescheduleButton } from "@/components/task-row-tools";
 import { Card, PageHeader } from "@/components/ui/layout";
 import { OverdueBadge, PriorityBadge, StatusBadge, DueDate } from "@/components/ui/badges";
 import { TaskActions } from "@/components/task-actions";
@@ -22,6 +24,7 @@ import { requireActor } from "@/server/context";
 import { getTaskDetail } from "@/server/services/tasks";
 import { publishedByCategory } from "@/server/services/procedures";
 import { listTaskTime } from "@/server/services/time";
+import { getRunningTimer, taskTrackedSeconds } from "@/server/services/timer";
 import { orNotFound } from "@/server/page-utils";
 
 export const metadata = { title: "Tarefa" };
@@ -31,7 +34,12 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   const { id } = await params;
   const sp = await searchParams;
   const task = await orNotFound(getTaskDetail(actor, id));
-  const [timeEntries, pops] = await Promise.all([listTaskTime(actor, id), publishedByCategory(actor, task.category as TaskCategory)]);
+  const [timeEntries, pops, running, trackedSeconds] = await Promise.all([
+    listTaskTime(actor, id),
+    publishedByCategory(actor, task.category as TaskCategory),
+    getRunningTimer(actor),
+    taskTrackedSeconds(id),
+  ]);
   const today = instantToLocalDate(new Date(), APP_TIMEZONE);
   const trackedMinutes = timeEntries.reduce((acc, e) => acc + e.minutes, 0);
   const status = task.status as TaskStatus;
@@ -49,6 +57,9 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
     evidenceCount: task.evidences.length,
   };
   const actions = availableActions(snapshot, actor);
+  const rights = taskRights(actor, { status, assigneeId: task.assigneeId, reviewerId: task.reviewerId, createdById: task.createdById, origin: task.origin });
+  const mine = running?.taskId === task.id ? running.startedAt : null;
+  const finishAction = (["COMPLETE", "APPROVE", "SUBMIT_REVIEW"] as const).find((a) => actions.includes(a));
   const blockers = completionBlockers(snapshot);
   const openPending = task.pendings.find((p) => !p.resolvedAt);
   const doneCount = task.checklistItems.filter((i) => i.done).length;
@@ -74,11 +85,15 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
           </span>
         }
         actions={
-          canWork && !closed ? (
-            <Link href={`/tarefas/${task.id}/editar`} className="btn-secondary">
-              <Pencil aria-hidden className="h-4 w-4" /> Editar
-            </Link>
-          ) : undefined
+          <>
+            {rights.canReschedule && <RescheduleButton taskId={task.id} dueDate={instantToLocalDate(task.dueAt, APP_TIMEZONE)} />}
+            {rights.canEdit && (
+              <Link href={`/tarefas/${task.id}/editar`} className="btn-secondary">
+                <Pencil aria-hidden className="h-4 w-4" /> Editar
+              </Link>
+            )}
+            {rights.canDelete && <DeleteTaskButton taskId={task.id} title={task.title} redirectTo="/tarefas" withLabel />}
+          </>
         }
       />
 
@@ -97,8 +112,23 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
             Prazo: <DueDate dueAt={task.dueAt} status={status} now={now} />
           </span>
         </div>
-        <TaskActions taskId={task.id} taskTitle={task.title} actions={actions} />
+        <TaskActions taskId={task.id} taskTitle={task.title} actions={actions.filter((a) => !["START", "COMPLETE", "SUBMIT_REVIEW", "APPROVE"].includes(a) || !rights.canTime)} />
       </div>
+
+      {!closed && (
+        <div className="mb-6">
+          <TaskTimer
+            taskId={task.id}
+            runningSince={mine}
+            trackedSeconds={trackedSeconds}
+            otherRunning={!!running && running.taskId !== task.id}
+            disabled={!rights.canTime}
+            disabledReason={status === "AGUARDANDO_CLIENTE" || status === "AGUARDANDO_TERCEIRO" ? "A tarefa está aguardando retorno. Retome-a para cronometrar." : "Você precisa ser o responsável, o revisor ou gestor para cronometrar esta tarefa."}
+            canFinish={!!finishAction}
+            finishLabel={finishAction === "SUBMIT_REVIEW" ? "Enviar para revisão" : finishAction === "APPROVE" ? "Aprovar e concluir" : "Concluir"}
+          />
+        </div>
+      )}
 
       {status === "EM_ANDAMENTO" && task.returnCount > 0 && task.lastReturnReason && (
         <div role="note" className="mb-4 flex gap-3 rounded-md border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900">

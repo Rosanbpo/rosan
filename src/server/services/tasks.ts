@@ -1,5 +1,5 @@
 import type { Prisma, TaskStatus as DbTaskStatus } from "@prisma/client";
-import { instantToLocalDate, localDateTimeToInstant, localDateToDbDate } from "@/domain/dates";
+import { instantToLocalDate, instantToLocalTime, isValidLocalDate, localDateTimeToInstant, localDateToDbDate } from "@/domain/dates";
 import type { Priority, TaskCategory, TaskStatus } from "@/domain/enums";
 import { CLOSED_STATUSES, STATUS_LABEL } from "@/domain/enums";
 import { ForbiddenError, NotFoundError, ValidationError, can, type Actor } from "@/domain/permissions";
@@ -10,6 +10,7 @@ import { parseInput, taskCreateSchema, taskUpdateSchema, urlSchema } from "../va
 import { assertClientAccess, assertTaskAccess, assertUserInOrg, taskScope } from "./access";
 import { diffFields, recordAudit } from "./audit";
 import { assertProjectForTask } from "./projects";
+import { stopTimersOfTask } from "./timer";
 
 export interface TaskFilters {
   q?: string;
@@ -268,7 +269,7 @@ export async function updateTask(actor: Actor, taskId: string, raw: unknown) {
   });
 }
 
-async function snapshot(taskId: string): Promise<TaskSnapshot & { clientId: string; organizationId: string }> {
+export async function taskSnapshot(taskId: string): Promise<TaskSnapshot & { clientId: string; organizationId: string }> {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     include: { checklistItems: { select: { required: true, done: true } }, _count: { select: { evidences: true } } },
@@ -298,7 +299,7 @@ export interface TransitionRequest {
  */
 export async function transitionTask(actor: Actor, taskId: string, action: TaskAction, req: TransitionRequest = {}) {
   await assertTaskAccess(actor, taskId);
-  const snap = await snapshot(taskId);
+  const snap = await taskSnapshot(taskId);
   const now = new Date();
   const today = instantToLocalDate(now, APP_TIMEZONE);
   const check = checkTransition(snap, action, actor, { note: req.note, followUpDate: req.followUpDate, today });
@@ -555,4 +556,56 @@ export async function peopleWithClients(actor: Actor) {
     role: m.role,
     clientIds: m.role === "ADMIN" ? null : m.user.clientMemberships.map((c) => c.clientId),
   }));
+}
+
+/** Mudar o dia do prazo mantendo o horário. Responsável, revisor e gestores podem. */
+export async function rescheduleTask(actor: Actor, taskId: string, rawDate: unknown) {
+  const before = await assertTaskAccess(actor, taskId);
+  assertOpen(before);
+  if (!canWorkOn(actor, before)) throw new ForbiddenError("Você não pode alterar o prazo desta tarefa.");
+  const date = typeof rawDate === "string" ? rawDate : "";
+  if (!isValidLocalDate(date)) throw new ValidationError("Informe uma data válida.", { dueDate: "Data inválida." });
+  const time = instantToLocalTime(before.dueAt, APP_TIMEZONE);
+  const dueAt = localDateTimeToInstant(date, time, APP_TIMEZONE);
+  if (dueAt.getTime() === before.dueAt.getTime()) return before;
+  const startAt = before.startAt && before.startAt > dueAt ? null : before.startAt;
+  return prisma.$transaction(async (tx) => {
+    const task = await tx.task.update({ where: { id: taskId }, data: { dueAt, startAt } });
+    await recordAudit(tx, {
+      organizationId: actor.organizationId,
+      actorId: actor.userId,
+      entityType: "Task",
+      entityId: taskId,
+      taskId,
+      clientId: before.clientId,
+      action: "task.rescheduled",
+      summary: `Prazo alterado de ${instantToLocalDate(before.dueAt, APP_TIMEZONE)} para ${date}`,
+      changes: { dueAt: { de: before.dueAt.toISOString(), para: dueAt.toISOString() } } as Prisma.InputJsonValue,
+    });
+    return task;
+  });
+}
+
+/**
+ * Exclui a tarefa (some das listas; o histórico e as horas apontadas ficam
+ * preservadas). Gestores excluem qualquer tarefa; quem criou, as manuais.
+ */
+export async function deleteTask(actor: Actor, taskId: string) {
+  const before = await assertTaskAccess(actor, taskId);
+  const owner = before.createdById === actor.userId && before.origin === "MANUAL";
+  if (!isManager(actor) && !owner) throw new ForbiddenError("Apenas gestores ou quem criou a tarefa podem excluí-la.");
+  await prisma.$transaction(async (tx) => {
+    await stopTimersOfTask(tx, taskId);
+    await tx.task.update({ where: { id: taskId }, data: { archivedAt: new Date() } });
+    await recordAudit(tx, {
+      organizationId: actor.organizationId,
+      actorId: actor.userId,
+      entityType: "Task",
+      entityId: taskId,
+      taskId,
+      clientId: before.clientId,
+      action: "task.deleted",
+      summary: `Tarefa excluída: ${before.title}`,
+    });
+  });
 }

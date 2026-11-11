@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
-import { localDateToDbDate } from "@/domain/dates";
-import { assertCan, ValidationError, type Actor } from "@/domain/permissions";
+import { dbDateToLocalDate, localDateToDbDate } from "@/domain/dates";
+import { assertCan, can, ValidationError, type Actor } from "@/domain/permissions";
 import type { ClientStatus } from "@/domain/enums";
 import { prisma } from "../db";
 import { PAGE_SIZE } from "../config";
@@ -258,4 +258,63 @@ export async function clientHistory(actor: Actor, clientId: string, take = 30) {
     take,
     include: { actor: { select: { name: true } } },
   });
+}
+
+/** Dados extras do painel do cliente: contratos, propostas, projetos e horas. */
+export async function clientPanelExtras(actor: Actor, clientId: string) {
+  await assertClientAccess(actor, clientId);
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setMonth(monthStart.getMonth() - 5);
+  monthStart.setHours(0, 0, 0, 0);
+  const canContracts = can(actor, "contracts.manage");
+  const canCrm = can(actor, "crm.manage");
+  const [contracts, proposals, projects, entries] = await Promise.all([
+    canContracts
+      ? prisma.contract.findMany({
+          where: { organizationId: actor.organizationId, clientId },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, number: true, status: true, monthlyFee: true, startDate: true, termMonths: true, distratoClauses: true },
+        })
+      : [],
+    canCrm
+      ? prisma.proposal.findMany({
+          where: { organizationId: actor.organizationId, lead: { convertedClientId: clientId } },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, number: true, status: true, monthlyFee: true, planName: true },
+        })
+      : [],
+    prisma.project.findMany({
+      where: { organizationId: actor.organizationId, clientId, status: { notIn: ["CANCELADO"] } },
+      orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }],
+      select: { id: true, name: true, status: true, dueDate: true },
+    }),
+    prisma.timeEntry.findMany({
+      where: { clientId, workedOn: { gte: monthStart } },
+      select: { workedOn: true, minutes: true, user: { select: { name: true } } },
+    }),
+  ]);
+
+  const month = (d: Date) => d.toISOString().slice(0, 7);
+  const thisMonth = month(new Date());
+  const byMonth = new Map<string, number>();
+  const byPerson = new Map<string, number>();
+  for (const e of entries) {
+    byMonth.set(month(e.workedOn), (byMonth.get(month(e.workedOn)) ?? 0) + e.minutes);
+    if (month(e.workedOn) === thisMonth) byPerson.set(e.user.name, (byPerson.get(e.user.name) ?? 0) + e.minutes);
+  }
+  const months: { month: string; minutes: number }[] = [];
+  const cursor = new Date(monthStart);
+  for (let i = 0; i < 6; i++) {
+    const key = month(cursor);
+    months.push({ month: key, minutes: byMonth.get(key) ?? 0 });
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return {
+    contracts: contracts.map((c) => ({ ...c, monthlyFee: Number(c.monthlyFee), startDate: c.startDate ? dbDateToLocalDate(c.startDate) : null, hasDistrato: c.distratoClauses !== null })),
+    proposals: proposals.map((p) => ({ ...p, monthlyFee: Number(p.monthlyFee) })),
+    projects: projects.map((p) => ({ ...p, dueDate: p.dueDate ? dbDateToLocalDate(p.dueDate) : null })),
+    hoursByMonth: months,
+    hoursByPerson: [...byPerson.entries()].map(([name, minutes]) => ({ name, minutes })).sort((a, b) => b.minutes - a.minutes),
+  };
 }

@@ -89,3 +89,19 @@ export async function updatePendingAction(pendingId: string, _: ActionState, fd:
     return "Acompanhamento atualizado.";
   });
 }
+
+export async function rescheduleTaskAction(taskId: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await tasks.rescheduleTask(actor, taskId, fd.get("dueDate"));
+    return "Prazo alterado.";
+  }, { revalidate: ["layout"] });
+}
+
+export async function deleteTaskAction(taskId: string, redirectTo: string | null, _: ActionState): Promise<ActionState> {
+  const res = await runAction(async (actor) => {
+    await tasks.deleteTask(actor, taskId);
+    return "Tarefa excluída.";
+  }, { revalidate: ["layout"] });
+  if (res?.ok && redirectTo) redirect(redirectTo);
+  return res;
+}

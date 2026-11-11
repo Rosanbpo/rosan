@@ -1,6 +1,9 @@
 import Link from "next/link";
 import type { Priority, TaskStatus } from "@/domain/enums";
-import { availableActions, isOverdue } from "@/domain/task-rules";
+import { availableActions, isOverdue, taskRights } from "@/domain/task-rules";
+import { instantToLocalDate } from "@/domain/dates";
+import { APP_TIMEZONE } from "@/server/config";
+import { TaskRowTools } from "./task-row-tools";
 import type { Actor } from "@/domain/permissions";
 import type { TaskListRow } from "@/server/services/tasks";
 import { DueDate, OverdueBadge, PriorityBadge, StatusBadge } from "./ui/badges";
@@ -8,7 +11,7 @@ import { TaskActions } from "./task-actions";
 import { EmptyState } from "./ui/layout";
 
 /** Lista de tarefas com ações rápidas (poucos cliques), usada em "Minha operação". */
-export function MyTaskList({ rows, actor, empty }: { rows: TaskListRow[]; actor: Actor; empty: string }) {
+export function MyTaskList({ rows, actor, empty, running }: { rows: TaskListRow[]; actor: Actor; empty: string; running?: { taskId: string; startedAt: string } | null }) {
   if (rows.length === 0) return <EmptyState title={empty} />;
   const now = new Date();
   return (
@@ -50,6 +53,13 @@ export function MyTaskList({ rows, actor, empty }: { rows: TaskListRow[]; actor:
                 <DueDate dueAt={t.dueAt} status={status} now={now} />
               </span>
               <TaskActions taskId={t.id} taskTitle={t.title} actions={actions} size="sm" />
+              <TaskRowTools
+                taskId={t.id}
+                title={t.title}
+                dueDate={instantToLocalDate(t.dueAt, APP_TIMEZONE)}
+                rights={taskRights(actor, { status, assigneeId: t.assigneeId, reviewerId: t.reviewerId, createdById: t.createdById, origin: t.origin })}
+                runningSince={running?.taskId === t.id ? running.startedAt : null}
+              />
             </div>
           </li>
         );
