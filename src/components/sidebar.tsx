@@ -10,6 +10,7 @@ import {
   Briefcase,
   CalendarClock,
   ClipboardList,
+  FileText,
   FolderKanban,
   Hourglass,
   LineChart,
@@ -35,6 +36,7 @@ const ICONS = {
   crm: Target,
   pops: BookOpen,
   projetos: FolderKanban,
+  propostas: FileText,
 };
 
 export interface NavItem {

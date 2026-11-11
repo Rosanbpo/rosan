@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { FileText, Pencil } from "lucide-react";
 import { LEAD_ACTIVITY_KINDS, LEAD_ACTIVITY_LABEL, LEAD_STAGES, LEAD_STAGE_LABEL, type LeadStage } from "@/domain/enums";
 import { dbDateToLocalDate } from "@/domain/dates";
 import { can } from "@/domain/permissions";
@@ -11,6 +11,8 @@ import { fmtDateTime, fmtLocalDate, fmtMoney } from "@/lib/format";
 import { requirePermission } from "@/server/context";
 import { orNotFound } from "@/server/page-utils";
 import { getLead } from "@/server/services/leads";
+import { proposalsOfLead } from "@/server/services/proposals";
+import { PROPOSAL_STATUS_LABEL, type ProposalStatus } from "@/domain/proposal";
 
 export const metadata = { title: "Lead" };
 
@@ -18,6 +20,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   const actor = await requirePermission("crm.manage");
   const { id } = await params;
   const lead = await orNotFound(getLead(actor, id));
+  const proposals = await proposalsOfLead(actor, id);
   const stage = lead.stage as LeadStage;
   const canConvert = can(actor, "clients.manage") && !lead.convertedClientId;
 
@@ -29,6 +32,9 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
         description={`${LEAD_STAGE_LABEL[stage]}${lead.source ? ` · origem: ${lead.source}` : ""}`}
         actions={
           <>
+            <Link href={`/propostas/nova?leadId=${id}`} className="btn-secondary">
+              <FileText aria-hidden className="h-4 w-4" /> Gerar proposta
+            </Link>
             <Link href={`/crm/${id}/editar`} className="btn-secondary">
               <Pencil aria-hidden className="h-4 w-4" /> Editar
             </Link>
@@ -157,6 +163,22 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
               </div>
             </dl>
           </Card>
+          {proposals.length > 0 && (
+            <Card title="Propostas">
+              <ul className="space-y-2 text-sm">
+                {proposals.map((pr) => (
+                  <li key={pr.id}>
+                    <Link className="font-medium text-brand-700 hover:underline" href={`/propostas/${pr.id}`}>
+                      {pr.number}
+                    </Link>{" "}
+                    <span className="text-slate-600">
+                      · {pr.planName} · {fmtMoney(pr.monthlyFee)} · {PROPOSAL_STATUS_LABEL[pr.status as ProposalStatus]}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
           {lead.notes && (
             <Card title="Observações">
               <p className="text-sm whitespace-pre-wrap text-slate-700">{lead.notes}</p>

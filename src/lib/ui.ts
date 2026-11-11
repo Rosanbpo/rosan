@@ -37,3 +37,11 @@ export const CLIENT_STATUS_STYLE: Record<ClientStatus, string> = {
 export function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
+
+export const PROPOSAL_STYLE: Record<"RASCUNHO" | "ENVIADA" | "ACEITA" | "RECUSADA" | "VENCIDA", string> = {
+  RASCUNHO: "bg-slate-100 text-slate-700 ring-slate-300",
+  ENVIADA: "bg-sky-50 text-sky-700 ring-sky-200",
+  ACEITA: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  RECUSADA: "bg-zinc-100 text-zinc-500 ring-zinc-200",
+  VENCIDA: "bg-amber-50 text-amber-800 ring-amber-200",
+};

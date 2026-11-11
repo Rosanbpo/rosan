@@ -115,7 +115,9 @@ Módulos comerciais e de gestão do negócio, além da operação:
 - **Projetos** (`/projetos`): implantações e iniciativas (de cliente ou internas) com prazo, progresso e tarefas vinculadas.
 - Clientes ganharam **mensalidade** e **dia de vencimento**; valores só aparecem para quem tem a permissão `finance.view` (administrador e gestor).
 
-Ainda não implementados: calculadora de precificação e gerador de proposta/contrato (dependem dos modelos da empresa).
+- **Propostas** (`/propostas`): gerador de proposta comercial a partir do lead, com os planos Básico, Intermediário e Avançado da planilha de precificação (escopo, limites mensais e mensalidade sugerida, todos editáveis). O documento (`/documento/proposta/:id`) tem 4 páginas A4 com a identidade da Rosan e vira PDF pelo botão *Imprimir / salvar PDF*. Marcar como enviada move o lead para “Proposta enviada”. Os dados da empresa (razão social, CNPJ, contatos) vêm de Configurações.
+
+Ainda não implementados: calculadora de precificação e gerador de contrato/distrato.
 
 ### Telas
 - **Painel do gestor:** vencem hoje, atrasadas, aguardando cliente (e terceiros), em revisão, próximos 7 dias, carga por operador (abertas, atrasadas, horas estimadas), top 5 clientes com atrasos e % de entregas no prazo. Filtros por período, cliente, responsável, categoria e prioridade. O período e as fórmulas aparecem na tela.

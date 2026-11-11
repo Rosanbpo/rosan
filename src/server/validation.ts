@@ -15,6 +15,7 @@ import {
   TASK_CATEGORIES,
 } from "@/domain/enums";
 import { validateRule } from "@/domain/recurrence";
+import { splitLines } from "@/domain/proposal";
 
 const emptyToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
 
@@ -317,3 +318,40 @@ export const projectSchema = z
 export type ProjectInput = z.infer<typeof projectSchema>;
 
 export const hourCostSchema = z.object({ hourCost: optionalMoney });
+
+const linesField = (label: string, min = 0) =>
+  z.preprocess(
+    (v) => (typeof v === "string" ? splitLines(v) : v ?? []),
+    z.array(z.string().max(400, "Linha muito longa.")).max(40, `Máximo de 40 itens em ${label}.`).refine((a) => a.length >= min, `Informe ao menos ${min} item em ${label}.`),
+  );
+
+export const proposalSchema = z.object({
+  leadId: optionalId,
+  planName: requiredText("Plano", 100),
+  companyName: requiredText("Empresa"),
+  contactName: optionalText(200),
+  contactEmail: z.preprocess(emptyToUndefined, z.string().trim().email("E-mail inválido.").optional()),
+  intro: optionalText(2000),
+  services: linesField("serviços", 1),
+  volumes: linesField("limites"),
+  exclusions: linesField("itens fora do escopo"),
+  monthlyFee: z.preprocess(
+    parseMoney,
+    z.number({ required_error: "Informe a mensalidade.", invalid_type_error: "Valor inválido." }).min(1, "Informe a mensalidade."),
+  ),
+  billingDay: optionalInt(1, 31).transform((v) => v ?? 10),
+  termMonths: optionalInt(1, 60).transform((v) => v ?? 12),
+  validUntil: localDate,
+  notes: optionalText(3000),
+});
+export type ProposalInput = z.infer<typeof proposalSchema>;
+
+export const orgProfileSchema = z.object({
+  name: requiredText("Nome da empresa"),
+  legalName: optionalText(200),
+  cnpj: z.preprocess(emptyToUndefined, z.string().refine(isValidCnpj, "CNPJ inválido.").transform((v) => v.replace(/\D/g, "")).optional()),
+  email: z.preprocess(emptyToUndefined, z.string().trim().email("E-mail inválido.").optional()),
+  phone: optionalText(50),
+  website: optionalText(200),
+  city: optionalText(100),
+});

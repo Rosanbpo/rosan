@@ -65,3 +65,113 @@
     @apply bg-slate-50;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Documentos (propostas): folhas A4 com identidade Rosan Finanças     */
+/* ------------------------------------------------------------------ */
+.doc-sheet {
+  position: relative;
+  width: 210mm;
+  min-height: 296mm;
+  margin: 0 auto 8mm;
+  overflow: hidden;
+  background: #fff;
+  color: #2b3350;
+  font-size: 10pt;
+  line-height: 1.5;
+  box-shadow: 0 2px 18px rgba(12, 22, 51, 0.2);
+}
+.doc-serif {
+  font-family: Georgia, "Times New Roman", serif;
+}
+.doc-cover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #0c1633;
+  color: #f3e7cc;
+}
+.doc-frame {
+  position: absolute;
+  inset: 9mm;
+  border: 0.3mm solid rgba(176, 141, 87, 0.55);
+  pointer-events: none;
+}
+.doc-body {
+  padding: 16mm 18mm 24mm;
+}
+.doc-eyebrow {
+  font-size: 8pt;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #b08d57;
+}
+.doc-h2 {
+  margin-top: 1.5mm;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 21pt;
+  line-height: 1.15;
+  color: #0c1633;
+}
+.doc-rule {
+  height: 0.3mm;
+  background: linear-gradient(90deg, #b08d57, rgba(176, 141, 87, 0));
+}
+.doc-card {
+  break-inside: avoid;
+  border-left: 1mm solid #b08d57;
+  background: #faf4e8;
+  padding: 3mm 4mm;
+}
+.doc-footer {
+  position: absolute;
+  right: 18mm;
+  bottom: 9mm;
+  left: 18mm;
+  display: flex;
+  justify-content: space-between;
+  border-top: 0.2mm solid #e6d1a5;
+  padding-top: 2.5mm;
+  font-size: 7.5pt;
+  color: #7a5a30;
+}
+.doc-step-num {
+  display: flex;
+  height: 8mm;
+  width: 8mm;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #0c1633;
+  font-family: Georgia, serif;
+  font-size: 11pt;
+  color: #e6d1a5;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .doc-sheet {
+    margin: 0;
+    box-shadow: none;
+    break-after: page;
+  }
+  .doc-sheet:last-child {
+    break-after: auto;
+  }
+}

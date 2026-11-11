@@ -83,3 +83,60 @@ describe("entrada de valores e horas", () => {
     expect(projectSchema.safeParse({ ...base, startDate: "2026-11-01", dueDate: "2026-11-10" }).success).toBe(true);
   });
 });
+
+import { defaultValidUntil, formatProposalNumber, isProposalExpired, nextProposalNumber, splitLines, splitPair } from "@/domain/proposal";
+import { PLAN_PRESETS, findPlan } from "@/domain/plans";
+import { proposalSchema } from "@/server/validation";
+
+describe("proposta comercial", () => {
+  it("numera por ano, em sequência", () => {
+    expect(formatProposalNumber(2026, 7)).toBe("2026-007");
+    expect(nextProposalNumber(2026, null)).toBe("2026-001");
+    expect(nextProposalNumber(2026, "2026-009")).toBe("2026-010");
+    expect(nextProposalNumber(2027, "2026-120")).toBe("2027-001");
+  });
+
+  it("calcula a validade e o vencimento", () => {
+    expect(defaultValidUntil("2026-11-11")).toBe("2026-11-26");
+    expect(isProposalExpired("ENVIADA", "2026-11-10", "2026-11-11")).toBe(true);
+    expect(isProposalExpired("ENVIADA", "2026-11-11", "2026-11-11")).toBe(false);
+    expect(isProposalExpired("RASCUNHO", "2026-01-01", "2026-11-11")).toBe(false);
+  });
+
+  it("separa pares e linhas", () => {
+    expect(splitPair("Contas a pagar | Controle de vencimentos")).toEqual({ left: "Contas a pagar", right: "Controle de vencimentos" });
+    expect(splitPair("Sem barra")).toEqual({ left: "Sem barra", right: "" });
+    expect(splitLines("a\n\n  b  \r\nc")).toEqual(["a", "b", "c"]);
+  });
+
+  it("os planos refletem a planilha de precificação", () => {
+    expect(findPlan("Plano Básico")?.suggestedFee).toBe(500);
+    expect(findPlan("Plano Intermediário")?.suggestedFee).toBe(1000);
+    expect(findPlan("Plano Avançado")?.suggestedFee).toBe(1500);
+    expect(findPlan("Plano Básico")?.volumes).toContain("Notas fiscais por mês | até 10");
+    for (const plan of PLAN_PRESETS.filter((p) => p.key !== "PERSONALIZADO")) {
+      for (const line of [...plan.services, ...plan.volumes]) expect(line).toContain("|");
+    }
+  });
+
+  it("valida a proposta e converte os campos de texto em listas", () => {
+    const ok = proposalSchema.safeParse({
+      planName: "Plano Básico",
+      companyName: "Padaria Pão Quente",
+      services: "Contas a pagar | x\nContas a receber | y",
+      volumes: "",
+      exclusions: "",
+      monthlyFee: "1.000,00",
+      validUntil: "2026-11-26",
+    });
+    expect(ok.success).toBe(true);
+    if (ok.success) {
+      expect(ok.data.services).toHaveLength(2);
+      expect(ok.data.monthlyFee).toBe(1000);
+      expect(ok.data.billingDay).toBe(10);
+      expect(ok.data.termMonths).toBe(12);
+    }
+    expect(proposalSchema.safeParse({ planName: "x", companyName: "Empresa", services: "", monthlyFee: "100", validUntil: "2026-11-26" }).success).toBe(false);
+    expect(proposalSchema.safeParse({ planName: "Plano", companyName: "Empresa", services: "a | b", monthlyFee: "0", validUntil: "2026-11-26" }).success).toBe(false);
+  });
+});

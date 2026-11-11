@@ -157,3 +157,50 @@ describe("projetos", () => {
     expect((await listProjects(s.op)).length).toBe(1);
   });
 });
+
+import { createProposal, listProposals, setProposalStatus, updateProposal } from "@/server/services/proposals";
+
+describe("propostas", () => {
+  const base = {
+    planName: "Plano Intermediário",
+    companyName: "Padaria Pão Quente",
+    services: "Contas a pagar | Controle\nContas a receber | Controle",
+    volumes: "Notas fiscais por mês | até 100",
+    exclusions: "Decisões gerenciais",
+    monthlyFee: "1.000,00",
+    validUntil: "2099-12-31",
+  };
+
+  it("numera em sequência, vincula ao lead e move o funil ao enviar", async () => {
+    const s = await setupOrg();
+    const lead = await createLead(s.gestor, { companyName: "Padaria Pão Quente" });
+    const a = await createProposal(s.gestor, { ...base, leadId: lead.id });
+    const b = await createProposal(s.gestor, { ...base, companyName: "Outra Empresa" });
+    const year = new Date().getFullYear();
+    expect(a.number).toBe(`${year}-001`);
+    expect(b.number).toBe(`${year}-002`);
+    expect(Number(a.monthlyFee)).toBe(1000);
+
+    await setProposalStatus(s.gestor, a.id, "ENVIADA");
+    const moved = await prisma.lead.findUniqueOrThrow({ where: { id: lead.id } });
+    expect(moved.stage).toBe("PROPOSTA");
+    expect((await listProposals(s.gestor)).length).toBe(2);
+  });
+
+  it("proposta aceita não pode ser editada e operador não acessa", async () => {
+    const s = await setupOrg();
+    const p = await createProposal(s.admin, base);
+    await setProposalStatus(s.admin, p.id, "ENVIADA");
+    await setProposalStatus(s.admin, p.id, "ACEITA");
+    await expect(updateProposal(s.admin, p.id, base)).rejects.toBeInstanceOf(ValidationError);
+    await expect(listProposals(s.op)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("propostas de outra empresa não são visíveis", async () => {
+    const a = await setupOrg();
+    const b = await setupOrg();
+    const p = await createProposal(a.admin, base);
+    await expect(updateProposal(b.admin, p.id, base)).rejects.toThrow();
+    expect((await listProposals(b.admin)).length).toBe(0);
+  });
+});

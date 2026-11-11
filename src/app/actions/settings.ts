@@ -42,7 +42,7 @@ export async function changeOwnPasswordAction(_: ActionState, fd: FormData): Pro
 
 export async function updateOrganizationAction(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async (actor) => {
-    await users.updateOrganization(actor, String(fd.get("name") ?? ""));
+    await users.updateOrganizationProfile(actor, formObject(fd));
     return "Dados da empresa atualizados.";
   });
 }
