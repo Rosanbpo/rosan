@@ -25,6 +25,9 @@ export default async function EditClientPage({ params }: { params: Promise<{ id:
         values={{
           ...client,
           monthlyFee: moneyInput(client.monthlyFee === null ? null : Number(client.monthlyFee)),
+          journeyStage: client.journeyStage,
+          software: client.software,
+          directCost: moneyInput(client.directCost === null ? null : Number(client.directCost)),
           startDate: client.startDate ? dbDateToLocalDate(client.startDate) : null,
           memberIds: client.members.map((m) => m.userId),
         }}

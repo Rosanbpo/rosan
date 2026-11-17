@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Download, Plus, Upload } from "lucide-react";
 import { CLIENT_STATUSES, CLIENT_STATUS_LABEL } from "@/domain/enums";
 import { can } from "@/domain/permissions";
 import { EmptyState, PageHeader, Pagination } from "@/components/ui/layout";
@@ -31,11 +31,22 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         title="Clientes"
         description={manage ? "Todos os clientes da empresa." : "Clientes aos quais você está vinculado."}
         actions={
-          manage && (
-            <Link href="/clientes/novo" className="btn-primary">
-              <Plus aria-hidden className="h-4 w-4" /> Novo cliente
-            </Link>
-          )
+          <div className="flex flex-wrap gap-2">
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- download de arquivo */}
+            <a href="/clientes/exportar" className="btn-secondary">
+              <Download aria-hidden className="h-4 w-4" /> Exportar
+            </a>
+            {manage && (
+              <>
+                <Link href="/clientes/importar" className="btn-secondary">
+                  <Upload aria-hidden className="h-4 w-4" /> Importar
+                </Link>
+                <Link href="/clientes/novo" className="btn-primary">
+                  <Plus aria-hidden className="h-4 w-4" /> Novo cliente
+                </Link>
+              </>
+            )}
+          </div>
         }
       />
       <form className="card mb-4 grid grid-cols-2 gap-3 p-4 md:grid-cols-5" aria-label="Filtros de clientes">

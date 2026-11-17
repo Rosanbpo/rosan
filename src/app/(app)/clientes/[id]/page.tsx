@@ -6,6 +6,7 @@ import {
   FileSignature,
   FolderKanban,
   History,
+  Landmark,
   LayoutDashboard,
   Mail,
   Pencil,
@@ -14,6 +15,7 @@ import {
   Repeat,
   UserRound,
   Wallet,
+  Workflow,
 } from "lucide-react";
 import { dbDateToLocalDate } from "@/domain/dates";
 import {
@@ -22,6 +24,13 @@ import {
   type ProjectStatus,
 } from "@/domain/enums";
 import { CONTRACT_STATUS_LABEL } from "@/domain/contract";
+import { BankAccountsPanel } from "@/components/bank-accounts-panel";
+import { EsteiraIcon } from "@/components/esteira-icon";
+import { ESTEIRAS, esteiraCounts } from "@/domain/esteiras";
+import { STAGE_LABEL } from "@/domain/enums";
+import { TONE } from "@/lib/ui";
+import { listBankAccounts } from "@/server/services/bank-accounts";
+import { esteiraProgress } from "@/server/services/esteiras";
 import { PROPOSAL_STATUS_LABEL, type ProposalStatus } from "@/domain/proposal";
 import { can } from "@/domain/permissions";
 import { Card, EmptyState, Stat } from "@/components/ui/layout";
@@ -88,6 +97,8 @@ const TABS: Array<{
       e.contracts.length > 0 ||
       e.proposals.length > 0,
   },
+  { key: "jornada", label: "Jornada", icon: Workflow, show: () => true },
+  { key: "bancos", label: "Bancos", icon: Landmark, show: () => true },
   { key: "projetos", label: "Projetos", icon: FolderKanban, show: () => true },
   { key: "rotinas", label: "Rotinas", icon: Repeat, show: () => true },
   { key: "cadastro", label: "Cadastro", icon: UserRound, show: () => true },
@@ -122,6 +133,8 @@ export default async function ClientPage({
     pendings,
     history,
     documents,
+    banks,
+    journey,
   ] = await Promise.all([
     getRunningTimer(actor),
     clientPanelExtras(actor, id),
@@ -136,6 +149,8 @@ export default async function ClientPage({
     listPendings(actor, { clientId: id }),
     clientHistory(actor, id),
     getDocumentChecklist(actor, id, competence),
+    aba === "bancos" ? listBankAccounts(actor, id) : Promise.resolve([]),
+    aba === "jornada" ? esteiraProgress(actor, { clientId: id }) : Promise.resolve({}),
   ]);
   const routineForm =
     aba === "rotinas" && can(actor, "recurrences.manage")
@@ -424,6 +439,58 @@ export default async function ClientPage({
         </div>
       )}
 
+      {aba === "bancos" && <BankAccountsPanel clientId={id} accounts={banks} canEdit={manage} />}
+
+      {aba === "jornada" && (
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Etapa atual: <strong>{client.journeyStage ? STAGE_LABEL[client.journeyStage] : "não definida"}</strong>
+            {manage && (
+              <>
+                {" "}
+                · <Link href={`/clientes/${id}/editar`} className="font-medium text-brand-700 hover:underline">alterar</Link>
+              </>
+            )}
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {ESTEIRAS.map((e) => {
+              const tone = TONE[e.tone];
+              const c = esteiraCounts(e);
+              const prog = (journey as Record<string, { clients: Array<{ total: number; done: number }> }>)[e.slug]?.clients[0];
+              const pct = prog && prog.total ? Math.round((prog.done / prog.total) * 100) : 0;
+              return (
+                <div key={e.slug} className={`overflow-hidden rounded-xl border bg-white shadow-sm ${tone.border}`}>
+                  <div className={`flex items-center gap-2 bg-gradient-to-r px-4 py-2.5 text-white ${tone.band}`}>
+                    <EsteiraIcon icon={e.icon} className="h-5 w-5" />
+                    <span className="text-sm font-semibold">{e.name}</span>
+                  </div>
+                  <div className="space-y-2 p-4 text-sm">
+                    {prog ? (
+                      <>
+                        <div className="flex justify-between text-xs text-slate-600">
+                          <span>{prog.done} de {prog.total} tarefas concluídas</span>
+                          <span className="font-semibold">{pct}%</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                          <div className={`h-full rounded-full ${tone.solid}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-xs text-slate-500">Ainda não aplicada ({c.tasks} tarefas disponíveis).</p>
+                    )}
+                    {can(actor, "projects.manage") && (
+                      <Link href={`/esteiras/${e.slug}?cliente=${id}`} className={`inline-block text-xs font-medium hover:underline ${tone.text}`}>
+                        {prog ? "Aplicar mais tarefas" : "Ver e aplicar"} →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {aba === "financeiro" && (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-6">
@@ -707,6 +774,16 @@ export default async function ClientPage({
               <dd>{client.contactPhone ?? "—"}</dd>
               <dt className="text-slate-500">Canais</dt>
               <dd>{client.contactChannels ?? "—"}</dd>
+              <dt className="text-slate-500">Etapa da jornada</dt>
+              <dd>{client.journeyStage ? STAGE_LABEL[client.journeyStage] : "—"}</dd>
+              <dt className="text-slate-500">Sistema financeiro</dt>
+              <dd>{client.software ?? "—"}</dd>
+              {finance && (
+                <>
+                  <dt className="text-slate-500">Custo direto mensal</dt>
+                  <dd>{client.directCost === null ? "—" : fmtMoney(Number(client.directCost))}</dd>
+                </>
+              )}
               <dt className="text-slate-500">Início</dt>
               <dd>
                 {client.startDate

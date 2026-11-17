@@ -1,4 +1,4 @@
-import { CLIENT_STATUSES, CLIENT_STATUS_LABEL, ROLE_LABEL, SERVICE_OPTIONS, type Role } from "@/domain/enums";
+import { CLIENT_STATUSES, CLIENT_STATUS_LABEL, JOURNEY_STAGES, ROLE_LABEL, STAGE_LABEL, SERVICE_OPTIONS, type Role } from "@/domain/enums";
 import type { ActionState } from "@/lib/action-state";
 import { ActionForm, Field, SubmitButton } from "./ui/action-form";
 
@@ -15,6 +15,9 @@ export interface ClientFormValues {
   startDate?: string | null;
   monthlyFee?: string;
   billingDay?: number | null;
+  journeyStage?: string | null;
+  software?: string | null;
+  directCost?: string;
   notes?: string | null;
   responsibleOperatorId?: string | null;
   managerId?: string | null;
@@ -64,6 +67,22 @@ export function ClientForm({
         </Field>
         <Field label="Mensalidade (R$)" name="monthlyFee" hint="Valor mensal do contrato. Alimenta a carteira e a rentabilidade.">
           <input id="monthlyFee" name="monthlyFee" inputMode="decimal" className="input" defaultValue={values.monthlyFee ?? ""} placeholder="2.500,00" />
+        </Field>
+        <Field label="Etapa da jornada" name="journeyStage" hint="Em que ponto do relacionamento o cliente está.">
+          <select id="journeyStage" name="journeyStage" className="input" defaultValue={values.journeyStage ?? ""}>
+            <option value="">Sem etapa</option>
+            {JOURNEY_STAGES.map((st) => (
+              <option key={st} value={st}>
+                {STAGE_LABEL[st]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Sistema financeiro" name="software" hint="ERP ou sistema que o cliente usa (Omie, Conta Azul, Nibo…).">
+          <input id="software" name="software" className="input" defaultValue={values.software ?? ""} />
+        </Field>
+        <Field label="Custo direto mensal (R$)" name="directCost" hint="Ferramentas, taxas ou outros custos só deste cliente. Entra na rentabilidade.">
+          <input id="directCost" name="directCost" inputMode="decimal" className="input" defaultValue={values.directCost ?? ""} placeholder="0,00" />
         </Field>
         <Field label="Dia de vencimento" name="billingDay" hint="Dia do mês em que a mensalidade é cobrada (1 a 31).">
           <input id="billingDay" name="billingDay" type="number" min={1} max={31} className="input" defaultValue={values.billingDay ?? ""} />

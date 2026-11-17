@@ -11,9 +11,11 @@ export function clientProfitability(input: {
   monthlyFee: number | null;
   minutes: number;
   hourCost: number | null;
+  /** Custo direto mensal do cliente (ferramentas, taxas), somado ao custo das horas. */
+  directCost?: number | null;
 }): Profitability {
   const hours = Math.round((input.minutes / 60) * 100) / 100;
-  const cost = input.hourCost === null ? null : round2(hours * input.hourCost);
+  const cost = input.hourCost === null ? null : round2(hours * input.hourCost + (input.directCost ?? 0));
   const margin = input.monthlyFee === null || cost === null ? null : round2(input.monthlyFee - cost);
   const marginPct = margin === null || !input.monthlyFee ? null : margin / input.monthlyFee;
   return { hours, cost, margin, marginPct };

@@ -44,6 +44,7 @@ export async function getPortfolio(actor: Actor, month: string) {
         status: true,
         monthlyFee: true,
         billingDay: true,
+        directCost: true,
         services: true,
         responsibleOperator: { select: { name: true } },
         manager: { select: { name: true } },
@@ -88,14 +89,16 @@ export async function getPortfolio(actor: Actor, month: string) {
       minutes,
       openTasks: openBy.get(c.id) ?? 0,
       overdueTasks: overdueBy.get(c.id) ?? 0,
-      ...clientProfitability({ monthlyFee, minutes, hourCost }),
+      directCost: c.directCost === null ? null : Number(c.directCost),
+      ...clientProfitability({ monthlyFee, minutes, hourCost, directCost: c.directCost === null ? null : Number(c.directCost) }),
     };
   });
 
   const active = rows.filter((r) => r.status === "ATIVO");
   const mrr = active.reduce((acc, r) => acc + (r.monthlyFee ?? 0), 0);
   const totalMinutes = rows.reduce((acc, r) => acc + r.minutes, 0);
-  const cost = hourCost === null ? null : Math.round((totalMinutes / 60) * hourCost * 100) / 100;
+  const totalDirect = rows.reduce((acc, r) => acc + (r.directCost ?? 0), 0);
+  const cost = hourCost === null ? null : Math.round(((totalMinutes / 60) * hourCost + totalDirect) * 100) / 100;
   return {
     month,
     hourCost,
@@ -125,7 +128,7 @@ export async function clientMonthSummary(actor: Actor, clientId: string) {
   const { from, to } = monthRange(currentMonth());
   const [org, client, time] = await Promise.all([
     prisma.organization.findUniqueOrThrow({ where: { id: actor.organizationId }, select: { hourCost: true } }),
-    prisma.client.findUniqueOrThrow({ where: { id: clientId }, select: { monthlyFee: true, billingDay: true } }),
+    prisma.client.findUniqueOrThrow({ where: { id: clientId }, select: { monthlyFee: true, billingDay: true, directCost: true } }),
     prisma.timeEntry.aggregate({ where: { clientId, workedOn: { gte: from, lt: to } }, _sum: { minutes: true } }),
   ]);
   const monthlyFee = client.monthlyFee === null ? null : Number(client.monthlyFee);
@@ -134,6 +137,6 @@ export async function clientMonthSummary(actor: Actor, clientId: string) {
     monthlyFee,
     billingDay: client.billingDay,
     minutes,
-    ...clientProfitability({ monthlyFee, minutes, hourCost: org.hourCost === null ? null : Number(org.hourCost) }),
+    ...clientProfitability({ monthlyFee, minutes, hourCost: org.hourCost === null ? null : Number(org.hourCost), directCost: client.directCost === null ? null : Number(client.directCost) }),
   };
 }

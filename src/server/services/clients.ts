@@ -129,6 +129,9 @@ function toData(input: ClientInput) {
     notes: input.notes ?? null,
     monthlyFee: input.monthlyFee ?? null,
     billingDay: input.billingDay ?? null,
+    journeyStage: input.journeyStage ?? null,
+    software: input.software ?? null,
+    directCost: input.directCost ?? null,
     responsibleOperatorId: input.responsibleOperatorId ?? null,
     managerId: input.managerId ?? null,
   };
