@@ -305,6 +305,7 @@ export const procedureSchema = z.object({
   responsible: optionalText(200),
   ownerId: optionalId,
   reviewedAt: optionalLocalDate,
+  clientId: optionalId,
 });
 export type ProcedureInput = z.infer<typeof procedureSchema>;
 
@@ -469,3 +470,12 @@ export const bankAccountSchema = z.object({
   nickname: optionalText(80),
   notes: optionalText(500),
 });
+
+export const clientNoteSchema = z.object({
+  kind: z.enum(["PARTICULARIDADE", "ATA"]),
+  title: requiredText("Título", 200),
+  content: z.string({ required_error: "Escreva o conteúdo." }).trim().min(2, "Escreva o conteúdo.").max(30_000),
+  meetingDate: optionalLocalDate,
+  participants: optionalText(500),
+});
+export type ClientNoteInput = z.infer<typeof clientNoteSchema>;
