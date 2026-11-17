@@ -21,6 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const items: NavItem[] = [
     ...(can(actor, "dashboard.view") ? [{ group: "Operação", href: "/painel", label: "Painel do gestor", icon: "painel" as const }] : []),
     ...(can(actor, "dashboard.view") ? [{ group: "Operação", href: "/central", label: "Central operacional", icon: "central" as const }] : []),
+    ...(can(actor, "dashboard.view") ? [{ group: "Operação", href: "/relatorios", label: "Relatórios", icon: "relatorios" as const }] : []),
     { group: "Operação", href: "/minha-operacao", label: "Minha operação", icon: "operacao", badge: myOverdue },
     { group: "Operação", href: "/tarefas", label: "Tarefas", icon: "tarefas" },
     { group: "Operação", href: "/pendencias", label: "Pendências", icon: "pendencias" },

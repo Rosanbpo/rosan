@@ -201,6 +201,15 @@
   .no-print {
     display: none !important;
   }
+  /* Relatórios: imprime só o conteúdo, sem menu lateral. */
+  body:has(.report-print) aside,
+  body:has(.report-print) header.sticky {
+    display: none !important;
+  }
+  body:has(.report-print) main {
+    margin: 0 !important;
+    padding: 10mm !important;
+  }
   .doc-sheet {
     margin: 0;
     box-shadow: none;
