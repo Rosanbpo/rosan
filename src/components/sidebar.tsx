@@ -15,6 +15,8 @@ import {
   FileSignature,
   FileCheck2,
   Workflow,
+  Radar,
+  Gauge,
   FolderKanban,
   Hourglass,
   LineChart,
@@ -42,6 +44,8 @@ const ICON_COLOR: Record<keyof typeof ICONS, string> = {
   precificacao: "bg-sky-500/20 text-sky-300",
   projetos: "bg-violet-500/20 text-violet-300",
   esteiras: "bg-violet-500/20 text-violet-300",
+  central: "bg-emerald-500/20 text-emerald-300",
+  executivo: "bg-amber-500/20 text-amber-300",
   pops: "bg-amber-500/20 text-amber-300",
   rotinas: "bg-violet-500/20 text-violet-300",
   config: "bg-slate-500/25 text-slate-300",
@@ -66,6 +70,8 @@ const ICONS = {
   contratos: FileSignature,
   documentos: FileCheck2,
   esteiras: Workflow,
+  central: Radar,
+  executivo: Gauge,
 };
 
 export interface NavItem {

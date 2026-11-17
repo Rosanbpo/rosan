@@ -1,11 +1,13 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { assertCan, ValidationError } from "@/domain/permissions";
 import type { ActionState } from "@/lib/action-state";
 import { formObject, runAction } from "@/server/action-utils";
 import * as holidays from "@/server/services/holidays";
 import * as users from "@/server/services/users";
 import { hourCostSchema, parseInput } from "@/server/validation";
+import { setBusinessGoals } from "@/server/services/executive";
 import { setHourCost } from "@/server/services/portfolio";
 import { runScheduler } from "@/server/services/generator";
 
@@ -89,5 +91,13 @@ export async function updateHourCostAction(_: ActionState, fd: FormData): Promis
     const input = parseInput(hourCostSchema, formObject(fd));
     await setHourCost(actor, input.hourCost);
     return "Custo da hora atualizado.";
+  });
+}
+
+export async function updateBusinessGoalsAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await setBusinessGoals(actor, formObject(fd));
+    revalidatePath("/executivo");
+    return "Metas e capacidade atualizadas.";
   });
 }

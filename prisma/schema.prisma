@@ -20,6 +20,11 @@ model Organization {
   timezone      String         @default("America/Sao_Paulo")
   /// Custo médio da hora de trabalho (R$), usado na rentabilidade por cliente.
   hourCost      Decimal?       @db.Decimal(10, 2)
+  /// Meta de receita recorrente mensal (R$) e data-alvo.
+  revenueGoal      Decimal?    @db.Decimal(12, 2)
+  revenueGoalDate  DateTime?   @db.Date
+  /// Horas mensais disponíveis da equipe (capacidade).
+  capacityHours    Int?
   /// Dados da empresa usados em propostas e contratos.
   legalName     String?
   cnpj          String?
