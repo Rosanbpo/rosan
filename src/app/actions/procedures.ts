@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/action-state";
 import { formObject, runAction } from "@/server/action-utils";
@@ -20,4 +21,12 @@ export async function updateProcedureAction(id: string, _: ActionState, fd: Form
   });
   if (res?.ok) redirect(`/pops/${id}`);
   return res;
+}
+
+export async function importPopLibraryAction(_: ActionState): Promise<ActionState> {
+  return runAction(async (actor) => {
+    const r = await procedures.importPopLibrary(actor);
+    revalidatePath("/pops");
+    return r.created ? `${r.created} processo(s) importado(s).` : "Todos os processos já estavam importados.";
+  });
 }

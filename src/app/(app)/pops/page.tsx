@@ -7,6 +7,9 @@ import { Select, categoryOptions } from "@/components/filter-select";
 import { EmptyState, PageHeader } from "@/components/ui/layout";
 import { fmtLocalDate } from "@/lib/format";
 import { cx } from "@/lib/ui";
+import { importPopLibraryAction } from "@/app/actions/procedures";
+import { ConfirmAction } from "@/components/confirm-action";
+import { POP_LIBRARY } from "@/domain/pop-library";
 import { requireActor } from "@/server/context";
 import { oneOf, str } from "@/server/page-utils";
 import { listProcedures } from "@/server/services/procedures";
@@ -39,9 +42,12 @@ export default async function ProceduresPage({ searchParams }: { searchParams: P
         description="Procedimentos operacionais padrão: como cada rotina deve ser executada."
         actions={
           manage && (
-            <Link href="/pops/novo" className="btn-primary">
-              <Plus aria-hidden className="h-4 w-4" /> Novo POP
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <ConfirmAction action={importPopLibraryAction} label="Importar meus processos" confirm={`Importar os ${POP_LIBRARY.length} processos prontos que ainda não existem?`} />
+              <Link href="/pops/novo" className="btn-primary">
+                <Plus aria-hidden className="h-4 w-4" /> Novo POP
+              </Link>
+            </div>
           )
         }
       />

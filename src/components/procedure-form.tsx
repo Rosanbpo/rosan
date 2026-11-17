@@ -8,6 +8,8 @@ import {
   type Role,
 } from "@/domain/enums";
 import type { ActionState } from "@/lib/action-state";
+import { normalizePop } from "@/domain/pop-markup";
+import { PopEditor } from "./pop-editor";
 import { ActionForm, Field, SubmitButton } from "./ui/action-form";
 
 export interface ProcedureFormValues {
@@ -62,8 +64,8 @@ export function ProcedureForm({
         <Field label="Objetivo" name="objective" className="md:col-span-2">
           <input id="objective" name="objective" className="input" defaultValue={values.objective ?? ""} placeholder="Para que serve este processo?" />
         </Field>
-        <Field label="Passo a passo" name="content" required className="md:col-span-2" hint="Um passo por linha. Use linhas em branco para separar etapas.">
-          <textarea id="content" name="content" required rows={14} className="input font-mono" defaultValue={values.content ?? ""} />
+        <Field label="Conteúdo do processo" name="content" required className="md:col-span-2" hint="Escreva como no Notion: seções, passos, checklists, avisos e tabelas. Veja as prévias do documento e do mapa mental.">
+          <PopEditor name="content" title={values.title ?? ""} defaultValue={normalizePop(values.content ?? "")} />
         </Field>
         <Field label="Sistemas e ferramentas" name="tools">
           <input id="tools" name="tools" className="input" defaultValue={values.tools ?? ""} placeholder="Banco, ERP, planilha…" />
