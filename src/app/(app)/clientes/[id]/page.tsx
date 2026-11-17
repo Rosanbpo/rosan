@@ -16,6 +16,9 @@ import {
   UserRound,
   Wallet,
   Workflow,
+  BookOpenCheck,
+  StickyNote,
+  NotebookPen,
 } from "lucide-react";
 import { dbDateToLocalDate } from "@/domain/dates";
 import {
@@ -24,6 +27,8 @@ import {
   type ProjectStatus,
 } from "@/domain/enums";
 import { CONTRACT_STATUS_LABEL } from "@/domain/contract";
+import { ClientNotesPanel } from "@/components/client-notes-panel";
+import { ClientProceduresPanel } from "@/components/client-procedures-panel";
 import { BankAccountsPanel } from "@/components/bank-accounts-panel";
 import { EsteiraIcon } from "@/components/esteira-icon";
 import { ESTEIRAS, esteiraCounts } from "@/domain/esteiras";
@@ -65,6 +70,8 @@ import {
   clientPanelExtras,
   getClient,
 } from "@/server/services/clients";
+import { listClientNotes } from "@/server/services/client-notes";
+import { listClientProcedures, procedureOptions } from "@/server/services/procedures";
 import { listTasks } from "@/server/services/tasks";
 import { listPendings } from "@/server/services/pendings";
 import { clientMonthSummary } from "@/server/services/portfolio";
@@ -99,6 +106,9 @@ const TABS: Array<{
   },
   { key: "jornada", label: "Jornada", icon: Workflow, show: () => true },
   { key: "bancos", label: "Bancos", icon: Landmark, show: () => true },
+  { key: "pops", label: "POPs", icon: BookOpenCheck, show: () => true },
+  { key: "particularidades", label: "Particularidades", icon: StickyNote, show: () => true },
+  { key: "atas", label: "Atas", icon: NotebookPen, show: () => true },
   { key: "projetos", label: "Projetos", icon: FolderKanban, show: () => true },
   { key: "rotinas", label: "Rotinas", icon: Repeat, show: () => true },
   { key: "cadastro", label: "Cadastro", icon: UserRound, show: () => true },
@@ -134,6 +144,9 @@ export default async function ClientPage({
     history,
     documents,
     banks,
+    clientPops,
+    standardPops,
+    clientNotes,
     journey,
   ] = await Promise.all([
     getRunningTimer(actor),
@@ -150,6 +163,9 @@ export default async function ClientPage({
     clientHistory(actor, id),
     getDocumentChecklist(actor, id, competence),
     aba === "bancos" ? listBankAccounts(actor, id) : Promise.resolve([]),
+    aba === "pops" ? listClientProcedures(actor, id) : Promise.resolve([]),
+    aba === "pops" && can(actor, "procedures.manage") ? procedureOptions(actor) : Promise.resolve([]),
+    aba === "particularidades" || aba === "atas" ? listClientNotes(actor, id, aba === "atas" ? "ATA" : "PARTICULARIDADE") : Promise.resolve([]),
     aba === "jornada" ? esteiraProgress(actor, { clientId: id }) : Promise.resolve({}),
   ]);
   const routineForm =
@@ -440,6 +456,12 @@ export default async function ClientPage({
       )}
 
       {aba === "bancos" && <BankAccountsPanel clientId={id} accounts={banks} canEdit={manage} />}
+
+      {aba === "pops" && <ClientProceduresPanel clientId={id} rows={clientPops} standard={standardPops} canManage={can(actor, "procedures.manage")} />}
+
+      {(aba === "particularidades" || aba === "atas") && (
+        <ClientNotesPanel clientId={id} kind={aba === "atas" ? "ATA" : "PARTICULARIDADE"} rows={clientNotes} canDelete={manage} />
+      )}
 
       {aba === "jornada" && (
         <div className="space-y-4">

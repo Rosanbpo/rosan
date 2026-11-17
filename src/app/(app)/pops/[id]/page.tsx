@@ -25,9 +25,9 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
   return (
     <>
       <PageHeader
-        breadcrumb={{ href: "/pops", label: "Processos e POPs" }}
+        breadcrumb={proc.client ? { href: `/clientes/${proc.client.id}?aba=pops`, label: `POPs de ${proc.client.tradeName}` } : { href: "/pops", label: "Processos e POPs" }}
         title={proc.title}
-        description={`${CATEGORY_LABEL[proc.category as TaskCategory]} · versão ${proc.version} · ${PROCEDURE_STATUS_LABEL[proc.status as ProcedureStatus]}`}
+        description={`${proc.client ? `${proc.client.tradeName} · ` : ""}${CATEGORY_LABEL[proc.category as TaskCategory]} · versão ${proc.version} · ${PROCEDURE_STATUS_LABEL[proc.status as ProcedureStatus]}`}
         actions={
           manage && (
             <Link href={`/pops/${id}/editar`} className="btn-secondary">

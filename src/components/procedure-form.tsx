@@ -30,15 +30,18 @@ export function ProcedureForm({
   values = {},
   submitLabel,
   cancelHref,
+  clientId,
 }: {
   action: (s: ActionState, fd: FormData) => Promise<ActionState>;
   people: Array<{ id: string; name: string; role: Role }>;
   values?: ProcedureFormValues;
   submitLabel: string;
   cancelHref: string;
+  clientId?: string;
 }) {
   return (
     <ActionForm action={action} className="space-y-6">
+      {clientId && <input type="hidden" name="clientId" value={clientId} />}
       <section className="card grid gap-4 p-5 md:grid-cols-2">
         <Field label="Título do processo" name="title" required className="md:col-span-2">
           <input id="title" name="title" required className="input" defaultValue={values.title} placeholder="Ex.: Conciliação bancária diária" />

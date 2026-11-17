@@ -12,28 +12,28 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model Organization {
-  runningTimers RunningTimer[]
-  pricingSheet  PricingSheet?
-  contracts     Contract[]
-  id            String         @id @default(cuid())
-  name          String
-  timezone      String         @default("America/Sao_Paulo")
+  runningTimers   RunningTimer[]
+  pricingSheet    PricingSheet?
+  contracts       Contract[]
+  id              String         @id @default(cuid())
+  name            String
+  timezone        String         @default("America/Sao_Paulo")
   /// Custo médio da hora de trabalho (R$), usado na rentabilidade por cliente.
-  hourCost      Decimal?       @db.Decimal(10, 2)
+  hourCost        Decimal?       @db.Decimal(10, 2)
   /// Meta de receita recorrente mensal (R$) e data-alvo.
-  revenueGoal      Decimal?    @db.Decimal(12, 2)
-  revenueGoalDate  DateTime?   @db.Date
+  revenueGoal     Decimal?       @db.Decimal(12, 2)
+  revenueGoalDate DateTime?      @db.Date
   /// Horas mensais disponíveis da equipe (capacidade).
-  capacityHours    Int?
+  capacityHours   Int?
   /// Dados da empresa usados em propostas e contratos.
-  legalName     String?
-  cnpj          String?
-  email         String?
-  phone         String?
-  website       String?
-  city          String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  legalName       String?
+  cnpj            String?
+  email           String?
+  phone           String?
+  website         String?
+  city            String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   memberships   Membership[]
   leads         Lead[]
@@ -52,6 +52,7 @@ model Organization {
 }
 
 model User {
+  clientNotes      ClientNote[]      @relation("ClientNoteAuthor")
   documentReceipts DocumentReceipt[] @relation("DocumentReceivedBy")
   runningTimer     RunningTimer?
   contractsCreated Contract[]
@@ -124,6 +125,8 @@ enum ClientStatus {
 
 model Client {
   bankAccounts          ClientBankAccount[]
+  procedures            Procedure[]
+  clientNotes           ClientNote[]
   documentRequirements  DocumentRequirement[]
   contracts             Contract[]
   id                    String                @id @default(cuid())
@@ -662,12 +665,17 @@ model Procedure {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
+  /// Preenchido quando o POP é só deste cliente.
+  clientId String?
+
   organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   owner        User?             @relation("ProcedureOwner", fields: [ownerId], references: [id])
+  client       Client?           @relation(fields: [clientId], references: [id], onDelete: Cascade)
   templates    RoutineTemplate[]
 
   @@index([organizationId, status])
   @@index([organizationId, category])
+  @@index([clientId])
 }
 
 // ---------------------------------------------------------------------------
@@ -906,5 +914,31 @@ model ClientBankAccount {
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId, archivedAt])
+  @@index([organizationId])
+}
+
+enum ClientNoteKind {
+  PARTICULARIDADE
+  ATA
+}
+
+/// Particularidades do cliente e atas de reunião (texto no formato dos POPs).
+model ClientNote {
+  id             String         @id @default(cuid())
+  organizationId String
+  clientId       String
+  kind           ClientNoteKind
+  title          String
+  content        String
+  meetingDate    DateTime?      @db.Date
+  participants   String?
+  authorId       String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  author User?  @relation("ClientNoteAuthor", fields: [authorId], references: [id])
+
+  @@index([clientId, kind])
   @@index([organizationId])
 }
