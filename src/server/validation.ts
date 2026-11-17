@@ -91,6 +91,9 @@ export const clientSchema = z.object({
   notes: optionalText(5000),
   monthlyFee: optionalMoney,
   billingDay: optionalInt(1, 31),
+  journeyStage: z.preprocess(emptyToUndefined, z.enum(JOURNEY_STAGES).optional()),
+  software: optionalText(100),
+  directCost: optionalMoney,
   responsibleOperatorId: optionalId,
   managerId: optionalId,
   memberIds: z.array(z.string().min(1)).default([]),
@@ -457,3 +460,12 @@ export const distratoSchema = z.object({
   distratoClauses: clausesField,
 });
 export type DistratoInput = z.infer<typeof distratoSchema>;
+
+export const bankAccountSchema = z.object({
+  bank: requiredText("Banco", 100),
+  agency: optionalText(20),
+  account: optionalText(30),
+  kind: optionalText(40),
+  nickname: optionalText(80),
+  notes: optionalText(500),
+});
