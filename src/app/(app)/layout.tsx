@@ -20,11 +20,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const items: NavItem[] = [
     ...(can(actor, "dashboard.view") ? [{ group: "Operação", href: "/painel", label: "Painel do gestor", icon: "painel" as const }] : []),
+    ...(can(actor, "dashboard.view") ? [{ group: "Operação", href: "/central", label: "Central operacional", icon: "central" as const }] : []),
     { group: "Operação", href: "/minha-operacao", label: "Minha operação", icon: "operacao", badge: myOverdue },
     { group: "Operação", href: "/tarefas", label: "Tarefas", icon: "tarefas" },
     { group: "Operação", href: "/pendencias", label: "Pendências", icon: "pendencias" },
     { group: "Operação", href: "/documentos", label: "Documentos dos clientes", icon: "documentos" },
     { group: "Clientes", href: "/clientes", label: "Clientes", icon: "clientes" },
+    ...(can(actor, "finance.view") ? [{ group: "Clientes", href: "/executivo", label: "Painel executivo", icon: "executivo" as const }] : []),
     ...(can(actor, "finance.view") ? [{ group: "Clientes", href: "/carteira", label: "Carteira e rentabilidade", icon: "carteira" as const }] : []),
     { group: "Clientes", href: "/projetos", label: "Projetos", icon: "projetos" },
     ...(can(actor, "projects.manage") ? [{ group: "Clientes", href: "/esteiras", label: "Esteiras", icon: "esteiras" as const }] : []),

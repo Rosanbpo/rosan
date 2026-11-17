@@ -338,6 +338,12 @@ export const esteiraApplySchema = z.object({
 
 export const hourCostSchema = z.object({ hourCost: optionalMoney });
 
+export const businessGoalsSchema = z.object({
+  revenueGoal: optionalMoney,
+  revenueGoalDate: optionalLocalDate,
+  capacityHours: optionalInt(1, 2000),
+});
+
 const linesField = (label: string, min = 0) =>
   z.preprocess(
     (v) => (typeof v === "string" ? splitLines(v) : v ?? []),

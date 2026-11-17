@@ -2,7 +2,7 @@ import { Card, PageHeader } from "@/components/ui/layout";
 import { SettingsNav } from "@/components/settings-nav";
 import { ActionForm, Field, SubmitButton } from "@/components/ui/action-form";
 import { ConfirmAction } from "@/components/confirm-action";
-import { runSchedulerNowAction, updateHourCostAction, updateOrganizationAction } from "@/app/actions/settings";
+import { runSchedulerNowAction, updateBusinessGoalsAction, updateHourCostAction, updateOrganizationAction } from "@/app/actions/settings";
 import { moneyInput } from "@/lib/format";
 import { fmtDateTime } from "@/lib/format";
 import { APP_TIMEZONE } from "@/server/config";
@@ -60,6 +60,22 @@ export default async function SettingsPage() {
           <ActionForm action={updateHourCostAction} className="space-y-4">
             <Field label="Custo médio da hora de trabalho (R$)" name="hourCost" hint="Some salários, encargos e custos fixos e divida pelas horas produtivas do mês.">
               <input id="hourCost" name="hourCost" inputMode="decimal" className="input" defaultValue={moneyInput(org.hourCost === null ? null : Number(org.hourCost))} placeholder="45,00" />
+            </Field>
+            <SubmitButton>Salvar</SubmitButton>
+          </ActionForm>
+        </Card>
+        <Card title="Metas e capacidade" description="Alimentam o Painel executivo: meta de receita com previsão e ocupação da equipe.">
+          <ActionForm action={updateBusinessGoalsAction} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Meta de receita mensal (R$)" name="revenueGoal">
+                <input id="revenueGoal" name="revenueGoal" inputMode="decimal" className="input" defaultValue={moneyInput(org.revenueGoal === null ? null : Number(org.revenueGoal))} placeholder="20.000,00" />
+              </Field>
+              <Field label="Data-alvo" name="revenueGoalDate">
+                <input id="revenueGoalDate" name="revenueGoalDate" type="date" className="input" defaultValue={org.revenueGoalDate ? org.revenueGoalDate.toISOString().slice(0, 10) : ""} />
+              </Field>
+            </div>
+            <Field label="Horas produtivas por mês da equipe" name="capacityHours" hint="Soma das horas que a equipe consegue dedicar aos clientes. Uma pessoa em tempo integral costuma ter 120 a 140 horas.">
+              <input id="capacityHours" name="capacityHours" inputMode="numeric" className="input" defaultValue={org.capacityHours ?? ""} placeholder="130" />
             </Field>
             <SubmitButton>Salvar</SubmitButton>
           </ActionForm>
