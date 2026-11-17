@@ -4,27 +4,23 @@ import { CATEGORY_LABEL, PROCEDURE_STATUS_LABEL, type ProcedureStatus, type Task
 import { can } from "@/domain/permissions";
 import { Card, PageHeader } from "@/components/ui/layout";
 import { fmtDate, fmtLocalDate } from "@/lib/format";
+import { PopDocument } from "@/components/pop-document";
+import { PopMindMap } from "@/components/pop-mindmap";
+import { normalizePop } from "@/domain/pop-markup";
 import { requireActor } from "@/server/context";
 import { orNotFound } from "@/server/page-utils";
 import { getProcedure } from "@/server/services/procedures";
 
 export const metadata = { title: "POP" };
 
-/** Divide o texto em etapas (blocos separados por linha em branco), numerando as linhas de cada etapa. */
-function toSteps(content: string): string[][] {
-  return content
-    .split(/\n\s*\n/)
-    .map((block) => block.split("\n").map((l) => l.trim()).filter(Boolean))
-    .filter((b) => b.length);
-}
-
-export default async function ProcedurePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProcedurePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ vista?: string }> }) {
   const actor = await requireActor();
   const { id } = await params;
+  const { vista } = await searchParams;
+  const mapa = vista === "mapa";
   const proc = await orNotFound(getProcedure(actor, id));
   const manage = can(actor, "procedures.manage");
-  const blocks = toSteps(proc.content);
-  let n = 0;
+  const content = normalizePop(proc.content);
 
   return (
     <>
@@ -40,32 +36,28 @@ export default async function ProcedurePage({ params }: { params: Promise<{ id: 
           )
         }
       />
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <div className={mapa ? "grid gap-6" : "grid gap-6 lg:grid-cols-3"}>
+        <div className={mapa ? "space-y-6" : "space-y-6 lg:col-span-2"}>
           {proc.objective && (
             <Card title="Objetivo">
               <p className="text-sm text-slate-700">{proc.objective}</p>
             </Card>
           )}
-          <Card title="Passo a passo">
-            <div className="space-y-4">
-              {blocks.map((lines, i) => (
-                <ol key={i} className="space-y-2">
-                  {lines.map((line) => {
-                    n += 1;
-                    return (
-                      <li key={n} className="flex gap-3 text-sm text-slate-800">
-                        <span aria-hidden className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">
-                          {n}
-                        </span>
-                        <span>{line}</span>
-                      </li>
-                    );
-                  })}
-                </ol>
-              ))}
+          <div className="flex gap-1" role="tablist" aria-label="Forma de ver o processo">
+            <Link role="tab" aria-selected={!mapa} href={`/pops/${id}`} className={mapa ? "btn-secondary px-3 py-1 text-xs" : "btn-primary px-3 py-1 text-xs"}>
+              Documento
+            </Link>
+            <Link role="tab" aria-selected={mapa} href={`/pops/${id}?vista=mapa`} className={mapa ? "btn-primary px-3 py-1 text-xs" : "btn-secondary px-3 py-1 text-xs"}>
+              Mapa mental
+            </Link>
+          </div>
+          {mapa ? (
+            <PopMindMap title={proc.title} content={content} />
+          ) : (
+            <div className="card p-6">
+              <PopDocument content={content} />
             </div>
-          </Card>
+          )}
         </div>
         <Card title="Ficha do processo">
           <dl className="space-y-2 text-sm">

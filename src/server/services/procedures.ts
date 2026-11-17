@@ -1,3 +1,4 @@
+import { POP_LIBRARY } from "@/domain/pop-library";
 import type { Prisma } from "@prisma/client";
 import { dbDateToLocalDate, localDateToDbDate } from "@/domain/dates";
 import type { ProcedureStatus, TaskCategory } from "@/domain/enums";
@@ -142,4 +143,38 @@ export async function updateProcedure(actor: Actor, id: string, raw: unknown) {
       summary: contentChanged ? `POP atualizado (nova versão ${current.version + 1})` : "POP atualizado",
     });
   });
+}
+
+/** Importa os processos prontos do escritório; ignora os que já existem (pelo título). */
+export async function importPopLibrary(actor: Actor) {
+  assertCan(actor, "procedures.manage");
+  const existing = await prisma.procedure.findMany({ where: { organizationId: actor.organizationId }, select: { title: true } });
+  const have = new Set(existing.map((e) => e.title.toLowerCase()));
+  const missing = POP_LIBRARY.filter((p) => !have.has(p.title.toLowerCase()));
+  if (!missing.length) return { created: 0, skipped: POP_LIBRARY.length };
+  await prisma.$transaction(async (tx) => {
+    for (const p of missing) {
+      const row = await tx.procedure.create({
+        data: {
+          organizationId: actor.organizationId,
+          title: p.title,
+          category: p.category,
+          status: "PUBLICADO",
+          objective: p.objective,
+          content: p.content,
+          tools: p.tools ?? null,
+          responsible: p.responsible ?? null,
+        },
+      });
+      await recordAudit(tx, {
+        organizationId: actor.organizationId,
+        actorId: actor.userId,
+        entityType: "Procedure",
+        entityId: row.id,
+        action: "procedure.created",
+        summary: `POP importado: ${row.title}`,
+      });
+    }
+  });
+  return { created: missing.length, skipped: POP_LIBRARY.length - missing.length };
 }
