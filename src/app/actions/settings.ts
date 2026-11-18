@@ -6,6 +6,7 @@ import type { ActionState } from "@/lib/action-state";
 import { formObject, runAction } from "@/server/action-utils";
 import * as holidays from "@/server/services/holidays";
 import * as users from "@/server/services/users";
+import * as twoFactor from "@/server/services/two-factor";
 import { hourCostSchema, parseInput } from "@/server/validation";
 import { setBusinessGoals } from "@/server/services/executive";
 import { setHourCost } from "@/server/services/portfolio";
@@ -99,5 +100,12 @@ export async function updateBusinessGoalsAction(_: ActionState, fd: FormData): P
     await setBusinessGoals(actor, formObject(fd));
     revalidatePath("/executivo");
     return "Metas e capacidade atualizadas.";
+  });
+}
+
+export async function resetTwoFactorAction(userId: string, _: ActionState): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await twoFactor.resetTwoFactor(actor, userId);
+    return "Duas etapas redefinidas. A pessoa pode ativar de novo em Minha conta.";
   });
 }

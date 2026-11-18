@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { ROLES, ROLE_LABEL, type Role } from "@/domain/enums";
-import { resetPasswordAction, updateUserAction } from "@/app/actions/settings";
+import { resetPasswordAction, resetTwoFactorAction, updateUserAction } from "@/app/actions/settings";
+import { ConfirmAction } from "./confirm-action";
 import { ActionForm, SubmitButton } from "./ui/action-form";
 
 export function UserRow({
   user,
   isSelf,
 }: {
-  user: { id: string; name: string; email: string; role: Role; active: boolean; clients: number };
+  user: { id: string; name: string; email: string; role: Role; active: boolean; clients: number; twoFactor: boolean };
   isSelf: boolean;
 }) {
   const [editing, setEditing] = useState(false);
@@ -78,6 +79,13 @@ export function UserRow({
             </div>
             <SubmitButton className="btn-secondary">Redefinir</SubmitButton>
           </ActionForm>
+          {user.twoFactor && !isSelf && (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">Duas etapas</p>
+              <p className="text-xs text-slate-500">Use se a pessoa perdeu o celular e os códigos de recuperação.</p>
+              <ConfirmAction action={resetTwoFactorAction.bind(null, user.id)} label="Redefinir duas etapas" confirm={`Remover a verificação em duas etapas de ${user.name}?`} />
+            </div>
+          )}
         </div>
       </td>
     </tr>

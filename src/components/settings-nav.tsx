@@ -5,6 +5,7 @@ const TABS = [
   { href: "/configuracoes", label: "Empresa e agendador" },
   { href: "/configuracoes/usuarios", label: "Usuários" },
   { href: "/configuracoes/feriados", label: "Feriados" },
+  { href: "/configuracoes/backup", label: "Backup" },
 ];
 
 export function SettingsNav({ current }: { current: string }) {

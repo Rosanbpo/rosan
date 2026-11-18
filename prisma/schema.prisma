@@ -52,20 +52,27 @@ model Organization {
 }
 
 model User {
-  vaultItemsCreated ClientVaultItem[] @relation("VaultItemCreator")
-  clientNotes       ClientNote[]      @relation("ClientNoteAuthor")
-  documentReceipts  DocumentReceipt[] @relation("DocumentReceivedBy")
-  runningTimer      RunningTimer?
-  contractsCreated  Contract[]
-  id                String            @id @default(cuid())
-  email             String            @unique
-  name              String
-  passwordHash      String
-  active            Boolean           @default(true)
+  vaultItemsCreated  ClientVaultItem[] @relation("VaultItemCreator")
+  clientNotes        ClientNote[]      @relation("ClientNoteAuthor")
+  documentReceipts   DocumentReceipt[] @relation("DocumentReceivedBy")
+  runningTimer       RunningTimer?
+  contractsCreated   Contract[]
+  id                 String            @id @default(cuid())
+  email              String            @unique
+  name               String
+  passwordHash       String
+  /// Verificação em duas etapas (TOTP). O segredo fica criptografado.
+  totpSecretEnc      String?
+  totpEnabledAt      DateTime?
+  totpLastStep       Int?
+  totpRecoveryHashes String[]          @default([])
+  totpFailures       Int               @default(0)
+  totpLockedUntil    DateTime?
+  active             Boolean           @default(true)
   /// Usuários criados pelo seed de demonstração. Bloqueados em produção.
-  isDemo            Boolean           @default(false)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  isDemo             Boolean           @default(false)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   memberships        Membership[]
   clientMemberships  ClientMember[]

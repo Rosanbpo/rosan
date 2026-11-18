@@ -1,20 +1,26 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { authConfig } from "./auth.config";
 import { prisma } from "./server/db";
+import { checkSecondFactor } from "./server/services/two-factor";
+
+class TwoFactorRequired extends CredentialsSignin {
+  code = "2fa_required";
+}
 
 const credentialsSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1),
+  code: z.string().optional(),
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
     Credentials({
-      credentials: { email: { label: "E-mail" }, password: { label: "Senha", type: "password" } },
+      credentials: { email: { label: "E-mail" }, password: { label: "Senha", type: "password" }, code: { label: "Código" } },
       async authorize(raw) {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
@@ -30,6 +36,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (user.isDemo && process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_LOGIN !== "true") return null;
         const membership = user.memberships[0];
         if (!membership) return null;
+        // Segundo fator: só é pedido depois que a senha está correta.
+        if (user.totpEnabledAt) {
+          if (!parsed.data.code?.trim()) throw new TwoFactorRequired();
+          if (!(await checkSecondFactor(user.id, parsed.data.code))) return null;
+        }
         return { id: user.id, name: user.name, email: user.email, organizationId: membership.organizationId };
       },
     }),

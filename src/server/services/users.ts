@@ -16,6 +16,7 @@ export async function listUsers(actor: Actor) {
           name: true,
           email: true,
           active: true,
+          totpEnabledAt: true,
           _count: { select: { clientMemberships: true } },
         },
       },
