@@ -198,7 +198,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                         {t.title}
                       </Link>
                     </td>
-                    <td>{t.client.tradeName}</td>
+                    <td>{t.client?.tradeName ?? "Interna"}</td>
                     <td>
                       <StatusBadge status={t.status as TaskStatus} />
                     </td>

@@ -50,7 +50,7 @@ function buildFilters(sp: SP, now: Date): TaskFilters {
     clientId: str(sp, "clientId"),
     assigneeId: str(sp, "assigneeId"),
     status: statuses,
-    open: str(sp, "abertas") === "1" || prazo === "hoje" || prazo === "7dias",
+    open: (str(sp, "f") === "1" ? str(sp, "abertas") === "1" : true) || prazo === "hoje" || prazo === "7dias",
     overdue: str(sp, "atrasadas") === "1",
     category: oneOf(str(sp, "category"), TASK_CATEGORIES),
     priority: oneOf(str(sp, "priority"), PRIORITIES),
@@ -98,7 +98,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
           </label>
           <input id="f-q" name="q" defaultValue={filters.q} className="input" placeholder="Título, descrição ou cliente" />
         </div>
-        <Select name="clientId" label="Cliente" value={filters.clientId} options={clients.map((c) => ({ value: c.id, label: c.tradeName }))} />
+        <Select name="clientId" label="Cliente" value={filters.clientId} options={[{ value: "interna", label: "Tarefas internas" }, ...clients.map((c) => ({ value: c.id, label: c.tradeName }))]} />
         <Select
           name="assigneeId"
           label="Responsável"
@@ -148,7 +148,8 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
             <input type="checkbox" name="atrasadas" value="1" defaultChecked={filters.overdue} /> Só atrasadas
           </label>
           <label className="flex items-center gap-1.5">
-            <input type="checkbox" name="abertas" value="1" defaultChecked={str(sp, "abertas") === "1"} /> Só abertas
+            <input type="hidden" name="f" value="1" />
+            <input type="checkbox" name="abertas" value="1" defaultChecked={str(sp, "f") === "1" ? str(sp, "abertas") === "1" : true} /> Só abertas
           </label>
         </fieldset>
         <div className="col-span-2 flex items-end gap-2 md:col-span-2">
@@ -237,7 +238,7 @@ async function KanbanView({ actorFilters }: { actorFilters: TaskFilters }) {
     title: t.title,
     status: t.status as TaskStatus,
     priority: t.priority,
-    clientName: t.client.tradeName,
+    clientName: t.client?.tradeName ?? "Interna",
     assigneeName: t.assignee?.name ?? null,
     dueLabel: fmtDateTime(t.dueAt),
     overdue: isOverdue({ status: t.status as TaskStatus, dueAt: t.dueAt }, now),
@@ -336,7 +337,7 @@ async function CalendarView({ actorFilters, sp }: { actorFilters: TaskFilters; s
                                 <li key={t.id}>
                                   <Link
                                     href={`/tarefas/${t.id}`}
-                                    title={`${t.title} — ${t.client.tradeName}`}
+                                    title={`${t.title} — ${t.client?.tradeName ?? "Interna"}`}
                                     className={cx(
                                       "flex items-center gap-1 truncate rounded px-1 py-0.5 hover:bg-slate-100",
                                       overdue && "bg-red-50 font-semibold text-red-700",
@@ -345,7 +346,7 @@ async function CalendarView({ actorFilters, sp }: { actorFilters: TaskFilters; s
                                   >
                                     <span aria-hidden className={cx("h-1.5 w-1.5 shrink-0 rounded-full", STATUS_DOT[t.status as TaskStatus])} />
                                     <span className="truncate">
-                                      {t.client.tradeName}: {t.title}
+                                      {t.client?.tradeName ?? "Interna"}: {t.title}
                                     </span>
                                   </Link>
                                 </li>

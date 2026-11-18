@@ -107,7 +107,7 @@ export default async function CentralPage() {
                   <li key={r.id}>
                     <Link href={`/tarefas/${r.id}`} className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-slate-50">
                       <span className={cx("min-w-0 flex-1 truncate", r.status === "CONCLUIDA" && "text-slate-400 line-through")}>
-                        <span className="font-medium">{r.client.tradeName}</span> · {r.title}
+                        <span className="font-medium">{r.client?.tradeName ?? "Interna"}</span> · {r.title}
                       </span>
                       <span className="shrink-0 text-xs text-slate-500">{fmtDateTime(r.dueAt).slice(-5)}</span>
                     </Link>

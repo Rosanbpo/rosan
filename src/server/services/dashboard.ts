@@ -103,7 +103,7 @@ export async function managerDashboard(actor: Actor, filters: DashboardFilters, 
   ]);
 
   const userIds = workloadRaw.map((w) => w.assigneeId).filter((x): x is string => !!x);
-  const clientIds = overdueByClient.map((c) => c.clientId);
+  const clientIds = overdueByClient.map((c) => c.clientId).filter((x): x is string => !!x);
   const [users, clients] = await Promise.all([
     prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } }),
     prisma.client.findMany({ where: { id: { in: clientIds } }, select: { id: true, tradeName: true } }),
@@ -122,7 +122,7 @@ export async function managerDashboard(actor: Actor, filters: DashboardFilters, 
   const clientName = new Map(clients.map((c) => [c.id, c.tradeName]));
   const topOverdueClients = overdueByClient.map((c) => ({
     clientId: c.clientId,
-    name: clientName.get(c.clientId) ?? "—",
+    name: c.clientId ? clientName.get(c.clientId) ?? "—" : "Tarefas internas",
     overdue: c._count._all,
   }));
   const onTime = completed.filter((t) => t.completedAt && t.completedAt <= t.dueAt).length;

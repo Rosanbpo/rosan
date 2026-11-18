@@ -119,10 +119,12 @@ export async function esteiraProgress(actor: Actor, opts: { clientId?: string } 
   });
   const out: Record<string, EsteiraProgress> = {};
   for (const r of rows) {
+    const cl = r.client;
+    if (!cl) continue;
     const slug = r.journeyKey!.split(":")[0]!;
     const entry = (out[slug] ??= { clients: [] });
-    let c = entry.clients.find((x) => x.id === r.client.id);
-    if (!c) entry.clients.push((c = { id: r.client.id, name: r.client.tradeName, total: 0, done: 0 }));
+    let c = entry.clients.find((x) => x.id === cl.id);
+    if (!c) entry.clients.push((c = { id: cl.id, name: cl.tradeName, total: 0, done: 0 }));
     if (r.status === "CANCELADA") continue;
     c.total++;
     if (r.status === "CONCLUIDA") c.done++;

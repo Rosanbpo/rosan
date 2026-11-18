@@ -53,7 +53,7 @@ export function TaskForm({
   cancelHref: string;
 }) {
   const [clientId, setClientId] = useState(values.clientId ?? "");
-  const eligible = people.filter((p) => !clientId || p.clientIds === null || p.clientIds.includes(clientId));
+  const eligible = people.filter((p) => !clientId || clientId === "interna" || p.clientIds === null || p.clientIds.includes(clientId));
   const lockPlanning = !canPlan;
 
   return (
@@ -62,7 +62,10 @@ export function TaskForm({
         {mode === "create" ? (
           <Field label="Cliente" name="clientId" required>
             <select id="clientId" name="clientId" required className="input" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-              <option value="">Selecione…</option>
+              <option value="" disabled>
+                Selecione…
+              </option>
+              <option value="interna">Tarefa interna (sem cliente)</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.tradeName}
@@ -73,7 +76,7 @@ export function TaskForm({
         ) : (
           <div>
             <span className="label">Cliente</span>
-            <p className="py-2 text-sm">{clients.find((c) => c.id === clientId)?.tradeName}</p>
+            <p className="py-2 text-sm">{clients.find((c) => c.id === clientId)?.tradeName ?? "Tarefa interna (sem cliente)"}</p>
           </div>
         )}
         <Field label="Categoria" name="category" required>

@@ -105,7 +105,8 @@ export const checklistDraftSchema = z.array(
 );
 
 export const taskCreateSchema = z.object({
-  clientId: z.string({ required_error: "Selecione o cliente." }).min(1, "Selecione o cliente."),
+  /** Vazio ou "interna" = tarefa interna, sem cliente. */
+  clientId: z.preprocess((v) => (v === "" || v === "interna" || v == null ? undefined : v), z.string().min(1).optional()),
   title: requiredText("Título"),
   description: optionalText(5000),
   category: z.enum(TASK_CATEGORIES),

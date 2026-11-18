@@ -36,7 +36,7 @@ export function MyTaskList({ rows, actor, empty, running }: { rows: TaskListRow[
               <Link href={`/tarefas/${t.id}`} className="font-medium text-slate-900 hover:text-brand-700 hover:underline">
                 {t.title}
               </Link>
-              <p className="text-sm text-slate-600">{t.client.tradeName}</p>
+              <p className="text-sm text-slate-600">{t.client?.tradeName ?? "Tarefa interna"}</p>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
                 <StatusBadge status={status} />
                 {isOverdue({ status, dueAt: t.dueAt }, now) && <OverdueBadge />}

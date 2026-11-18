@@ -13,7 +13,11 @@ export function taskScope(actor: Actor): Prisma.TaskWhereInput {
   if (seesAllClients(actor)) return { organizationId: actor.organizationId };
   return {
     organizationId: actor.organizationId,
-    client: { members: { some: { userId: actor.userId } } },
+    OR: [
+      { client: { members: { some: { userId: actor.userId } } } },
+      // Tarefas internas (sem cliente): só quem criou ou executa.
+      { clientId: null, OR: [{ assigneeId: actor.userId }, { createdById: actor.userId }, { reviewerId: actor.userId }] },
+    ],
   };
 }
 

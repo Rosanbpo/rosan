@@ -371,7 +371,7 @@ model Task {
   runningTimers    RunningTimer[]
   id               String         @id @default(cuid())
   organizationId   String
-  clientId         String
+  clientId         String?
   title            String
   description      String?
   category         TaskCategory
@@ -405,7 +405,7 @@ model Task {
   updatedAt        DateTime       @updatedAt
 
   organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client         Client?         @relation(fields: [clientId], references: [id], onDelete: Cascade)
   recurrence     Recurrence?     @relation(fields: [recurrenceId], references: [id], onDelete: SetNull)
   project        Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
   timeEntries    TimeEntry[]
@@ -558,7 +558,7 @@ model SchedulerLock {
 model TimeEntry {
   id             String   @id @default(cuid())
   organizationId String
-  clientId       String
+  clientId       String?
   taskId         String?
   userId         String
   /// Dia trabalhado (data de calendário).
@@ -570,7 +570,7 @@ model TimeEntry {
   createdAt      DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  client       Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client       Client?      @relation(fields: [clientId], references: [id], onDelete: Cascade)
   task         Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
   user         User         @relation(fields: [userId], references: [id])
 

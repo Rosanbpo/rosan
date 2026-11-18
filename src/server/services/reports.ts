@@ -44,7 +44,8 @@ export async function monthlyReport(actor: Actor, month: string, now = new Date(
     perDay[day - 1]!++;
     const person = t.assignee?.name ?? "Sem responsável";
     perPerson.set(person, (perPerson.get(person) ?? 0) + 1);
-    perClient.set(t.client.tradeName, (perClient.get(t.client.tradeName) ?? 0) + 1);
+    const cn = t.client?.tradeName ?? "Interna";
+    perClient.set(cn, (perClient.get(cn) ?? 0) + 1);
     if (t.completedAt! <= t.dueAt) onTime++;
   }
   const top = (m: Map<string, number>) => [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR")).map(([name, count]) => ({ name, count }));
@@ -59,7 +60,7 @@ export async function monthlyReport(actor: Actor, month: string, now = new Date(
     perPerson: top(perPerson),
     perClient: top(perClient).slice(0, 10),
     byStatus: open.map((o) => ({ status: o.status, label: STATUS_LABEL[o.status], count: o._count._all })),
-    backlog: backlog.map((b) => ({ id: b.id, title: b.title, client: b.client.tradeName, assignee: b.assignee?.name ?? null, status: STATUS_LABEL[b.status], dueAt: b.dueAt })),
+    backlog: backlog.map((b) => ({ id: b.id, title: b.title, client: b.client?.tradeName ?? "Interna", assignee: b.assignee?.name ?? null, status: STATUS_LABEL[b.status], dueAt: b.dueAt })),
   };
 }
 
@@ -76,7 +77,7 @@ export async function monthlyReportCsv(actor: Actor, month: string): Promise<str
   return toCsv([
     ["Cliente", "Tarefa", "Categoria", "Responsável", "Prazo", "Status", "Concluída em", "No prazo", "Estimativa (min)"],
     ...tasks.map((t) => [
-      t.client.tradeName,
+      t.client?.tradeName ?? "Interna",
       t.title,
       CATEGORY_LABEL[t.category],
       t.assignee?.name ?? "",

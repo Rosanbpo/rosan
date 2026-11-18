@@ -72,6 +72,7 @@ export async function centralOverview(actor: Actor, now = new Date()) {
   const docMap = new Map(docs.map((d) => [d.id, d.missing.length]));
   const doneMap = new Map<string, { n: number; ok: number }>();
   for (const d of done) {
+    if (!d.clientId) continue;
     const e = doneMap.get(d.clientId) ?? { n: 0, ok: 0 };
     e.n++;
     if (d.completedAt && d.completedAt <= d.dueAt) e.ok++;
