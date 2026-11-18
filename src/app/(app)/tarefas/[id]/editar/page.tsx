@@ -19,13 +19,13 @@ export default async function EditTaskPage({ params }: { params: Promise<{ id: s
   const manager = can(actor, "tasks.plan");
   if (task.status === "CONCLUIDA" || task.status === "CANCELADA") redirect(`/tarefas/${id}`);
   if (!manager && task.assigneeId !== actor.userId && task.reviewerId !== actor.userId) redirect(`/tarefas/${id}`);
-  const [people, projects] = await Promise.all([peopleWithClients(actor), projectOptions(actor, task.clientId)]);
+  const [people, projects] = await Promise.all([peopleWithClients(actor), projectOptions(actor, task.clientId ?? undefined)]);
   return (
     <>
       <PageHeader title="Editar tarefa" breadcrumb={{ href: `/tarefas/${id}`, label: task.title }} />
       <TaskForm
         action={updateTaskAction.bind(null, id)}
-        clients={[{ id: task.client.id, tradeName: task.client.tradeName }]}
+        clients={task.client ? [{ id: task.client.id, tradeName: task.client.tradeName }] : []}
         people={people}
         projects={projects}
         mode="edit"
@@ -33,7 +33,7 @@ export default async function EditTaskPage({ params }: { params: Promise<{ id: s
         selfId={actor.userId}
         cancelHref={`/tarefas/${id}`}
         values={{
-          clientId: task.clientId,
+          clientId: task.clientId ?? undefined,
           title: task.title,
           description: task.description,
           category: task.category,

@@ -61,9 +61,13 @@ export function TaskTable({
                     {t.title}
                   </Link>
                   {showClient && compact && (
-                    <Link href={`/clientes/${t.client.id}`} className="block text-xs font-medium text-brand-700 hover:underline">
-                      {t.client.tradeName}
-                    </Link>
+                    t.client ? (
+                      <Link href={`/clientes/${t.client.id}`} className="block text-xs font-medium text-brand-700 hover:underline">
+                        {t.client.tradeName}
+                      </Link>
+                    ) : (
+                      <span className="block text-xs font-medium text-slate-500">Interna</span>
+                    )
                   )}
                   <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                     <span>{CATEGORY_LABEL[t.category as TaskCategory]}</span>
@@ -85,9 +89,13 @@ export function TaskTable({
                 </td>
                 {showClient && !compact && (
                   <td className="whitespace-nowrap">
-                    <Link href={`/clientes/${t.client.id}`} className="hover:underline">
-                      {t.client.tradeName}
-                    </Link>
+                    {t.client ? (
+                      <Link href={`/clientes/${t.client.id}`} className="hover:underline">
+                        {t.client.tradeName}
+                      </Link>
+                    ) : (
+                      <span className="text-slate-500">Interna</span>
+                    )}
                   </td>
                 )}
                 <td className="whitespace-nowrap">

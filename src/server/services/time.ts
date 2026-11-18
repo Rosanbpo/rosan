@@ -9,7 +9,7 @@ import { recordAudit } from "./audit";
 /** Registra horas trabalhadas pelo próprio usuário, em uma tarefa ou diretamente em um cliente. */
 export async function logTime(actor: Actor, raw: unknown) {
   const input = parseInput(timeEntrySchema, raw);
-  let clientId = input.clientId;
+  let clientId: string | null | undefined = input.clientId;
   if (input.taskId) {
     const task = await assertTaskAccess(actor, input.taskId);
     clientId = task.clientId;
@@ -24,7 +24,7 @@ export async function logTime(actor: Actor, raw: unknown) {
     const entry = await tx.timeEntry.create({
       data: {
         organizationId: actor.organizationId,
-        clientId: clientId!,
+        clientId: clientId ?? null,
         taskId: input.taskId ?? null,
         userId: actor.userId,
         workedOn: localDateToDbDate(input.workedOn),
@@ -38,7 +38,7 @@ export async function logTime(actor: Actor, raw: unknown) {
       entityType: "TimeEntry",
       entityId: entry.id,
       taskId: input.taskId ?? null,
-      clientId: clientId!,
+      clientId: clientId ?? null,
       action: "time.logged",
       summary: `${input.minutes} min apontados`,
     });
@@ -51,7 +51,7 @@ export async function deleteTimeEntry(actor: Actor, id: string) {
   if (!entry) throw new NotFoundError("Lançamento não encontrado.");
   if (entry.userId !== actor.userId && !can(actor, "tasks.plan")) throw new ForbiddenError();
   // Garante que o usuário ainda tem acesso ao cliente do lançamento.
-  await assertClientAccess(actor, entry.clientId);
+  if (entry.clientId) await assertClientAccess(actor, entry.clientId);
   await prisma.$transaction(async (tx) => {
     await tx.timeEntry.delete({ where: { id } });
     await recordAudit(tx, {

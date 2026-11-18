@@ -42,7 +42,7 @@ export function buildTaskWhere(actor: Actor, f: TaskFilters, now = new Date()): 
       ],
     });
   }
-  if (f.clientId) and.push({ clientId: f.clientId });
+  if (f.clientId) and.push({ clientId: f.clientId === "interna" ? null : f.clientId });
   if (f.assigneeId) and.push({ assigneeId: f.assigneeId === "none" ? null : f.assigneeId });
   if (f.reviewerId) and.push({ reviewerId: f.reviewerId });
   if (f.status?.length) and.push({ status: { in: f.status as DbTaskStatus[] } });
@@ -148,9 +148,9 @@ function timing(input: { dueDate: string; dueTime: string; startDate?: string; s
   return { dueAt, startAt };
 }
 
-async function validatePeople(actor: Actor, clientId: string, assigneeId?: string, reviewerId?: string) {
-  if (assigneeId) await assertUserInOrg(actor.organizationId, assigneeId, clientId);
-  if (reviewerId) await assertUserInOrg(actor.organizationId, reviewerId, clientId);
+async function validatePeople(actor: Actor, clientId: string | null | undefined, assigneeId?: string, reviewerId?: string) {
+  if (assigneeId) await assertUserInOrg(actor.organizationId, assigneeId, clientId ?? undefined);
+  if (reviewerId) await assertUserInOrg(actor.organizationId, reviewerId, clientId ?? undefined);
   if (assigneeId && reviewerId && assigneeId === reviewerId) {
     throw new ValidationError("O revisor deve ser diferente do responsável.", { reviewerId: "Escolha outro revisor." });
   }
@@ -159,7 +159,8 @@ async function validatePeople(actor: Actor, clientId: string, assigneeId?: strin
 export async function createTask(actor: Actor, raw: unknown) {
   if (!can(actor, "tasks.create")) throw new ForbiddenError();
   const input = parseInput(taskCreateSchema, raw);
-  await assertClientAccess(actor, input.clientId);
+  if (input.clientId) await assertClientAccess(actor, input.clientId);
+  else if (input.projectId) throw new ValidationError("Tarefa interna não pode ter projeto.", { projectId: "Escolha um cliente para usar projeto." });
   let assigneeId = input.assigneeId;
   if (!isManager(actor)) {
     // Operadores criam tarefas apenas para si mesmos.
@@ -167,14 +168,14 @@ export async function createTask(actor: Actor, raw: unknown) {
     assigneeId = actor.userId;
   }
   await validatePeople(actor, input.clientId, assigneeId, input.reviewerId);
-  await assertProjectForTask(actor, input.projectId, input.clientId);
+  if (input.clientId) await assertProjectForTask(actor, input.projectId, input.clientId);
   const { dueAt, startAt } = timing(input);
 
   return prisma.$transaction(async (tx) => {
     const task = await tx.task.create({
       data: {
         organizationId: actor.organizationId,
-        clientId: input.clientId,
+        clientId: input.clientId ?? null,
         title: input.title,
         description: input.description ?? null,
         category: input.category,
@@ -244,7 +245,10 @@ export async function updateTask(actor: Actor, taskId: string, raw: unknown) {
     reviewerId: input.reviewerId ?? null,
     projectId: input.projectId ?? null,
   };
-  if (data.projectId !== before.projectId) await assertProjectForTask(actor, data.projectId, before.clientId);
+  if (data.projectId !== before.projectId) {
+    if (!before.clientId && data.projectId) throw new ValidationError("Tarefa interna não pode ter projeto.");
+    if (before.clientId) await assertProjectForTask(actor, data.projectId, before.clientId);
+  }
   const changes = diffFields(before as unknown as Record<string, unknown>, data, UPDATE_FIELDS);
   if (Object.keys(changes).length === 0) return before;
   if (!isManager(actor)) {
@@ -276,7 +280,7 @@ export async function updateTask(actor: Actor, taskId: string, raw: unknown) {
   });
 }
 
-export async function taskSnapshot(taskId: string): Promise<TaskSnapshot & { clientId: string; organizationId: string }> {
+export async function taskSnapshot(taskId: string): Promise<TaskSnapshot & { clientId: string | null; organizationId: string }> {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
     include: { checklistItems: { select: { required: true, done: true } }, _count: { select: { evidences: true } } },
@@ -307,6 +311,7 @@ export interface TransitionRequest {
 export async function transitionTask(actor: Actor, taskId: string, action: TaskAction, req: TransitionRequest = {}) {
   await assertTaskAccess(actor, taskId);
   const snap = await taskSnapshot(taskId);
+  if (!snap.clientId && (action === "WAIT_CLIENT" || action === "WAIT_THIRD")) throw new ValidationError("Tarefas internas não têm pendência de cliente ou terceiro.");
   const now = new Date();
   const today = instantToLocalDate(now, APP_TIMEZONE);
   const check = checkTransition(snap, action, actor, { note: req.note, followUpDate: req.followUpDate, today });
@@ -366,6 +371,7 @@ export async function transitionTask(actor: Actor, taskId: string, action: TaskA
       });
     }
     if (action === "WAIT_CLIENT" || action === "WAIT_THIRD") {
+      if (!snap.clientId) throw new ValidationError("Tarefas internas não têm pendência de cliente ou terceiro.");
       await tx.pending.create({
         data: {
           organizationId: snap.organizationId,

@@ -58,7 +58,7 @@ export async function getRunningTimer(actor: Actor) {
     include: { task: { select: { id: true, title: true, client: { select: { tradeName: true } } } } },
   });
   if (!t) return null;
-  return { taskId: t.taskId, taskTitle: t.task.title, clientName: t.task.client.tradeName, startedAt: t.startedAt.toISOString() };
+  return { taskId: t.taskId, taskTitle: t.task.title, clientName: t.task.client?.tradeName ?? "Tarefa interna", startedAt: t.startedAt.toISOString() };
 }
 
 /** Tempo total já apontado na tarefa (todas as pessoas), em segundos. */

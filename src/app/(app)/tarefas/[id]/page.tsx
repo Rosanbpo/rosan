@@ -72,9 +72,13 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
         title={task.title}
         description={
           <span className="flex flex-wrap items-center gap-2">
-            <Link href={`/clientes/${task.client.id}`} className="font-medium text-brand-700 hover:underline">
-              {task.client.tradeName}
-            </Link>
+            {task.client ? (
+              <Link href={`/clientes/${task.client.id}`} className="font-medium text-brand-700 hover:underline">
+                {task.client.tradeName}
+              </Link>
+            ) : (
+              <span className="font-medium text-slate-700">Tarefa interna</span>
+            )}
             <span aria-hidden>·</span>
             <span>{CATEGORY_LABEL[task.category as TaskCategory]}</span>
             {task.competence && (
