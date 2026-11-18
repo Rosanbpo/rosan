@@ -211,3 +211,13 @@ export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
   CONCLUIDO: "Concluído",
   CANCELADO: "Cancelado",
 };
+
+export const VAULT_CATEGORIES = ["BANCO", "SISTEMA", "EMAIL", "CERTIFICADO", "OUTRO"] as const;
+export type VaultCategory = (typeof VAULT_CATEGORIES)[number];
+export const VAULT_CATEGORY_LABEL: Record<VaultCategory, string> = {
+  BANCO: "Banco",
+  SISTEMA: "Sistema",
+  EMAIL: "E-mail",
+  CERTIFICADO: "Certificado digital",
+  OUTRO: "Outro",
+};
