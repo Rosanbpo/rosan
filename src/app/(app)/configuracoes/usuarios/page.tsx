@@ -44,6 +44,7 @@ export default async function UsersPage() {
                       role: m.role,
                       active: m.active && m.user.active,
                       clients: m.user._count.clientMemberships,
+                      twoFactor: !!m.user.totpEnabledAt,
                     }}
                   />
                 ))}
