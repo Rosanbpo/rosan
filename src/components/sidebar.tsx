@@ -183,7 +183,7 @@ export function Sidebar({
         </div>
       )}
 
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col overflow-y-auto bg-brand-900 lg:flex">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col overflow-y-auto bg-brand-900 shadow-[2px_0_24px_rgb(12_22_51/0.25)] lg:flex">
         {brand}
         {nav}
         {user}

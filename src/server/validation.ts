@@ -479,3 +479,12 @@ export const clientNoteSchema = z.object({
   participants: optionalText(500),
 });
 export type ClientNoteInput = z.infer<typeof clientNoteSchema>;
+
+export const vaultItemSchema = z.object({
+  category: z.enum(["BANCO", "SISTEMA", "EMAIL", "CERTIFICADO", "OUTRO"]),
+  label: requiredText("Nome", 120),
+  url: optionalText(300),
+  username: optionalText(200),
+  secret: optionalText(2000),
+  notes: optionalText(1000),
+});

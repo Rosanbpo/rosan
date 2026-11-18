@@ -17,6 +17,7 @@ import {
   Wallet,
   Workflow,
   BookOpenCheck,
+  KeyRound,
   StickyNote,
   NotebookPen,
 } from "lucide-react";
@@ -27,6 +28,9 @@ import {
   type ProjectStatus,
 } from "@/domain/enums";
 import { CONTRACT_STATUS_LABEL } from "@/domain/contract";
+import { ClientVaultPanel } from "@/components/client-vault-panel";
+import { vaultConfigured } from "@/server/crypto";
+import { listVault, vaultAccessLog } from "@/server/services/vault";
 import { ClientNotesPanel } from "@/components/client-notes-panel";
 import { ClientProceduresPanel } from "@/components/client-procedures-panel";
 import { BankAccountsPanel } from "@/components/bank-accounts-panel";
@@ -106,6 +110,7 @@ const TABS: Array<{
   },
   { key: "jornada", label: "Jornada", icon: Workflow, show: () => true },
   { key: "bancos", label: "Bancos", icon: Landmark, show: () => true },
+  { key: "cofre", label: "Cofre", icon: KeyRound, show: () => true },
   { key: "pops", label: "POPs", icon: BookOpenCheck, show: () => true },
   { key: "particularidades", label: "Particularidades", icon: StickyNote, show: () => true },
   { key: "atas", label: "Atas", icon: NotebookPen, show: () => true },
@@ -144,6 +149,8 @@ export default async function ClientPage({
     history,
     documents,
     banks,
+    vaultItems,
+    vaultLog,
     clientPops,
     standardPops,
     clientNotes,
@@ -163,6 +170,8 @@ export default async function ClientPage({
     clientHistory(actor, id),
     getDocumentChecklist(actor, id, competence),
     aba === "bancos" ? listBankAccounts(actor, id) : Promise.resolve([]),
+    aba === "cofre" ? listVault(actor, id) : Promise.resolve([]),
+    aba === "cofre" ? vaultAccessLog(actor, id) : Promise.resolve([]),
     aba === "pops" ? listClientProcedures(actor, id) : Promise.resolve([]),
     aba === "pops" && can(actor, "procedures.manage") ? procedureOptions(actor) : Promise.resolve([]),
     aba === "particularidades" || aba === "atas" ? listClientNotes(actor, id, aba === "atas" ? "ATA" : "PARTICULARIDADE") : Promise.resolve([]),
@@ -456,6 +465,8 @@ export default async function ClientPage({
       )}
 
       {aba === "bancos" && <BankAccountsPanel clientId={id} accounts={banks} canEdit={manage} />}
+
+      {aba === "cofre" && <ClientVaultPanel clientId={id} items={vaultItems} log={vaultLog} canEdit={manage} configured={vaultConfigured()} />}
 
       {aba === "pops" && <ClientProceduresPanel clientId={id} rows={clientPops} standard={standardPops} canManage={can(actor, "procedures.manage")} />}
 

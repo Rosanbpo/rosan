@@ -52,19 +52,20 @@ model Organization {
 }
 
 model User {
-  clientNotes      ClientNote[]      @relation("ClientNoteAuthor")
-  documentReceipts DocumentReceipt[] @relation("DocumentReceivedBy")
-  runningTimer     RunningTimer?
-  contractsCreated Contract[]
-  id               String            @id @default(cuid())
-  email            String            @unique
-  name             String
-  passwordHash     String
-  active           Boolean           @default(true)
+  vaultItemsCreated ClientVaultItem[] @relation("VaultItemCreator")
+  clientNotes       ClientNote[]      @relation("ClientNoteAuthor")
+  documentReceipts  DocumentReceipt[] @relation("DocumentReceivedBy")
+  runningTimer      RunningTimer?
+  contractsCreated  Contract[]
+  id                String            @id @default(cuid())
+  email             String            @unique
+  name              String
+  passwordHash      String
+  active            Boolean           @default(true)
   /// Usuários criados pelo seed de demonstração. Bloqueados em produção.
-  isDemo           Boolean           @default(false)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  isDemo            Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   memberships        Membership[]
   clientMemberships  ClientMember[]
@@ -124,6 +125,7 @@ enum ClientStatus {
 }
 
 model Client {
+  vaultItems            ClientVaultItem[]
   bankAccounts          ClientBankAccount[]
   procedures            Procedure[]
   clientNotes           ClientNote[]
@@ -940,5 +942,35 @@ model ClientNote {
   author User?  @relation("ClientNoteAuthor", fields: [authorId], references: [id])
 
   @@index([clientId, kind])
+  @@index([organizationId])
+}
+
+enum VaultCategory {
+  BANCO
+  SISTEMA
+  EMAIL
+  CERTIFICADO
+  OUTRO
+}
+
+/// Acesso guardado de um cliente. O segredo fica criptografado (AES-256-GCM) e cada visualização é auditada.
+model ClientVaultItem {
+  id             String        @id @default(cuid())
+  organizationId String
+  clientId       String
+  category       VaultCategory @default(OUTRO)
+  label          String
+  url            String?
+  username       String?
+  secretEnc      String?
+  notes          String?
+  createdById    String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  client  Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  creator User?  @relation("VaultItemCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
   @@index([organizationId])
 }
