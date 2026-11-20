@@ -182,6 +182,10 @@ export const recurrenceSchema = z
   .object({
     clientId: z.string().min(1, "Selecione o cliente."),
     templateId: z.string().min(1, "Selecione o modelo."),
+    /** Quando templateId = "__novo__": rotina feita só para este cliente. */
+    customTitle: optionalText(200),
+    customCategory: z.preprocess(emptyToUndefined, z.enum(TASK_CATEGORIES).optional()),
+    checklist: checklistDraftSchema.default([]),
     startDate: localDate,
     endDate: optionalLocalDate,
     assigneeId: optionalId,
@@ -190,6 +194,7 @@ export const recurrenceSchema = z
     ...ruleFields,
   })
   .superRefine(ruleRefinement);
+export const NEW_TEMPLATE = "__novo__";
 export type RecurrenceInput = z.infer<typeof recurrenceSchema>;
 
 export const userCreateSchema = z.object({

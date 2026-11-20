@@ -74,6 +74,14 @@ export async function quickAddRoutineAction(clientId: string, _: ActionState, fd
       dueTime: str("dueTime") || "18:00",
       assigneeId: str("assigneeId") || undefined,
       projectId: str("projectId") || undefined,
+      checklist: (() => {
+        try {
+          const v = JSON.parse(str("checklist") || "[]");
+          return Array.isArray(v) ? v.filter((c) => c && typeof c.label === "string") : [];
+        } catch {
+          return [];
+        }
+      })(),
     });
     revalidatePath(`/clientes/${clientId}`);
     return "Rotina cadastrada.";

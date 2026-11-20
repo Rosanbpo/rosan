@@ -4,7 +4,17 @@ import { useState } from "react";
 import type { ActionState } from "@/lib/action-state";
 import { CATEGORY_LABEL, PRIORITY_LABEL, PRIORITIES, ROLE_LABEL, TASK_CATEGORIES, type Role } from "@/domain/enums";
 import { ActionForm, Field, SubmitButton } from "./ui/action-form";
-import { ChecklistEditor } from "./ui/checklist-editor";
+import { ChecklistEditor, type ChecklistDraftItem } from "./ui/checklist-editor";
+
+export interface TaskPrefill {
+  id: string;
+  name: string;
+  title: string;
+  description: string | null;
+  category: string;
+  priority: string;
+  checklist: ChecklistDraftItem[];
+}
 
 export interface Person {
   id: string;
@@ -36,6 +46,7 @@ export function TaskForm({
   clients,
   people,
   projects = [],
+  prefills = [],
   values = {},
   mode,
   canPlan,
@@ -46,6 +57,7 @@ export function TaskForm({
   clients: Array<{ id: string; tradeName: string }>;
   people: Person[];
   projects?: Array<{ id: string; name: string; clientId: string | null }>;
+  prefills?: TaskPrefill[];
   values?: TaskFormValues;
   mode: "create" | "edit";
   canPlan: boolean;
@@ -55,10 +67,24 @@ export function TaskForm({
   const [clientId, setClientId] = useState(values.clientId ?? "");
   const eligible = people.filter((p) => !clientId || clientId === "interna" || p.clientIds === null || p.clientIds.includes(clientId));
   const lockPlanning = !canPlan;
+  const [fill, setFill] = useState<{ n: number; p: TaskPrefill | null }>({ n: 0, p: null });
+  const pick = (id: string) => setFill((f) => ({ n: f.n + 1, p: prefills.find((t) => t.id === id) ?? null }));
 
   return (
     <ActionForm action={action} className="space-y-6">
-      <div className="card grid gap-4 p-5 md:grid-cols-2">
+      <div className="card grid gap-4 p-5 md:grid-cols-2" key={fill.n}>
+        {mode === "create" && prefills.length > 0 && (
+          <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-3 md:col-span-2">
+            <label htmlFor="prefill" className="text-xs font-semibold uppercase tracking-wide text-brand-800">⚡ Puxar de um modelo pronto (opcional)</label>
+            <select id="prefill" className="input mt-1.5" value={fill.p?.id ?? ""} onChange={(e) => pick(e.target.value)}>
+              <option value="">— Começar do zero —</option>
+              {prefills.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-xs text-slate-600">Preenche título, categoria, prioridade e checklist. Você ajusta o que precisar.</p>
+          </div>
+        )}
         {mode === "create" ? (
           <Field label="Cliente" name="clientId" required>
             <select id="clientId" name="clientId" required className="input" value={clientId} onChange={(e) => setClientId(e.target.value)}>
@@ -80,7 +106,7 @@ export function TaskForm({
           </div>
         )}
         <Field label="Categoria" name="category" required>
-          <select id="category" name="category" className="input" defaultValue={values.category ?? "OUTRAS"} disabled={lockPlanning && mode === "edit"}>
+          <select id="category" name="category" className="input" defaultValue={fill.p?.category ?? values.category ?? "OUTRAS"} disabled={lockPlanning && mode === "edit"}>
             {TASK_CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {CATEGORY_LABEL[c]}
@@ -103,12 +129,19 @@ export function TaskForm({
           {lockPlanning && mode === "edit" && <input type="hidden" name="projectId" value={values.projectId ?? ""} />}
         </Field>
         <Field label="Título" name="title" required className="md:col-span-2">
-          <input id="title" name="title" required minLength={2} maxLength={200} className="input" defaultValue={values.title} />
+          <input id="title" name="title" required minLength={2} maxLength={200} className="input" defaultValue={fill.p?.title ?? values.title} />
         </Field>
         <Field label="Descrição" name="description" className="md:col-span-2">
-          <textarea id="description" name="description" rows={4} className="input" defaultValue={values.description ?? ""} />
+          <textarea id="description" name="description" rows={4} className="input" defaultValue={fill.p?.description ?? values.description ?? ""} />
         </Field>
       </div>
+
+      {mode === "create" && (
+        <div className="card p-5">
+          <h2 className="mb-3 text-sm font-semibold text-slate-900">Checklist <span className="font-normal text-slate-500">(opcional — passos que precisam ser feitos)</span></h2>
+          <ChecklistEditor key={fill.n} initial={fill.p?.checklist ?? []} allowRequired={canPlan} />
+        </div>
+      )}
 
       <div className="card grid gap-4 p-5 md:grid-cols-3">
         <h2 className="text-sm font-semibold text-slate-900 md:col-span-3">Responsabilidades e prazo</h2>
@@ -169,12 +202,6 @@ export function TaskForm({
         </label>
       </div>
 
-      {mode === "create" && (
-        <div className="card p-5">
-          <h2 className="mb-3 text-sm font-semibold text-slate-900">Checklist</h2>
-          <ChecklistEditor allowRequired={canPlan} />
-        </div>
-      )}
 
       <div className="flex justify-end gap-2">
         <a href={cancelHref} className="btn-secondary">

@@ -114,13 +114,13 @@ export function TemplateForm({
         </label>
       </section>
       <section className="card p-5">
+        <h2 className="mb-3 text-sm font-semibold">Checklist <span className="font-normal text-slate-500">(opcional)</span></h2>
+        <ChecklistEditor initial={values.checklist} />
+      </section>
+      <section className="card p-5">
         <h2 className="mb-1 text-sm font-semibold">Regra de prazo padrão</h2>
         <p className="mb-4 text-xs text-slate-500">Usada como sugestão ao vincular o modelo a um cliente; cada recorrência pode ajustar.</p>
         <RuleFields values={values} />
-      </section>
-      <section className="card p-5">
-        <h2 className="mb-3 text-sm font-semibold">Checklist</h2>
-        <ChecklistEditor initial={values.checklist} />
       </section>
       <div className="flex justify-end gap-2">
         <a href="/rotinas?aba=modelos" className="btn-secondary">
@@ -161,6 +161,7 @@ export function RecurrenceForm({
 }) {
   const [clientId, setClientId] = useState(values.clientId);
   const [templateId, setTemplateId] = useState(values.templateId);
+  const custom = mode === "create" && templateId === "__novo__";
   const template = templates.find((t) => t.id === templateId);
   const rule = mode === "create" && template ? template.rule : values;
   const eligible = people.filter((p) => !clientId || p.clientIds === null || p.clientIds.includes(clientId));
@@ -178,9 +179,10 @@ export function RecurrenceForm({
             ))}
           </select>
         </Field>
-        <Field label="Modelo de rotina" name="templateId" required hint={mode === "create" ? "A regra de prazo do modelo é carregada como sugestão." : undefined}>
+        <Field label="Modelo de rotina" name="templateId" required hint={mode === "create" ? "A regra de prazo do modelo é carregada como sugestão. Não achou o modelo? Crie uma rotina só para este cliente." : undefined}>
           <select id="templateId" name="templateId" className="input" value={templateId} onChange={(e) => setTemplateId(e.target.value)} disabled={mode === "edit"} required>
             <option value="">Selecione…</option>
+            {mode === "create" && <option value="__novo__">➕ Criar rotina só para este cliente</option>}
             {templates.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -188,6 +190,20 @@ export function RecurrenceForm({
             ))}
           </select>
         </Field>
+        {custom && (
+          <>
+            <Field label="Nome da rotina" name="customTitle" required hint="Aparece como título das tarefas geradas. Fica só neste cliente, fora da lista de modelos.">
+              <input id="customTitle" name="customTitle" required maxLength={200} className="input" placeholder="Ex.: Conferir extrato da conta da loja" />
+            </Field>
+            <Field label="Área" name="customCategory">
+              <select id="customCategory" name="customCategory" className="input" defaultValue="OUTRAS">
+                {TASK_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>
+                ))}
+              </select>
+            </Field>
+          </>
+        )}
         <Field label="Responsável padrão" name="assigneeId" hint="Se vazio, usa o operador responsável do cliente.">
           <select id="assigneeId" name="assigneeId" className="input" defaultValue={values.assigneeId ?? ""}>
             <option value="">Operador responsável do cliente</option>
@@ -231,6 +247,12 @@ export function RecurrenceForm({
         <h2 className="mb-4 text-sm font-semibold">Regra de prazo</h2>
         <RuleFields key={mode === "create" ? templateId : "edit"} values={rule} />
       </section>
+      {custom && (
+        <section className="card p-5">
+          <h2 className="mb-3 text-sm font-semibold">Checklist (opcional)</h2>
+          <ChecklistEditor initial={[]} />
+        </section>
+      )}
       <div className="flex justify-end gap-2">
         <a href="/rotinas" className="btn-secondary">
           Voltar

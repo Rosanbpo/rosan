@@ -4,7 +4,7 @@ import { TASK_CATEGORIES, type Frequency, type TaskCategory } from "@/domain/enu
 import { assertCan, NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
 import { APP_TIMEZONE } from "../config";
 import { prisma } from "../db";
-import { parseInput, recurrenceSchema, type RecurrenceInput } from "../validation";
+import { NEW_TEMPLATE, parseInput, recurrenceSchema, type RecurrenceInput } from "../validation";
 import { assertClientAccess, assertUserInOrg, clientScope } from "./access";
 import { diffFields, recordAudit } from "./audit";
 import { generateForRecurrence, generationBlocker, loadHolidaySet, previewNext, recurrenceInclude } from "./generator";
@@ -103,19 +103,41 @@ export async function createRecurrence(actor: Actor, raw: unknown) {
   assertCan(actor, "recurrences.manage");
   const input = parseInput(recurrenceSchema, raw);
   await assertClientAccess(actor, input.clientId);
-  const template = await prisma.routineTemplate.findFirst({
-    where: { id: input.templateId, organizationId: actor.organizationId, archivedAt: null },
-  });
-  if (!template) throw new ValidationError("Modelo inválido ou arquivado.", { templateId: "Selecione um modelo ativo." });
+  const custom = input.templateId === NEW_TEMPLATE;
+  if (custom && !input.customTitle) throw new ValidationError("Informe o nome da rotina.", { customTitle: "Informe o nome da rotina." });
+  const found = custom
+    ? null
+    : await prisma.routineTemplate.findFirst({ where: { id: input.templateId, organizationId: actor.organizationId, archivedAt: null } });
+  if (!custom && !found) throw new ValidationError("Modelo inválido ou arquivado.", { templateId: "Selecione um modelo ativo." });
   await validatePeople(actor, input);
   await validateProject(actor, input);
   const recurrence = await prisma.$transaction(async (tx) => {
+    const template =
+      found ??
+      (await tx.routineTemplate.create({
+        data: {
+          organizationId: actor.organizationId,
+          exclusiveClientId: input.clientId,
+          name: input.customTitle!,
+          title: input.customTitle!,
+          category: input.customCategory ?? "OUTRAS",
+          frequency: input.frequency,
+          weekdays: input.frequency === "WEEKLY" ? input.weekdays : [],
+          monthDays: input.frequency === "BIWEEKLY" || input.frequency === "MONTHLY_DAY" ? input.monthDays : [],
+          nthBusinessDay: input.frequency === "MONTHLY_NTH_BUSINESS_DAY" ? input.nthBusinessDay ?? 1 : null,
+          dueTime: input.dueTime,
+          leadDays: input.leadDays,
+          startOffsetDays: input.startOffsetDays,
+          nonBusinessDayRule: input.nonBusinessDayRule,
+          checklistItems: { create: input.checklist.map((c, position) => ({ label: c.label, required: c.required, position })) },
+        },
+      }));
     const r = await tx.recurrence.create({
       data: {
         ...ruleData(input),
         organizationId: actor.organizationId,
         clientId: input.clientId,
-        templateId: input.templateId,
+        templateId: template.id,
         timezone: APP_TIMEZONE,
         generationFloor: todayDb(),
       },
@@ -210,6 +232,7 @@ export interface QuickRoutineInput {
   dueTime: string;
   assigneeId?: string;
   projectId?: string;
+  checklist?: Array<{ label: string; required?: boolean }>;
 }
 
 /**
@@ -253,6 +276,12 @@ export async function quickAddRoutine(actor: Actor, input: QuickRoutineInput) {
     const t = await prisma.routineTemplate.create({
       data: {
         organizationId: actor.organizationId,
+        exclusiveClientId: input.clientId,
+        checklistItems: {
+          create: (input.checklist ?? [])
+            .filter((c) => c.label.trim())
+            .map((c, position) => ({ label: c.label.trim().slice(0, 300), required: !!c.required, position })),
+        },
         name: `${title} — ${client.tradeName}`,
         title,
         description: input.description?.trim() || null,

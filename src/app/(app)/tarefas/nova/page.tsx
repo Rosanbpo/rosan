@@ -8,6 +8,7 @@ import { requireActor } from "@/server/context";
 import { clientOptions } from "@/server/services/clients";
 import { peopleWithClients } from "@/server/services/tasks";
 import { projectOptions } from "@/server/services/projects";
+import { templatePrefills } from "@/server/services/routine-options";
 import { str } from "@/server/page-utils";
 
 export const metadata = { title: "Nova tarefa" };
@@ -15,7 +16,7 @@ export const metadata = { title: "Nova tarefa" };
 export default async function NewTaskPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const actor = await requireActor();
   const sp = await searchParams;
-  const [clients, people, projects] = await Promise.all([clientOptions(actor), peopleWithClients(actor), projectOptions(actor)]);
+  const [clients, people, projects, prefills] = await Promise.all([clientOptions(actor), peopleWithClients(actor), projectOptions(actor), templatePrefills(actor)]);
   return (
     <>
       <PageHeader title="Nova tarefa" breadcrumb={{ href: "/tarefas", label: "Tarefas" }} />
@@ -29,6 +30,7 @@ export default async function NewTaskPage({ searchParams }: { searchParams: Prom
           clients={clients}
           people={people}
           projects={projects}
+          prefills={prefills}
           mode="create"
           canPlan={can(actor, "tasks.plan")}
           selfId={actor.userId}
