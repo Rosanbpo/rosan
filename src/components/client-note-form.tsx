@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ActionState } from "@/lib/action-state";
+import { NOTE_TONE, NOTE_TONES } from "@/domain/client-note-tone";
 import { PopEditor } from "./pop-editor";
 import { ActionForm, Field, SubmitButton } from "./ui/action-form";
 
@@ -19,6 +20,8 @@ export interface ClientNoteValues {
   content?: string;
   meetingDate?: string | null;
   participants?: string | null;
+  tone?: string | null;
+  pinned?: boolean;
 }
 
 export function ClientNoteForm({
@@ -52,9 +55,29 @@ export function ClientNoteForm({
             </Field>
           </>
         )}
-        <Field label={ata ? "Ata" : "Detalhes"} name="content" required className="md:col-span-2" hint="Mesmo formato dos POPs: seções, listas, checklist, avisos e tabelas.">
-          <PopEditor name="content" title={values.title ?? ""} defaultValue={values.content ?? (ata ? ATA_TEMPLATE : "")} />
-        </Field>
+        {!ata && (
+          <fieldset className="md:col-span-2">
+            <legend className="mb-1.5 text-sm font-medium text-slate-700">Tipo de destaque</legend>
+            <div className="flex flex-wrap gap-2">
+              {NOTE_TONES.map((t) => (
+                <label key={t} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm has-[:checked]:ring-2 has-[:checked]:ring-brand-700 ${NOTE_TONE[t].card}`}>
+                  <input type="radio" name="tone" value={t} defaultChecked={(values.tone ?? "INFO") === t} className="sr-only" />
+                  <span aria-hidden>{NOTE_TONE[t].emoji}</span> {NOTE_TONE[t].label}
+                </label>
+              ))}
+            </div>
+            <label className="mt-3 flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="pinned" defaultChecked={values.pinned} /> 📌 Fixar no topo e no resumo do cliente</label>
+          </fieldset>
+        )}
+        {ata ? (
+          <Field label="Ata" name="content" required className="md:col-span-2" hint="Mesmo formato dos POPs: seções, listas, checklist, avisos e tabelas.">
+            <PopEditor name="content" title={values.title ?? ""} defaultValue={values.content ?? ATA_TEMPLATE} />
+          </Field>
+        ) : (
+          <Field label="Observação" name="content" required className="md:col-span-2" hint="Escreva em linhas curtas. Use **negrito** para destacar o mais importante e “- ” para fazer listas.">
+            <textarea id="content" name="content" required rows={6} className="input" defaultValue={values.content ?? ""} placeholder="Ex.: A dona só aprova pagamentos às quintas-feiras. Nunca incluir pagamentos na segunda." />
+          </Field>
+        )}
       </section>
       <div className="flex gap-2">
         <SubmitButton>{submitLabel}</SubmitButton>

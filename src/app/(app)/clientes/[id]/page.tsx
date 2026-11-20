@@ -33,6 +33,8 @@ import { ClientVaultPanel } from "@/components/client-vault-panel";
 import { vaultConfigured } from "@/server/crypto";
 import { listVault, vaultAccessLog } from "@/server/services/vault";
 import { ClientNotesPanel } from "@/components/client-notes-panel";
+import { NOTE_TONE, toneOf } from "@/domain/client-note-tone";
+import { highlightedNotes } from "@/server/services/client-notes";
 import { ClientProceduresPanel } from "@/components/client-procedures-panel";
 import { BankAccountsPanel } from "@/components/bank-accounts-panel";
 import { EsteiraIcon } from "@/components/esteira-icon";
@@ -120,7 +122,7 @@ const TABS: Array<{
   { key: "cofre", label: "Cofre", icon: KeyRound, show: () => true },
   { key: "onboarding", label: "Onboarding", icon: Workflow, show: () => true },
   { key: "rotinas", label: "Rotina", icon: Repeat, show: () => true },
-  { key: "pops", label: "POPs e particularidades", icon: BookOpenCheck, show: () => true },
+  { key: "pops", label: "Observações e POPs", icon: BookOpenCheck, show: () => true },
   { key: "pendencias", label: "Pendências", icon: Hourglass, show: () => true },
   { key: "atas", label: "Atas", icon: NotebookPen, show: () => true },
   { key: "fechamentos", label: "Fechamentos", icon: FolderKanban, show: () => true },
@@ -187,6 +189,7 @@ export default async function ClientPage({
     clientNotes,
     journey,
     ESTEIRAS,
+    highlights,
   ] = await Promise.all([
     getRunningTimer(actor),
     clientPanelExtras(actor, id),
@@ -209,6 +212,7 @@ export default async function ClientPage({
     aba === "pops" || aba === "atas" ? listClientNotes(actor, id, aba === "atas" ? "ATA" : "PARTICULARIDADE") : Promise.resolve([]),
     aba === "onboarding" ? esteiraProgress(actor, { clientId: id }) : Promise.resolve({}),
     aba === "onboarding" ? listEsteirasFor(actor.organizationId) : Promise.resolve([]),
+    aba === "resumo" ? highlightedNotes(actor, id) : Promise.resolve([]),
   ]);
   const routineForm =
     aba === "rotinas" && can(actor, "recurrences.manage")
@@ -336,6 +340,26 @@ export default async function ClientPage({
             billing={finance?.billingDay ? billingDaysLabel(finance.billingDay, finance.billingDay2) : null}
             overdue={indicators.overdue}
           />
+          {highlights.length > 0 && (
+            <section className="mb-6" aria-label="Observações importantes">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-brand-900">📌 Atenção com este cliente</h2>
+                <Link href={`/clientes/${id}?aba=pops`} className="text-xs text-brand-700 hover:underline">Ver todas as observações →</Link>
+              </div>
+              <ul className="grid gap-3 md:grid-cols-2">
+                {highlights.map((n) => {
+                  const t = NOTE_TONE[toneOf(n.tone)];
+                  return (
+                    <li key={n.id} className={`relative overflow-hidden rounded-xl border p-4 pl-5 ${t.card}`}>
+                      <span aria-hidden className={`absolute inset-y-0 left-0 w-1.5 ${t.bar}`} />
+                      <p className="text-sm font-semibold text-slate-900">{t.emoji} {n.title}</p>
+                      <p className="mt-1 line-clamp-3 whitespace-pre-line text-sm text-slate-700">{n.content.replace(/\*\*/g, "")}</p>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
           <JourneyStepper current={client.journeyStage} clientId={id} />
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <Stat
@@ -405,7 +429,7 @@ export default async function ClientPage({
                         Complete bancos e sistema em <Link href={`/clientes/${id}?aba=bancos`} className="font-medium text-brand-700 hover:underline">Bancos</Link> e guarde os acessos no <Link href={`/clientes/${id}?aba=cofre`} className="font-medium text-brand-700 hover:underline">Cofre</Link>.
                       </li>
                       <li>
-                        Registre o que é específico dele em <Link href={`/clientes/${id}?aba=pops`} className="font-medium text-brand-700 hover:underline">Particularidades</Link>.
+                        Registre o que é específico dele em <Link href={`/clientes/${id}?aba=pops`} className="font-medium text-brand-700 hover:underline">Observações</Link>.
                       </li>
                       <li>
                         Crie as rotinas do mês em <Link href="/rotinas/recorrencias" className="font-medium text-brand-700 hover:underline">Modelos e recorrências</Link>.
@@ -515,7 +539,7 @@ export default async function ClientPage({
         <div className="space-y-8">
           <section aria-labelledby="sec-part">
             <h2 id="sec-part" className="mb-3 text-sm font-semibold text-brand-900">
-              Particularidades
+              Observações importantes
             </h2>
             <ClientNotesPanel clientId={id} kind="PARTICULARIDADE" rows={clientNotes} canDelete={manage} />
           </section>

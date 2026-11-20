@@ -11,7 +11,7 @@ export async function listClientNotes(actor: Actor, clientId: string, kind: Clie
   await assertClientAccess(actor, clientId);
   const rows = await prisma.clientNote.findMany({
     where: { organizationId: actor.organizationId, clientId, kind },
-    orderBy: kind === "ATA" ? [{ meetingDate: "desc" }, { createdAt: "desc" }] : [{ updatedAt: "desc" }],
+    orderBy: kind === "ATA" ? [{ meetingDate: "desc" }, { createdAt: "desc" }] : [{ pinned: "desc" }, { updatedAt: "desc" }],
     include: { author: { select: { name: true } } },
   });
   return rows.map((r) => ({ ...r, meetingDateLocal: r.meetingDate ? dbDateToLocalDate(r.meetingDate) : null }));
@@ -40,6 +40,8 @@ export async function createClientNote(actor: Actor, clientId: string, raw: unkn
         content: input.content,
         meetingDate: input.kind === "ATA" && input.meetingDate ? localDateToDbDate(input.meetingDate) : null,
         participants: input.participants ?? null,
+        tone: input.kind === "PARTICULARIDADE" ? input.tone ?? "INFO" : null,
+        pinned: input.kind === "PARTICULARIDADE" && input.pinned,
         authorId: actor.userId,
       },
     });
@@ -66,6 +68,7 @@ export async function updateClientNote(actor: Actor, noteId: string, raw: unknow
       content: input.content,
       meetingDate: current.kind === "ATA" && input.meetingDate ? localDateToDbDate(input.meetingDate) : current.meetingDate,
       participants: input.participants ?? null,
+      ...(current.kind === "PARTICULARIDADE" ? { tone: input.tone ?? "INFO", pinned: input.pinned } : {}),
     },
   });
   return current;
@@ -87,4 +90,15 @@ export async function deleteClientNote(actor: Actor, noteId: string) {
     });
   });
   return current;
+}
+
+/** Observações fixadas ou de alerta (atenção / nunca fazer), para o resumo do cliente. */
+export async function highlightedNotes(actor: Actor, clientId: string) {
+  await assertClientAccess(actor, clientId);
+  return prisma.clientNote.findMany({
+    where: { organizationId: actor.organizationId, clientId, kind: "PARTICULARIDADE", OR: [{ pinned: true }, { tone: { in: ["ATENCAO", "PROIBIDO"] } }] },
+    orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
+    take: 6,
+    select: { id: true, title: true, content: true, tone: true, pinned: true },
+  });
 }
