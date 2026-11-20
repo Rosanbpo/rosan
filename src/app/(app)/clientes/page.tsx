@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Download, Plus, Upload } from "lucide-react";
-import { CLIENT_STATUSES, CLIENT_STATUS_LABEL } from "@/domain/enums";
+import { CLIENT_STATUSES, CLIENT_STATUS_LABEL, STAGE_LABEL, type JourneyStage } from "@/domain/enums";
 import { can } from "@/domain/permissions";
 import { EmptyState, PageHeader, Pagination } from "@/components/ui/layout";
 import { ClientStatusBadge } from "@/components/ui/badges";
 import { Select } from "@/components/filter-select";
-import { fmtCnpj } from "@/lib/format";
+import { fmtCnpj, fmtMoney } from "@/lib/format";
 import { requireActor } from "@/server/context";
 import { listClients } from "@/server/services/clients";
 import { oneOf, pageOf, str } from "@/server/page-utils";
@@ -25,6 +25,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     page: pageOf(sp),
   });
   const manage = can(actor, "clients.manage");
+  const showFee = can(actor, "finance.view");
   return (
     <>
       <PageHeader
@@ -85,6 +86,12 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                 <tr>
                   <th scope="col">Cliente</th>
                   <th scope="col">Status</th>
+                  <th scope="col">Etapa</th>
+                  {showFee && (
+                    <th scope="col" className="text-right">
+                      Mensalidade
+                    </th>
+                  )}
                   <th scope="col">Responsável</th>
                   <th scope="col">Gestor</th>
                   <th scope="col" className="text-right">Abertas</th>
@@ -107,6 +114,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                     <td>
                       <ClientStatusBadge status={c.status} />
                     </td>
+                    <td>{c.journeyStage ? STAGE_LABEL[c.journeyStage as JourneyStage] : "—"}</td>
+                    {showFee && <td className="text-right tabular-nums">{c.monthlyFee ? fmtMoney(Number(c.monthlyFee)) : "—"}</td>}
                     <td>{c.responsibleOperator?.name ?? "—"}</td>
                     <td>{c.manager?.name ?? "—"}</td>
                     <td className="text-right tabular-nums">{c._count.tasks}</td>
