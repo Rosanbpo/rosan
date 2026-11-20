@@ -1070,6 +1070,8 @@ model ClientDiagnosis {
   platforms            String?
   cards                String?
   notes                String?
+  /// Respostas completas do questionário (chave → resposta).
+  answers              Json?
   /// Mensalidade e horas usadas na precificação (base para acompanhar reajuste).
   pricedFee            Decimal?  @db.Decimal(12, 2)
   pricedHours          Decimal?  @db.Decimal(8, 2)

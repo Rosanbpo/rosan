@@ -18,7 +18,7 @@ const dados = (clientId: string, q = "") => `/clientes/${clientId}?aba=dados${q}
 export async function saveDiagnosisAction(clientId: string, fd: FormData): Promise<void> {
   let target = dados(clientId, "&dx=salvo");
   try {
-    await dx.saveDiagnosis(await actorOrThrow(), clientId, formObject(fd));
+    await dx.saveDiagnosis(await actorOrThrow(), clientId, formObject(fd, { arrays: ["services"] }));
   } catch (e) {
     unstable_rethrow(e);
     const m = msg(e);
@@ -72,7 +72,7 @@ export async function recordPricingAction(clientId: string, payload: { diagnosis
 export async function submitPublicDiagnosisAction(token: string, fd: FormData): Promise<void> {
   let target = `/diagnostico/${token}?ok=1`;
   try {
-    await dx.submitDiagnosisByToken(token, formObject(fd));
+    await dx.submitDiagnosisByToken(token, formObject(fd, { arrays: ["services"] }));
   } catch (e) {
     unstable_rethrow(e);
     const m = msg(e);

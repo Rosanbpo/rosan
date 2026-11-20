@@ -3,7 +3,9 @@ import { z } from "zod";
 import { checkVolume, DEFAULT_MINIMUM_WAGE, type Diagnosis } from "@/domain/consultive-pricing";
 import { isCompetenceMonth } from "@/domain/closing";
 import { NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
+import { missingQuestions, readAnswers, toColumns, type Answers } from "@/domain/diagnosis-form";
 import { prisma } from "../db";
+import { isValidCnpj } from "../validation";
 import { assertClientAccess } from "./access";
 import { recordAudit } from "./audit";
 
@@ -49,7 +51,8 @@ export async function getDiagnosis(actor: Actor, clientId: string) {
 /** Lançamento manual (ou ajuste) do diagnóstico pela equipe. */
 export async function saveDiagnosis(actor: Actor, clientId: string, raw: unknown) {
   await assertClientAccess(actor, clientId);
-  const data = parse(raw);
+  const answers = readAnswers(raw as Record<string, unknown>);
+  const data = { ...toColumns(answers), answers: answers as unknown as object };
   await prisma.$transaction(async (tx) => {
     await tx.clientDiagnosis.upsert({
       where: { clientId },
@@ -91,7 +94,17 @@ export async function diagnosisByToken(token: string) {
 export async function submitDiagnosisByToken(token: string, raw: unknown) {
   const row = await diagnosisByToken(token);
   if (!row) throw new NotFoundError("Link inválido ou expirado. Peça um novo link.");
-  const data = parse(raw);
+  const answers: Answers = readAnswers(raw as Record<string, unknown>);
+  /** Em caso de erro, guarda o que já foi digitado (rascunho) para o cliente não perder o preenchimento. */
+  const fail = async (message: string): Promise<never> => {
+    await prisma.clientDiagnosis.update({ where: { clientId: row.clientId }, data: { answers: { ...answers, __draft: "1" } as unknown as object } });
+    throw new ValidationError(message);
+  };
+  const missing = missingQuestions(answers);
+  if (missing.length) await fail(`Faltam respostas: ${missing.slice(0, 4).map((q) => q.label.replace(/\?$/, "")).join("; ")}${missing.length > 4 ? ` e mais ${missing.length - 4}` : ""}.`);
+  const cnpj = typeof answers.cnpj === "string" ? answers.cnpj : "";
+  if (!isValidCnpj(cnpj)) await fail("O CNPJ informado parece inválido. Confira os números.");
+  const data = { ...toColumns(answers), answers: answers as unknown as object };
   await prisma.$transaction(async (tx) => {
     await tx.clientDiagnosis.update({ where: { clientId: row.clientId }, data: { ...data, source: "CLIENTE", submittedAt: new Date() } });
     await recordAudit(tx, { organizationId: row.organizationId, actorId: null, entityType: "Client", entityId: row.clientId, clientId: row.clientId, action: "DIAGNOSIS_SUBMITTED", summary: "Cliente respondeu o diagnóstico pelo link" });
