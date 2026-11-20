@@ -1,13 +1,14 @@
 import { headers } from "next/headers";
 import { createDiagnosisLinkAction, revokeDiagnosisLinkAction, saveDiagnosisAction, saveVolumeAction } from "@/app/actions/diagnosis";
 import { Card } from "@/components/ui/layout";
-import { DiagnosisFields, type DiagData } from "@/components/diagnosis-fields";
+import { DiagnosisQuestionnaire } from "@/components/diagnosis-questionnaire";
+import { ALL_QUESTIONS, DIAGNOSIS_SECTIONS, displayAnswer, type Answers } from "@/domain/diagnosis-form";
 import { monthLabel } from "@/components/closing-panel";
 import { currentCompetence } from "@/server/services/closings";
 import { fmtMoney } from "@/lib/format";
 import type { VolumeCheck } from "@/domain/consultive-pricing";
 
-type Diag = (NonNullable<DiagData> & { token?: string | null; source?: string; submittedAt?: Date | null; pricedFee?: unknown; pricedHours?: unknown; pricedAt?: Date | null }) | null;
+type Diag = ({ regime?: string; bankAccounts?: number; employees?: number; books?: string; multiCnpj?: boolean; inventory?: boolean; catchUpMonths?: number; revenue?: unknown; statementLines?: number; entries?: number; banks?: string | null; platforms?: string | null; cards?: string | null; answers?: unknown; token?: string | null; source?: string; submittedAt?: Date | null; pricedFee?: unknown; pricedHours?: unknown; pricedAt?: Date | null }) | null;
 type Row = { id: string; competence: string; statementLines: number; entries: number; notes: string | null; check: VolumeCheck };
 
 const LEVEL = {
@@ -23,6 +24,13 @@ export async function DiagnosisPanel({ clientId, diagnosis, rows, manage, flash 
   const link = diagnosis?.token ? `${proto}://${host}/diagnostico/${diagnosis.token}` : null;
   const priced = diagnosis?.pricedFee ? Number(diagnosis.pricedFee) : null;
   const month = currentCompetence();
+  const d = diagnosis;
+  const prefill: Answers = d?.answers && !(d.answers as Answers).__draft ? (d.answers as Answers) : d ? {
+    regime: { MEI: "MEI", SIMPLES: "Simples Nacional", PRESUMIDO: "Lucro Presumido", REAL: "Lucro Real" }[d.regime ?? ""] ?? "",
+    revenue: d.revenue ? String(Number(d.revenue)).replace(".", ",") : "", bankAccounts: String(d.bankAccounts ?? 0), statementLines: String(d.statementLines ?? 0),
+    employeesClt: String(d.employees ?? 0), employeesPj: "0", books: { ORGANIZADA: "Organizado", PARCIAL: "Parcialmente organizado", DESORGANIZADA: "Desorganizado" }[d.books ?? ""] ?? "",
+    catchUpMonths: String(d.catchUpMonths ?? 0), multiCnpj: d.multiCnpj ? "Sim" : "Não", inventory: d.inventory ? "Sim" : "Não", banks: d.banks ?? "",
+  } : {};
   const list = (v?: string | null) => (v ? v.split(/\n|,/).map((x) => x.trim()).filter(Boolean) : []);
   const chips = (title: string, emoji: string, v?: string | null) => (
     <div><p className="text-xs font-medium text-slate-500">{emoji} {title}</p>
@@ -58,15 +66,38 @@ export async function DiagnosisPanel({ clientId, diagnosis, rows, manage, flash 
             </div>
             {link && <input readOnly value={link} className="input text-xs" aria-label="Link do diagnóstico" />}
             <details className="rounded-xl border border-hair p-4" open={!diagnosis}>
-              <summary className="cursor-pointer text-sm font-medium text-brand-900">✍️ Lançar ou editar manualmente</summary>
+              <summary className="cursor-pointer text-sm font-medium text-brand-900">✍️ Lançar ou editar manualmente (as perguntas não são obrigatórias aqui)</summary>
               <form action={saveDiagnosisAction.bind(null, clientId)} className="mt-4 space-y-4">
-                <DiagnosisFields d={diagnosis} />
+                <DiagnosisQuestionnaire answers={prefill} required={false} />
                 <button type="submit" className="btn-primary">Salvar diagnóstico</button>
               </form>
             </details>
           </div>
         )}
       </Card>
+
+      {diagnosis?.answers && !(diagnosis.answers as Answers).__draft ? (
+        <Card title="📋 Respostas do diagnóstico" description="Tudo o que foi informado, por etapa.">
+          <details>
+            <summary className="cursor-pointer text-sm font-medium text-brand-900">Ver as {ALL_QUESTIONS.length} respostas</summary>
+            <div className="mt-4 space-y-5">
+              {DIAGNOSIS_SECTIONS.map((sec) => (
+                <div key={sec.id}>
+                  <h3 className="mb-1 text-sm font-semibold text-brand-900">{sec.emoji} {sec.title}</h3>
+                  <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+                    {sec.questions.map((q) => (
+                      <div key={q.key} className="contents">
+                        <dt className="text-slate-500">{q.label}</dt>
+                        <dd className="text-slate-900">{displayAnswer(diagnosis.answers as Answers, q) || <span className="text-slate-400">—</span>}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ))}
+            </div>
+          </details>
+        </Card>
+      ) : null}
 
       {diagnosis && (
         <Card title="📈 Movimentação mensal" description="Compare com o que foi usado na precificação. Se a movimentação crescer, reavalie a mensalidade.">
