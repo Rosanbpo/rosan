@@ -32,7 +32,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
         description={`${LEAD_STAGE_LABEL[stage]}${lead.source ? ` · origem: ${lead.source}` : ""}`}
         actions={
           <>
-            <Link href="/precificacao" className="btn-secondary">🧭 Precificar</Link>
+            <Link href={`/precificacao?empresa=${encodeURIComponent(lead.companyName)}`} className="btn-secondary">🧭 Precificar</Link>
             <Link href={`/propostas/nova?leadId=${id}`} className="btn-secondary">
               <FileText aria-hidden className="h-4 w-4" /> Gerar proposta
             </Link>

@@ -9,7 +9,8 @@ import { DEFAULT_MINIMUM_WAGE } from "@/domain/consultive-pricing";
 
 export const metadata = { title: "Precificação" };
 
-export default async function PricingPage() {
+export default async function PricingPage({ searchParams }: { searchParams: Promise<{ empresa?: string }> }) {
+  const { empresa } = await searchParams;
   const actor = await requirePermission("pricing.manage");
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: actor.organizationId }, select: { hourCost: true, capacityHours: true } });
   const monthStart = new Date(`${new Date().toISOString().slice(0, 7)}-01T00:00:00-03:00`);
@@ -27,6 +28,7 @@ export default async function PricingPage() {
         usedHours={usedHours}
         defaultWage={DEFAULT_MINIMUM_WAGE}
         clients={clients}
+        initialCompany={empresa}
       />
     </>
   );
