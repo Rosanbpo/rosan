@@ -30,7 +30,7 @@ export function ProjectCalendar({
 
   return (
     <div>
-      <div className="grid grid-cols-7 gap-1.5 text-center text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
+      <div className="grid grid-cols-7 gap-1.5 text-center text-[11px] font-semibold text-slate-500">
         {WEEK.map((d) => (
           <div key={d}>{d}</div>
         ))}

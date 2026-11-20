@@ -214,9 +214,6 @@ export default async function ClientPage({
       >
         <div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold tracking-[0.3em] text-brand-500 uppercase">
-              Painel do cliente
-            </p>
             <h1 className="mt-1.5 flex flex-wrap items-center gap-3 font-serif text-[1.9rem] leading-tight text-brand-100">
               {client.tradeName} <ClientStatusBadge status={client.status} />
               {client.journeyStage && (
@@ -520,13 +517,13 @@ export default async function ClientPage({
       {aba === "pops" && (
         <div className="space-y-8">
           <section aria-labelledby="sec-part">
-            <h2 id="sec-part" className="mb-3 text-sm font-semibold tracking-wide text-brand-900 uppercase">
+            <h2 id="sec-part" className="mb-3 text-sm font-semibold text-brand-900">
               Particularidades
             </h2>
             <ClientNotesPanel clientId={id} kind="PARTICULARIDADE" rows={clientNotes} canDelete={manage} />
           </section>
           <section aria-labelledby="sec-pops">
-            <h2 id="sec-pops" className="mb-3 text-sm font-semibold tracking-wide text-brand-900 uppercase">
+            <h2 id="sec-pops" className="mb-3 text-sm font-semibold text-brand-900">
               POPs
             </h2>
             <ClientProceduresPanel clientId={id} rows={clientPops} standard={standardPops} canManage={can(actor, "procedures.manage")} />
@@ -656,7 +653,7 @@ export default async function ClientPage({
               })()}
               {extras.hoursByPerson.length > 0 && (
                 <>
-                  <h3 className="mt-4 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                  <h3 className="mt-4 text-xs font-semibold text-slate-500">
                     Por pessoa neste mês
                   </h3>
                   <ul className="mt-1 divide-y divide-slate-100 text-sm">
@@ -902,7 +899,7 @@ export default async function ClientPage({
                 {client.members.map((m) => m.user.name).join(", ") || "—"}
               </dd>
             </dl>
-            <h3 className="mt-4 text-xs font-semibold text-slate-500 uppercase">
+            <h3 className="mt-4 text-xs font-semibold text-slate-500">
               Serviços contratados
             </h3>
             <div className="mt-1 flex flex-wrap gap-1">
@@ -921,7 +918,7 @@ export default async function ClientPage({
             </div>
             {client.notes && (
               <>
-                <h3 className="mt-4 text-xs font-semibold text-slate-500 uppercase">
+                <h3 className="mt-4 text-xs font-semibold text-slate-500">
                   Observações operacionais
                 </h3>
                 <p className="mt-1 text-sm whitespace-pre-wrap">
@@ -989,7 +986,7 @@ function HeroFact({
         <Icon aria-hidden className="h-4 w-4" />
       </span>
       <div>
-        <dt className="text-[10px] font-semibold tracking-[0.18em] text-brand-500 uppercase">
+        <dt className="text-[10px] font-semibold text-brand-500">
           {label}
         </dt>
         <dd className="text-sm text-brand-100">{value}</dd>

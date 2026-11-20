@@ -15,7 +15,7 @@ export function PageHeader({
   breadcrumb?: { href: string; label: string };
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mb-7 flex flex-col gap-3 border-b border-hair pb-5 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {breadcrumb && (
           <Link href={breadcrumb.href} className="text-sm text-brand-700 hover:underline">
@@ -23,8 +23,7 @@ export function PageHeader({
           </Link>
         )}
         <h1 className="page-title mt-1">{title}</h1>
-        <span aria-hidden className="mt-2 block h-0.5 w-10 rounded bg-brand-500" />
-        {description && <p className="mt-1 text-sm text-slate-600">{description}</p>}
+        {description && <p className="mt-1.5 max-w-2xl text-sm text-slate-500">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
@@ -49,9 +48,9 @@ export function Card({
   return (
     <section className={cx("card", className)}>
       {(title || actions) && (
-        <header className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
+        <header className="flex items-start justify-between gap-3 border-b border-hair px-5 py-3.5">
           <div>
-            {title && <h2 className="text-[13px] font-semibold tracking-wide text-brand-900 uppercase">{title}</h2>}
+            {title && <h2 className="font-serif text-[1.05rem] font-medium text-brand-900">{title}</h2>}
             {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
           </div>
           {actions}
@@ -64,7 +63,7 @@ export function Card({
 
 export function EmptyState({ title, description, action }: { title: string; description?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#d3dae5] bg-white px-6 py-10 text-center">
       <Inbox aria-hidden className="h-8 w-8 text-slate-400" />
       <p className="mt-3 text-sm font-medium text-slate-800">{title}</p>
       {description && <p className="mt-1 max-w-md text-sm text-slate-500">{description}</p>}
@@ -143,25 +142,25 @@ export function Stat({
   tone?: "default" | "danger" | "warning" | "info" | "success";
   href?: string;
 }) {
-  const tones = {
-    default: { value: "text-slate-900", card: "border-t-brand-500 bg-white", label: "text-brand-900/60" },
-    danger: { value: "text-red-700", card: "border-t-red-500 bg-gradient-to-br from-red-50 to-white", label: "text-red-800/70" },
-    warning: { value: "text-amber-700", card: "border-t-amber-500 bg-gradient-to-br from-amber-50 to-white", label: "text-amber-800/70" },
-    info: { value: "text-violet-700", card: "border-t-violet-500 bg-gradient-to-br from-violet-50 to-white", label: "text-violet-800/70" },
-    success: { value: "text-emerald-700", card: "border-t-emerald-500 bg-gradient-to-br from-emerald-50 to-white", label: "text-emerald-800/70" },
+  const valueTone = {
+    default: "text-brand-900",
+    danger: "text-red-700",
+    warning: "text-amber-700",
+    info: "text-brand-900",
+    success: "text-emerald-700",
   }[tone];
   const body = (
     <>
-      <p className={cx("text-[11px] font-semibold tracking-wider uppercase", tones.label)}>{label}</p>
-      <p className={cx("mt-1.5 text-[1.65rem] leading-none font-semibold tabular-nums", tones.value)}>{value}</p>
-      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
+      <p className="text-[13px] font-medium text-slate-500">{label}</p>
+      <p className={cx("mt-2 font-serif text-[1.9rem] leading-none font-medium tabular-nums", valueTone)}>{value}</p>
+      {hint && <p className="mt-2 text-xs text-slate-500">{hint}</p>}
     </>
   );
   return href ? (
-    <Link href={href} className={cx("card block border-t-[3px] p-4 transition-shadow hover:shadow-md", tones.card)}>
+    <Link href={href} className="card block p-4 transition-colors hover:border-brand-500">
       {body}
     </Link>
   ) : (
-    <div className={cx("card border-t-[3px] p-4", tones.card)}>{body}</div>
+    <div className="card p-4">{body}</div>
   );
 }

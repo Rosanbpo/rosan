@@ -11,7 +11,7 @@ import { isOverdue } from "@/domain/task-rules";
 import { fmtDateTime, relativeDays } from "@/lib/format";
 import { CLIENT_STATUS_STYLE, PRIORITY_STYLE, STATUS_DOT, STATUS_STYLE, cx } from "@/lib/ui";
 
-const pill = "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap";
+const pill = "inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap";
 
 export function StatusBadge({ status }: { status: TaskStatus }) {
   return (
