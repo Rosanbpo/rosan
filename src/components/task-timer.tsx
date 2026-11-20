@@ -67,7 +67,7 @@ export function TaskTimer({ taskId, runningSince, trackedSeconds, otherRunning, 
             <Timer aria-hidden className={cx("h-6 w-6", running && "animate-pulse")} />
           </span>
           <div>
-            <p className={cx("text-xs font-semibold tracking-widest uppercase", running ? "text-brand-500" : "text-slate-500")}>
+            <p className={cx("text-xs font-semibold", running ? "text-brand-500" : "text-slate-500")}>
               {running ? "Cronômetro em andamento" : "Tempo na tarefa"}
             </p>
             <p className="font-mono text-3xl font-semibold tracking-tight tabular-nums" aria-live="off">

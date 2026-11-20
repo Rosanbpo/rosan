@@ -45,7 +45,7 @@ export default async function EsteirasPage() {
                   ].map((x) => (
                     <div key={x.label} className={cx("rounded-lg py-2", tone.soft)}>
                       <dd className={cx("text-xl font-bold tabular-nums", tone.text)}>{x.n}</dd>
-                      <dt className="text-[11px] tracking-wide text-slate-500 uppercase">{x.label}</dt>
+                      <dt className="text-[11px] text-slate-500">{x.label}</dt>
                     </div>
                   ))}
                 </dl>

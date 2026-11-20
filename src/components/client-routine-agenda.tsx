@@ -54,7 +54,7 @@ function Card({ r, note, editable }: { r: AgendaRoutine; note?: string; editable
 function Group({ title, count, children }: { title: string; count: number; children: ReactNode }) {
   return (
     <section>
-      <h3 className="mb-2 flex items-center gap-2 border-b-2 border-brand-500/60 pb-1 text-xs font-semibold tracking-wide text-brand-900 uppercase">
+      <h3 className="mb-2 flex items-center gap-2 border-b-2 border-brand-500/60 pb-1 text-xs font-semibold text-brand-900">
         {title}
         <span className="rounded-full bg-brand-900 px-1.5 text-[10px] text-brand-100">{count}</span>
       </h3>
@@ -78,13 +78,13 @@ export function ClientRoutineAgenda({ routines, editable }: { routines: AgendaRo
     <div className="space-y-6">
       {weekly.length > 0 && (
         <section>
-          <h3 className="mb-2 text-xs font-semibold tracking-wide text-brand-900 uppercase">Dias da semana</h3>
+          <h3 className="mb-2 text-xs font-semibold text-brand-900">Dias da semana</h3>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {days.map((d) => {
               const items = weekly.filter((r) => r.weekdays.includes(d)).sort(byTime);
               return (
                 <div key={d}>
-                  <p className="mb-2 flex items-center gap-2 border-b-2 border-brand-500/60 pb-1 text-xs font-semibold text-brand-900 uppercase">
+                  <p className="mb-2 flex items-center gap-2 border-b-2 border-brand-500/60 pb-1 text-xs font-semibold text-brand-900">
                     {DAY_LABEL[d]}
                     <span className="rounded-full bg-brand-900 px-1.5 text-[10px] text-brand-100">{items.length}</span>
                   </p>

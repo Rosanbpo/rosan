@@ -90,7 +90,7 @@ export function KanbanBoard({ tasks, closedNote }: { tasks: KanbanTask[]; closed
                 if (task && task.status !== status) move(task, status);
               }}
             >
-              <h2 className="flex items-center gap-2 px-3 py-2 text-xs font-semibold tracking-wide text-slate-600 uppercase">
+              <h2 className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600">
                 <span aria-hidden className={cx("h-2 w-2 rounded-full", STATUS_DOT[status])} />
                 {STATUS_LABEL[status]}
                 <span className="ml-auto rounded-full bg-white px-1.5 text-slate-500">{column.length}</span>

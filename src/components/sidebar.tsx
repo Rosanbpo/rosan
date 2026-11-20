@@ -122,22 +122,20 @@ export function Sidebar({
         const heading = item.group && item.group !== items[idx - 1]?.group ? item.group : null;
         return (
           <div key={item.href} className="flex flex-col">
-            {heading && <p className="mt-3 mb-1 px-3 text-[10px] font-semibold tracking-[0.18em] text-brand-200/60 uppercase">{heading}</p>}
+            {heading && <p className="mt-5 mb-1.5 px-3 text-xs font-medium text-slate-500">{heading}</p>}
             <Link
               href={item.href}
               onClick={() => setOpen(false)}
               aria-current={active ? "page" : undefined}
               className={cx(
-                "flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors",
-                active ? "bg-white/10 text-white shadow-[inset_3px_0_0_#b08d57]" : "text-slate-300 hover:bg-white/5 hover:text-white",
+                "group flex items-center gap-3 rounded-md px-3 py-2 text-[13.5px] transition-colors",
+                active ? "bg-white/[0.07] font-medium text-white shadow-[inset_2px_0_0_#7ea3dc]" : "text-slate-300/90 hover:bg-white/[0.04] hover:text-white",
               )}
             >
-              <span className={cx("flex h-7 w-7 shrink-0 items-center justify-center rounded-md", ICON_COLOR[item.icon])}>
-                <Icon aria-hidden className="h-4 w-4" />
-              </span>
+              <Icon aria-hidden className={cx("h-[18px] w-[18px] shrink-0", active ? "text-brand-500" : "text-slate-500 group-hover:text-brand-200")} />
               <span className="flex-1">{item.label}</span>
               {!!item.badge && (
-                <span className="rounded-full bg-red-100 px-1.5 text-xs font-semibold text-red-700" aria-label={`${item.badge} itens`}>
+                <span className="rounded-full bg-red-500/90 px-1.5 text-xs font-medium text-white" aria-label={`${item.badge} itens`}>
                   {item.badge}
                 </span>
               )}
@@ -151,7 +149,7 @@ export function Sidebar({
   const brand = (
     <div className="flex flex-col items-center px-6 pt-5 pb-3">
       <Image src="/logo.png" alt={appName} width={620} height={530} priority className="h-auto w-36" />
-      <p className="mt-1 truncate text-[11px] tracking-[0.2em] text-brand-200/80 uppercase">Escritório virtual</p>
+      <p className="mt-1 truncate text-xs text-brand-200/70">Escritório virtual</p>
     </div>
   );
 
@@ -195,7 +193,7 @@ export function Sidebar({
         </div>
       )}
 
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col overflow-y-auto bg-brand-900 shadow-[2px_0_24px_rgb(12_22_51/0.25)] lg:flex">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col overflow-y-auto bg-brand-900 lg:flex">
         {brand}
         {nav}
         {user}
