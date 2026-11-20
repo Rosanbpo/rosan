@@ -23,7 +23,7 @@ export async function updateClientAction(clientId: string, _: ActionState, fd: F
   const res = await runAction(async (actor) => {
     await clients.updateClient(actor, clientId, formObject(fd, { arrays: ARRAYS }));
   });
-  if (res?.ok) redirect(`/clientes/${clientId}`);
+  if (res?.ok) redirect(`/clientes/${clientId}?aba=dados&salvo=1`);
   return res;
 }
 

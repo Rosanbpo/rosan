@@ -20,6 +20,7 @@ import {
   KeyRound,
   StickyNote,
   NotebookPen,
+  LayoutDashboard,
 } from "lucide-react";
 import { dbDateToLocalDate } from "@/domain/dates";
 import {
@@ -53,8 +54,17 @@ import { isCompetence, previousCompetence } from "@/domain/documents";
 import { instantToLocalDate } from "@/domain/dates";
 import { APP_TIMEZONE } from "@/server/config";
 import { getDocumentChecklist } from "@/server/services/documents";
+import { ClientForm } from "@/components/client-form";
+import { updateClientAction } from "@/app/actions/clients";
+import { moneyInput } from "@/lib/format";
 import { ClientStatusBadge } from "@/components/ui/badges";
 import { TaskTable } from "@/components/task-table";
+import { ClientDashboardTop } from "@/components/client-dashboard-top";
+import { ClosingPanel } from "@/components/closing-panel";
+import { ClientLogoBox } from "@/components/client-logo-box";
+import { getClosing, closingHistory, currentCompetence } from "@/server/services/closings";
+import { isCompetenceMonth } from "@/domain/closing";
+import { getClientLogo } from "@/server/services/client-logo";
 import { ConfirmAction } from "@/components/confirm-action";
 import { archiveClientAction } from "@/app/actions/clients";
 import {
@@ -91,31 +101,38 @@ const TABS: Array<{
     finance: unknown,
   ) => boolean;
 }> = [
+  { key: "resumo", label: "Resumo", icon: LayoutDashboard, show: () => true },
   { key: "dados", label: "Dados", icon: UserRound, show: () => true },
-  {
-    key: "financeiro",
-    label: "Financeiro",
-    icon: Wallet,
-    show: (a, e, f) =>
-      !!f ||
-      can(a, "contracts.manage") ||
-      e.contracts.length > 0 ||
-      e.proposals.length > 0,
-  },
-  { key: "bancos", label: "Bancos", icon: Landmark, show: () => true },
   { key: "cofre", label: "Cofre", icon: KeyRound, show: () => true },
   { key: "onboarding", label: "Onboarding", icon: Workflow, show: () => true },
   { key: "rotinas", label: "Rotina", icon: Repeat, show: () => true },
   { key: "pops", label: "POPs e particularidades", icon: BookOpenCheck, show: () => true },
   { key: "pendencias", label: "Pendências", icon: Hourglass, show: () => true },
   { key: "atas", label: "Atas", icon: NotebookPen, show: () => true },
-  { key: "projetos", label: "Projetos", icon: FolderKanban, show: () => true },
+  { key: "fechamentos", label: "Fechamentos", icon: FolderKanban, show: () => true },
   { key: "historico", label: "Histórico", icon: History, show: () => true },
 ];
 
+const TAB_TONE: Record<string, string> = {
+  resumo: "text-blue-600",
+  dados: "text-sky-500",
+  financeiro: "text-emerald-500",
+  bancos: "text-indigo-500",
+  cofre: "text-amber-500",
+  onboarding: "text-rose-400",
+  rotinas: "text-blue-500",
+  pops: "text-violet-500",
+  pendencias: "text-orange-500",
+  atas: "text-teal-500",
+  fechamentos: "text-fuchsia-500",
+  historico: "text-slate-400",
+};
+
 const LEGACY_TABS: Record<string, string> = {
-  resumo: "rotinas",
   cadastro: "dados",
+  financeiro: "dados",
+  bancos: "dados",
+  projetos: "fechamentos",
   jornada: "onboarding",
   documentos: "pendencias",
   particularidades: "pops",
@@ -134,7 +151,7 @@ export default async function ClientPage({
   const { id } = await params;
   const sp = await searchParams;
   const requested = LEGACY_TABS[sp.aba ?? ""] ?? sp.aba;
-  const aba = TABS.some((t) => t.key === requested) ? (requested as string) : "dados";
+  const aba = TABS.some((t) => t.key === requested) ? (requested as string) : "resumo";
   const competence = isCompetence(sp.competencia)
     ? sp.competencia
     : previousCompetence(instantToLocalDate(new Date(), APP_TIMEZONE));
@@ -169,7 +186,7 @@ export default async function ClientPage({
     listPendings(actor, { clientId: id }),
     clientHistory(actor, id),
     getDocumentChecklist(actor, id, competence),
-    aba === "bancos" ? listBankAccounts(actor, id) : Promise.resolve([]),
+    aba === "dados" ? listBankAccounts(actor, id) : Promise.resolve([]),
     aba === "cofre" ? listVault(actor, id) : Promise.resolve([]),
     aba === "cofre" ? vaultAccessLog(actor, id) : Promise.resolve([]),
     aba === "pops" ? listClientProcedures(actor, id) : Promise.resolve([]),
@@ -195,10 +212,17 @@ export default async function ClientPage({
         }
       : null;
   const manage = can(actor, "clients.manage");
+  const formPeople = aba === "dados" && manage ? await assignableUsers(actor) : null;
   const finance = can(actor, "finance.view")
     ? await clientMonthSummary(actor, id)
     : null;
   const now = new Date();
+  const showFinance = !!finance || can(actor, "contracts.manage") || extras.contracts.length > 0 || extras.proposals.length > 0;
+  const closingMonth = isCompetenceMonth(sp.mes) ? sp.mes : currentCompetence();
+  const closingSummary = aba === "resumo" ? await getClosing(actor, id, currentCompetence()) : null;
+  const closingData = aba === "fechamentos" ? await getClosing(actor, id, closingMonth) : null;
+  const closingHist = aba === "fechamentos" ? await closingHistory(actor, id) : [];
+  const hasLogo = !!(await getClientLogo(actor, id));
   const ours = openTasks.rows.filter((t) => t.status === "A_FAZER" || t.status === "EM_ANDAMENTO" || t.status === "EM_REVISAO");
   const clientSide = pendings.rows.filter((p) => p.type === "CLIENTE");
   const thirdSide = pendings.rows.filter((p) => p.type === "TERCEIRO");
@@ -206,139 +230,86 @@ export default async function ClientPage({
 
   return (
     <>
-      <Link href="/clientes" className="text-sm text-brand-700 hover:underline">
-        ← Clientes
-      </Link>
-      <section
-        className="mt-2 mb-6 overflow-hidden rounded-xl bg-brand-900 text-brand-100 shadow-[0_2px_8px_rgb(12_22_51/0.18)]"
-        aria-label="Resumo do cliente"
-      >
-        <div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between">
+      <section className="card mb-5 flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between" aria-label="Resumo do cliente">
+        <div className="flex min-w-0 items-center gap-4">
+          <Link href="/clientes" className="btn-secondary btn-sm shrink-0">
+            ← Clientes
+          </Link>
+          <ClientLogoBox clientId={id} name={client.tradeName} hasLogo={hasLogo} />
           <div className="min-w-0">
-            <h1 className="mt-1.5 flex flex-wrap items-center gap-3 text-[1.9rem] leading-tight font-semibold text-white">
-              {client.tradeName} <ClientStatusBadge status={client.status} />
+            <h1 className="flex flex-wrap items-center gap-2 text-[1.45rem] leading-tight font-bold text-brand-900">
+              {client.tradeName}
+              <ClientStatusBadge status={client.status} />
               {client.journeyStage && (
-                <span className="rounded-full bg-white/10 px-2.5 py-0.5 font-sans text-xs font-medium text-brand-100">{STAGE_LABEL[client.journeyStage]}</span>
+                <span className="rounded-md bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-sky-200 ring-inset">{STAGE_LABEL[client.journeyStage]}</span>
               )}
-              {client.archivedAt && (
-                <span className="rounded bg-zinc-200 px-2 py-0.5 font-sans text-xs text-zinc-700">
-                  Arquivado
-                </span>
-              )}
+              {client.archivedAt && <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 ring-1 ring-zinc-200 ring-inset">Arquivado</span>}
             </h1>
-            <p className="mt-1 text-sm text-brand-200/90">
+            <p className="mt-0.5 truncate text-sm text-slate-500">
               {client.legalName}
-              {client.cnpj ? ` · CNPJ ${fmtCnpj(client.cnpj)}` : ""}
+              {client.cnpj ? ` · ${fmtCnpj(client.cnpj)}` : ""}
             </p>
-            <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-3 text-sm">
-              <HeroFact
-                icon={UserRound}
-                label="Contato"
-                value={client.contactName ?? "—"}
-              />
-              {client.contactEmail && (
-                <HeroFact
-                  icon={Mail}
-                  label="E-mail"
-                  value={client.contactEmail}
-                />
-              )}
-              {client.contactPhone && (
-                <HeroFact
-                  icon={Phone}
-                  label="Telefone"
-                  value={client.contactPhone}
-                />
-              )}
-              <HeroFact
-                icon={Briefcase}
-                label="Responsável"
-                value={client.responsibleOperator?.name ?? "—"}
-              />
-              <HeroFact
-                icon={CalendarCheck}
-                label="Cliente desde"
-                value={
-                  client.startDate
-                    ? fmtLocalDate(dbDateToLocalDate(client.startDate))
-                    : "—"
-                }
-              />
-              {finance && (
-                <HeroFact
-                  icon={Wallet}
-                  label="Mensalidade"
-                  value={`${fmtMoney(finance.monthlyFee)}${finance.billingDay ? ` · ${billingDaysLabel(finance.billingDay, finance.billingDay2)}` : ""}`}
-                />
-              )}
-            </dl>
+            {finance && finance.monthlyFee !== null && (
+              <p className="mt-0.5 text-sm font-semibold text-emerald-700">
+                {fmtMoney(finance.monthlyFee)}/mês
+                {finance.billingDay ? <span className="ml-2 font-normal text-slate-500">vence {billingDaysLabel(finance.billingDay, finance.billingDay2)}</span> : null}
+              </p>
+            )}
           </div>
-          <div className="flex flex-wrap gap-2 lg:justify-end">
-            <Link
-              href={`/tarefas/nova?clientId=${id}`}
-              className="btn bg-brand-500 text-brand-900 hover:bg-brand-200"
-            >
-              <Plus aria-hidden className="h-4 w-4" /> Nova tarefa
+        </div>
+        <div className="flex flex-wrap gap-2 lg:justify-end">
+          <Link href={`/tarefas/nova?clientId=${id}`} className="btn-primary">
+            <Plus aria-hidden className="h-4 w-4" /> Nova tarefa
+          </Link>
+          {can(actor, "contracts.manage") && (
+            <Link href="/contratos/novo" className="btn-secondary">
+              <FileSignature aria-hidden className="h-4 w-4" /> Novo contrato
             </Link>
-            {manage && (
-              <Link
-                href={`/clientes/${id}/editar`}
-                className="btn border border-white/25 text-brand-100 hover:bg-white/10"
-              >
-                <Pencil aria-hidden className="h-4 w-4" /> Editar
-              </Link>
-            )}
-            {can(actor, "contracts.manage") && (
-              <Link
-                href="/contratos/novo"
-                className="btn border border-white/25 text-brand-100 hover:bg-white/10"
-              >
-                <FileSignature aria-hidden className="h-4 w-4" /> Novo contrato
-              </Link>
-            )}
-            {manage &&
-              (client.archivedAt ? (
-                <ConfirmAction
-                  action={archiveClientAction.bind(null, id, false)}
-                  label="Reativar"
-                  className="btn border border-white/25 text-brand-100 hover:bg-white/10"
-                  confirm="Reativar este cliente?"
-                />
-              ) : (
-                <ConfirmAction
-                  action={archiveClientAction.bind(null, id, true)}
-                  label="Arquivar"
-                  className="btn text-red-300 hover:bg-white/10"
-                  confirm="Arquivar o cliente? O histórico é preservado e as recorrências ativas serão pausadas."
-                />
-              ))}
-          </div>
+          )}
+          {manage &&
+            (client.archivedAt ? (
+              <ConfirmAction action={archiveClientAction.bind(null, id, false)} label="Reativar" className="btn-secondary" confirm="Reativar este cliente?" />
+            ) : (
+              <ConfirmAction
+                action={archiveClientAction.bind(null, id, true)}
+                label="Arquivar"
+                className="btn border border-red-200 bg-white text-red-700 hover:bg-red-50"
+                confirm="Arquivar o cliente? O histórico é preservado e as recorrências ativas serão pausadas."
+              />
+            ))}
         </div>
       </section>
 
-      <nav
-        aria-label="Seções do cliente"
-        className="mb-6 flex gap-1 overflow-x-auto border-b border-slate-200"
-      >
-        {TABS.filter((t) => t.show(actor, extras, finance)).map((t) => (
-          <Link
-            key={t.key}
-            href={`/clientes/${id}?aba=${t.key}`}
-            aria-current={aba === t.key ? "page" : undefined}
-            className={`-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-              aba === t.key
-                ? "border-brand-500 text-brand-900"
-                : "border-transparent text-slate-500 hover:text-brand-900"
-            }`}
-          >
-            <t.icon aria-hidden className="h-4 w-4" />
-            {t.label}
-          </Link>
-        ))}
-      </nav>
-
-      {aba === "rotinas" && (
+      <div className="card overflow-hidden">
+        <nav aria-label="Seções do cliente" className="flex gap-1 overflow-x-auto border-b border-hair bg-slate-50/60 px-3">
+          {TABS.filter((t) => t.show(actor, extras, finance)).map((t) => (
+            <Link
+              key={t.key}
+              href={`/clientes/${id}?aba=${t.key}`}
+              aria-current={aba === t.key ? "page" : undefined}
+              className={`-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+                aba === t.key ? "border-brand-700 text-brand-700" : "border-transparent text-slate-500 hover:text-brand-900"
+              }`}
+            >
+              <t.icon aria-hidden className={`h-4 w-4 ${aba === t.key ? "text-brand-700" : TAB_TONE[t.key] ?? "text-slate-400"}`} />
+              {t.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="p-5">
+      {aba === "resumo" && (
         <>
+          <ClientDashboardTop
+            clientId={id}
+            closing={closingSummary}
+            ours={ours.length}
+            clientSide={clientSide.length}
+            thirdSide={thirdSide.length}
+            missingDocs={missingDocs.length}
+            fee={finance?.monthlyFee ?? null}
+            billing={finance?.billingDay ? billingDaysLabel(finance.billingDay, finance.billingDay2) : null}
+            overdue={indicators.overdue}
+          />
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <Stat
               label="Abertas"
@@ -511,8 +482,6 @@ export default async function ClientPage({
         </div>
       )}
 
-      {aba === "bancos" && <BankAccountsPanel clientId={id} accounts={banks} canEdit={manage} />}
-
       {aba === "cofre" && <ClientVaultPanel clientId={id} items={vaultItems} log={vaultLog} canEdit={manage} configured={vaultConfigured()} />}
 
       {aba === "pops" && (
@@ -586,7 +555,104 @@ export default async function ClientPage({
         </div>
       )}
 
-      {aba === "financeiro" && (
+      {aba === "fechamentos" && closingData && (
+        <ClosingPanel clientId={id} month={closingMonth} closing={closingData.closing} tasks={closingData.tasks} history={closingHist} manage={manage} />
+      )}
+
+      {aba === "rotinas" && (
+        <div className="space-y-6">
+          <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-4 text-sm text-slate-700">
+            <p className="font-semibold text-brand-900">
+              O que é a rotina do cliente?
+            </p>
+            <p className="mt-1">
+              É a agenda fixa deste cliente: o que precisa ser feito, em que dia
+              e horário. Cadastrada aqui, a rotina gera as tarefas sozinha, no
+              dia e horário certos.
+            </p>
+          </div>
+          <Card
+            title="Agenda de rotinas"
+            actions={
+              can(actor, "recurrences.manage") && (
+                <Link
+                  className="text-sm text-brand-700 hover:underline"
+                  href={`/rotinas/recorrencias/nova?clientId=${id}`}
+                >
+                  Cadastro avançado
+                </Link>
+              )
+            }
+          >
+            <ClientRoutineAgenda
+              editable={can(actor, "recurrences.manage")}
+              routines={client.recurrences.map((r) => ({
+                id: r.id,
+                name: r.template.title,
+                frequency: r.frequency,
+                weekdays: r.weekdays,
+                monthDays: r.monthDays,
+                nthBusinessDay: r.nthBusinessDay,
+                dueTime: r.dueTime,
+                status: r.status,
+                assignee: r.assignee?.name ?? null,
+              }))}
+            />
+          </Card>
+          {routineForm && (
+            <Card
+              title="Nova rotina"
+              description="Cadastro rápido: dia, horário e pronto."
+            >
+              <ClientRoutineForm
+                clientId={id}
+                templates={routineForm.templates}
+                people={routineForm.people}
+                projects={routineForm.projects}
+              />
+            </Card>
+          )}
+        </div>
+      )}
+
+      {aba === "dados" && sp.salvo && (
+        <p role="status" className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Dados salvos.</p>
+      )}
+      {aba === "dados" && (
+        manage && formPeople ? (
+          <ClientForm
+            action={updateClientAction.bind(null, id)}
+            people={formPeople}
+            submitLabel="Salvar dados"
+            cancelHref={`/clientes/${id}`}
+            values={{
+              ...client,
+              monthlyFee: moneyInput(client.monthlyFee === null ? null : Number(client.monthlyFee)),
+              directCost: moneyInput(client.directCost === null ? null : Number(client.directCost)),
+              startDate: client.startDate ? dbDateToLocalDate(client.startDate) : null,
+              memberIds: client.members.map((m) => m.userId),
+            }}
+          />
+        ) : (
+          <dl className="grid max-w-2xl grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+            <dt className="text-slate-500">CNPJ</dt>
+            <dd>{client.cnpj ? fmtCnpj(client.cnpj) : "—"}</dd>
+            <dt className="text-slate-500">Razão social</dt>
+            <dd>{client.legalName}</dd>
+            <dt className="text-slate-500">Contato</dt>
+            <dd>{client.contactName ?? "—"}</dd>
+            <dt className="text-slate-500">E-mail</dt>
+            <dd className="break-all">{client.contactEmail ?? "—"}</dd>
+            <dt className="text-slate-500">Telefone</dt>
+            <dd>{client.contactPhone ?? "—"}</dd>
+            <dt className="text-slate-500">Responsável</dt>
+            <dd>{client.responsibleOperator?.name ?? "—"}</dd>
+          </dl>
+        )
+      )}
+
+      {aba === "dados" && <div className="mt-6" />}
+      {aba === "dados" && showFinance && (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-6">
             {finance && (
@@ -765,181 +831,9 @@ export default async function ClientPage({
         </div>
       )}
 
-      {aba === "projetos" && (
-        <div className="max-w-2xl">
-          <Card
-            title="Projetos"
-            actions={
-              <Link
-                className="text-sm text-brand-700 hover:underline"
-                href={`/projetos/novo?cliente=${client.id}`}
-              >
-                Implantação / novo
-              </Link>
-            }
-          >
-            {extras.projects.length ? (
-              <ul className="divide-y divide-slate-100 text-sm">
-                {extras.projects.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex items-center justify-between gap-2 py-2"
-                  >
-                    <div>
-                      <Link
-                        href={`/projetos/${p.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {p.name}
-                      </Link>
-                      {p.dueDate && (
-                        <p className="text-xs text-slate-500">
-                          Prazo {fmtLocalDate(p.dueDate)}
-                        </p>
-                      )}
-                    </div>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">
-                      {PROJECT_STATUS_LABEL[p.status as ProjectStatus]}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-slate-500">
-                Nenhum projeto para este cliente.
-              </p>
-            )}
-          </Card>
-        </div>
-      )}
-
-      {aba === "rotinas" && (
-        <div className="space-y-6">
-          <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-4 text-sm text-slate-700">
-            <p className="font-semibold text-brand-900">
-              O que é a rotina do cliente?
-            </p>
-            <p className="mt-1">
-              É a agenda fixa deste cliente: o que precisa ser feito, em que dia
-              e horário. Cadastrada aqui, a rotina gera as tarefas sozinha, no
-              dia e horário certos.
-            </p>
-          </div>
-          <Card
-            title="Agenda de rotinas"
-            actions={
-              can(actor, "recurrences.manage") && (
-                <Link
-                  className="text-sm text-brand-700 hover:underline"
-                  href={`/rotinas/recorrencias/nova?clientId=${id}`}
-                >
-                  Cadastro avançado
-                </Link>
-              )
-            }
-          >
-            <ClientRoutineAgenda
-              editable={can(actor, "recurrences.manage")}
-              routines={client.recurrences.map((r) => ({
-                id: r.id,
-                name: r.template.title,
-                frequency: r.frequency,
-                weekdays: r.weekdays,
-                monthDays: r.monthDays,
-                nthBusinessDay: r.nthBusinessDay,
-                dueTime: r.dueTime,
-                status: r.status,
-                assignee: r.assignee?.name ?? null,
-              }))}
-            />
-          </Card>
-          {routineForm && (
-            <Card
-              title="Nova rotina"
-              description="Cadastro rápido: dia, horário e pronto."
-            >
-              <ClientRoutineForm
-                clientId={id}
-                templates={routineForm.templates}
-                people={routineForm.people}
-                projects={routineForm.projects}
-              />
-            </Card>
-          )}
-        </div>
-      )}
-
       {aba === "dados" && (
-        <div className="max-w-2xl">
-          <Card title="Cadastro">
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-              <dt className="text-slate-500">CNPJ</dt>
-              <dd>{client.cnpj ? fmtCnpj(client.cnpj) : "—"}</dd>
-              <dt className="text-slate-500">Razão social</dt>
-              <dd>{client.legalName}</dd>
-              <dt className="text-slate-500">Nome fantasia</dt>
-              <dd>{client.tradeName}</dd>
-              <dt className="text-slate-500">Contato</dt>
-              <dd>{client.contactName ?? "—"}</dd>
-              <dt className="text-slate-500">E-mail</dt>
-              <dd className="break-all">{client.contactEmail ?? "—"}</dd>
-              <dt className="text-slate-500">Telefone</dt>
-              <dd>{client.contactPhone ?? "—"}</dd>
-              <dt className="text-slate-500">Canais</dt>
-              <dd>{client.contactChannels ?? "—"}</dd>
-              <dt className="text-slate-500">Etapa da jornada</dt>
-              <dd>{client.journeyStage ? STAGE_LABEL[client.journeyStage] : "—"}</dd>
-              <dt className="text-slate-500">Sistema financeiro</dt>
-              <dd>{client.software ?? "—"}</dd>
-              {finance && (
-                <>
-                  <dt className="text-slate-500">Custo direto mensal</dt>
-                  <dd>{client.directCost === null ? "—" : fmtMoney(Number(client.directCost))}</dd>
-                </>
-              )}
-              <dt className="text-slate-500">Início</dt>
-              <dd>
-                {client.startDate
-                  ? fmtLocalDate(dbDateToLocalDate(client.startDate))
-                  : "—"}
-              </dd>
-              <dt className="text-slate-500">Responsável</dt>
-              <dd>{client.responsibleOperator?.name ?? "—"}</dd>
-              <dt className="text-slate-500">Gestor</dt>
-              <dd>{client.manager?.name ?? "—"}</dd>
-              <dt className="text-slate-500">Equipe</dt>
-              <dd>
-                {client.members.map((m) => m.user.name).join(", ") || "—"}
-              </dd>
-            </dl>
-            <h3 className="mt-4 text-xs font-semibold text-slate-500">
-              Serviços contratados
-            </h3>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {client.services.length ? (
-                client.services.map((s) => (
-                  <span
-                    key={s}
-                    className="rounded-full bg-slate-100 px-2 py-0.5 text-xs"
-                  >
-                    {s}
-                  </span>
-                ))
-              ) : (
-                <span className="text-sm text-slate-500">—</span>
-              )}
-            </div>
-            {client.notes && (
-              <>
-                <h3 className="mt-4 text-xs font-semibold text-slate-500">
-                  Observações operacionais
-                </h3>
-                <p className="mt-1 text-sm whitespace-pre-wrap">
-                  {client.notes}
-                </p>
-              </>
-            )}
-          </Card>
+        <div className="mt-6">
+          <BankAccountsPanel clientId={id} accounts={banks} canEdit={manage} />
         </div>
       )}
 
@@ -980,30 +874,8 @@ export default async function ClientPage({
           </Card>
         </div>
       )}
-    </>
-  );
-}
-
-function HeroFact({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Mail;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-brand-500">
-        <Icon aria-hidden className="h-4 w-4" />
-      </span>
-      <div>
-        <dt className="text-[10px] font-semibold text-brand-500">
-          {label}
-        </dt>
-        <dd className="text-sm text-brand-100">{value}</dd>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
