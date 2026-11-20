@@ -50,7 +50,7 @@ export function Card({
       {(title || actions) && (
         <header className="flex items-start justify-between gap-3 border-b border-hair px-5 py-3.5">
           <div>
-            {title && <h2 className="font-serif text-[1.05rem] font-medium text-brand-900">{title}</h2>}
+            {title && <h2 className="text-[15px] font-semibold text-brand-900">{title}</h2>}
             {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
           </div>
           {actions}
@@ -142,25 +142,27 @@ export function Stat({
   tone?: "default" | "danger" | "warning" | "info" | "success";
   href?: string;
 }) {
-  const valueTone = {
-    default: "text-brand-900",
-    danger: "text-red-700",
-    warning: "text-amber-700",
-    info: "text-brand-900",
-    success: "text-emerald-700",
+  const t = {
+    default: { value: "text-brand-900", bar: "bg-brand-500", bg: "from-brand-50/70" },
+    danger: { value: "text-red-700", bar: "bg-red-500", bg: "from-red-50/70" },
+    warning: { value: "text-amber-700", bar: "bg-amber-500", bg: "from-amber-50/70" },
+    info: { value: "text-violet-700", bar: "bg-violet-500", bg: "from-violet-50/70" },
+    success: { value: "text-emerald-700", bar: "bg-emerald-500", bg: "from-emerald-50/70" },
   }[tone];
   const body = (
     <>
-      <p className="text-[13px] font-medium text-slate-500">{label}</p>
-      <p className={cx("mt-2 font-serif text-[1.9rem] leading-none font-medium tabular-nums", valueTone)}>{value}</p>
+      <span aria-hidden className={cx("absolute inset-y-3 left-0 w-1 rounded-r", t.bar)} />
+      <p className="text-[13px] font-medium text-slate-600">{label}</p>
+      <p className={cx("mt-2 text-[1.85rem] leading-none font-semibold tabular-nums", t.value)}>{value}</p>
       {hint && <p className="mt-2 text-xs text-slate-500">{hint}</p>}
     </>
   );
+  const cls = cx("card relative block overflow-hidden bg-gradient-to-br to-white to-60% p-4 pl-5", t.bg);
   return href ? (
-    <Link href={href} className="card block p-4 transition-colors hover:border-brand-500">
+    <Link href={href} className={cx(cls, "transition-colors hover:border-brand-500")}>
       {body}
     </Link>
   ) : (
-    <div className="card p-4">{body}</div>
+    <div className={cls}>{body}</div>
   );
 }
