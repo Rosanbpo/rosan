@@ -141,6 +141,7 @@ model Client {
   logo                  ClientLogo?
   diagnosis             ClientDiagnosis?
   onboarding            ClientOnboarding?
+  npsResponses          ClientNps[]
   volumes               ClientVolume[]
   closings              ClientClosing[]
   documentRequirements  DocumentRequirement[]
@@ -1103,4 +1104,20 @@ model ClientOnboarding {
   updatedAt              DateTime @updatedAt
 
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+/// Nota de satisfação (NPS, 0 a 10) dada pelo cliente.
+model ClientNps {
+  id             String   @id @default(cuid())
+  organizationId String
+  clientId       String
+  score          Int
+  comment        String?
+  answeredAt     DateTime @default(now())
+  recordedById   String?
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, answeredAt])
+  @@index([organizationId, answeredAt])
 }

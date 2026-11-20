@@ -67,6 +67,8 @@ import { saveOnboardingAction, createOnboardingTasksAction } from "@/app/actions
 import { getOnboarding, ONBOARDING_STEPS } from "@/server/services/onboarding";
 import { getDiagnosis } from "@/server/services/diagnosis";
 import { headers } from "next/headers";
+import { NpsCard } from "@/components/nps-card";
+import { clientNps } from "@/server/services/nps";
 import { ClosingPanel } from "@/components/closing-panel";
 import { ClientLogoBox } from "@/components/client-logo-box";
 import { getClosing, closingHistory, currentCompetence } from "@/server/services/closings";
@@ -234,6 +236,7 @@ export default async function ClientPage({
   const onbDiag = aba === "onboarding" ? await getDiagnosis(actor, id) : null;
   const hdr = aba === "onboarding" ? await headers() : null;
   const origin = hdr ? `${hdr.get("x-forwarded-proto") ?? "https"}://${hdr.get("x-forwarded-host") ?? hdr.get("host")}` : "";
+  const npsData = aba === "resumo" ? await clientNps(actor, id) : null;
   const hasLogo = !!(await getClientLogo(actor, id));
   const ours = openTasks.rows.filter((t) => t.status === "A_FAZER" || t.status === "EM_ANDAMENTO" || t.status === "EM_REVISAO");
   const clientSide = pendings.rows.filter((p) => p.type === "CLIENTE");
@@ -515,6 +518,10 @@ export default async function ClientPage({
 
       {aba === "atas" && (
         <ClientNotesPanel clientId={id} kind="ATA" rows={clientNotes} canDelete={manage} />
+      )}
+
+      {aba === "resumo" && npsData && (
+        <div className="mt-6"><NpsCard clientId={id} rows={npsData.rows} nps={npsData.nps} manage={manage} flash={{ ok: sp.nps, erro: sp.npserro }} /></div>
       )}
 
       {aba === "onboarding" && (
