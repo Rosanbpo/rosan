@@ -187,6 +187,9 @@ export async function setContractStatus(actor: Actor, id: string, status: Contra
   assertCan(actor, "contracts.manage");
   const current = await getContract(actor, id);
   if (current.status === status) return;
+  if (status === "RASCUNHO" && (await prisma.contractSignLink.count({ where: { contractId: id, status: "ASSINADO" } })) > 0) {
+    throw new ValidationError("Este contrato foi assinado eletronicamente e não pode voltar a rascunho. Gere um novo contrato se precisar alterar.");
+  }
   if (status === "ENCERRADO" && current.distratoClauses === null) {
     // Encerrar não exige distrato (ex.: fim do prazo), mas a data de encerramento ajuda os relatórios.
   }

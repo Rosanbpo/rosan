@@ -1232,3 +1232,25 @@ model AgendaFeed {
   token          String   @unique
   createdAt      DateTime @default(now())
 }
+
+/// Link de assinatura eletrônica simples do contrato, com as evidências do aceite.
+model ContractSignLink {
+  id             String    @id @default(cuid())
+  organizationId String
+  contractId     String
+  token          String    @unique
+  /// PENDENTE | ASSINADO | CANCELADO
+  status         String    @default("PENDENTE")
+  /// SHA-256 do conteúdo do contrato no momento do envio.
+  docHash        String
+  expiresAt      DateTime
+  signerName     String?
+  signerCpf      String?
+  signedAt       DateTime?
+  signerIp       String?
+  signerAgent    String?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+
+  @@index([contractId])
+}
