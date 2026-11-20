@@ -291,6 +291,8 @@ model RoutineTemplate {
   procedureId        String?
   /// Etapa da jornada do cliente a que o modelo pertence (opcional).
   stage              JourneyStage?
+  /// Rotina criada só para um cliente (não aparece na lista geral de modelos).
+  exclusiveClientId  String?
   archivedAt         DateTime?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt

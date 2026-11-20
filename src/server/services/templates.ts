@@ -13,7 +13,7 @@ function canRead(actor: Actor) {
 export async function listTemplates(actor: Actor, opts: { archived?: boolean } = {}) {
   canRead(actor);
   return prisma.routineTemplate.findMany({
-    where: { organizationId: actor.organizationId, archivedAt: opts.archived ? { not: null } : null },
+    where: { organizationId: actor.organizationId, exclusiveClientId: null, archivedAt: opts.archived ? { not: null } : null },
     orderBy: { name: "asc" },
     include: {
       _count: { select: { checklistItems: true, recurrences: { where: { status: "ACTIVE" } } } },

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CATEGORY_LABEL, TASK_CATEGORIES } from "@/domain/enums";
 import { quickAddRoutineAction } from "@/app/actions/routines";
+import { ChecklistEditor } from "./ui/checklist-editor";
 import { ActionForm, Field, SubmitButton } from "./ui/action-form";
 
 const DAYS = [
@@ -105,6 +106,12 @@ export function ClientRoutineForm({
         <Field label="Observação" name="description" className="md:col-span-2">
           <textarea id="description" name="description" rows={2} className="input" placeholder="Detalhe opcional…" />
         </Field>
+      )}
+      {!template && (
+        <div className="md:col-span-2">
+          <p className="label mb-1">Checklist (opcional)</p>
+          <ChecklistEditor key={String(template)} />
+        </div>
       )}
       <div className="flex justify-end md:col-span-2">
         <SubmitButton>Adicionar rotina</SubmitButton>
