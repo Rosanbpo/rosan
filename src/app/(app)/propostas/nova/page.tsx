@@ -17,7 +17,7 @@ export default async function NewProposalPage({ searchParams }: { searchParams: 
   const leadId = str(sp, "leadId");
   const lead = leadId ? await orNotFound(getLead(actor, leadId)) : null;
   const today = instantToLocalDate(new Date(), APP_TIMEZONE);
-  const fee = lead?.expectedFee === null || lead?.expectedFee === undefined ? undefined : Number(lead.expectedFee).toFixed(2).replace(".", ",");
+  const fee = str(sp, "valor") ?? (lead?.expectedFee === null || lead?.expectedFee === undefined ? undefined : Number(lead.expectedFee).toFixed(2).replace(".", ","));
 
   return (
     <>
@@ -29,7 +29,7 @@ export default async function NewProposalPage({ searchParams }: { searchParams: 
         cancelHref={leadId ? `/crm/${leadId}` : "/propostas"}
         values={{
           leadId: lead?.id,
-          companyName: lead?.companyName,
+          companyName: lead?.companyName ?? str(sp, "empresa"),
           contactName: lead?.contactName,
           contactEmail: lead?.contactEmail,
           validUntil: defaultValidUntil(today),
