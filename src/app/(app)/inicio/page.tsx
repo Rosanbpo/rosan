@@ -3,6 +3,9 @@ import { STATUS_LABEL } from "@/domain/enums";
 import { fmtDateTime, fmtMoney } from "@/lib/format";
 import { requirePermission } from "@/server/context";
 import { homeOverview } from "@/server/services/home";
+import { managerDashboard } from "@/server/services/dashboard";
+import { TaskTable } from "@/components/task-table";
+import { fmtMinutes } from "@/lib/format";
 
 export const metadata = { title: "Início" };
 
@@ -26,12 +29,12 @@ function greeting(now: Date) {
 
 function Tile({ label, emoji, value, hint, cls, href }: { label: string; emoji: string; value: string; hint: string; cls: string; href?: string }) {
   const body = (
-    <div className={`h-full rounded-xl border p-4 ${cls}`}>
+    <div className={`h-full rounded-lg border p-3 ${cls}`}>
       <div className="flex items-start justify-between">
         <p className="text-xs font-semibold">{label}</p>
         <span aria-hidden>{emoji}</span>
       </div>
-      <p className="mt-2 text-2xl font-bold text-brand-900 xl:text-[1.7rem]">{value}</p>
+      <p className="mt-1 text-xl font-bold text-brand-900">{value}</p>
       <p className="text-xs opacity-80">{hint}</p>
     </div>
   );
@@ -41,23 +44,24 @@ function Tile({ label, emoji, value, hint, cls, href }: { label: string; emoji: 
 export default async function InicioPage() {
   const actor = await requirePermission("dashboard.view");
   const now = new Date();
-  const d = await homeOverview(actor, now);
+  const [d, m] = await Promise.all([homeOverview(actor, now), managerDashboard(actor, {}, now)]);
+  const maxLoad = Math.max(1, ...m.workload.map((w) => w.open));
   const first = actor.name.split(" ")[0];
   const dateLabel = new Intl.DateTimeFormat("pt-BR", { dateStyle: "full", timeZone: "America/Sao_Paulo" }).format(now);
   const total = Math.max(1, d.byStatus.reduce((a, s) => a + s.count, 0));
 
   return (
-    <>
-      <header className="mb-5">
-        <h1 className="text-2xl font-bold text-brand-900">{greeting(now)}, {first}! 👋</h1>
+    <div className="text-[13px] [&_.text-sm]:text-[13px]">
+      <header className="mb-4">
+        <h1 className="text-xl font-bold text-brand-900">{greeting(now)}, {first}! 👋</h1>
         <p className="mt-1 text-sm text-slate-500">{dateLabel} · {d.dueToday} tarefa{d.dueToday === 1 ? "" : "s"} para hoje</p>
       </header>
 
-      <section aria-label="Insights da operação" className="mb-5">
+      <section aria-label="Insights da operação" className="mb-4">
         <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-brand-900">💡 Insights da operação <span className="rounded-full bg-slate-200 px-2 text-xs">{d.insights.length}</span></h2>
         <div className="grid gap-3 md:grid-cols-2">
           {d.insights.map((i) => (
-            <div key={i.title} className={`rounded-xl border p-4 ${TONE_BOX[i.tone]}`}>
+            <div key={i.title} className={`rounded-lg border px-4 py-3 ${TONE_BOX[i.tone]}`}>
               <p className="font-semibold text-brand-900"><span aria-hidden>{i.emoji}</span> {i.title}</p>
               <p className="mt-1 text-sm text-slate-600">{i.text}</p>
               <Link href={i.href} className={`mt-2 inline-block rounded-md border bg-white/60 px-2 py-0.5 text-xs font-medium ${TONE_BTN[i.tone]}`}>{i.cta} →</Link>
@@ -66,7 +70,7 @@ export default async function InicioPage() {
         </div>
       </section>
 
-      <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+      <div className="mb-4 grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-7">
         <Tile label="MRR" emoji="💰" value={d.mrr === null ? "—" : fmtMoney(d.mrr)} hint={`${d.activeClients} clientes ativos`} cls="border-sky-200 bg-sky-50 text-sky-800" href="/carteira" />
         <Tile label="Para hoje" emoji="☀️" value={String(d.dueToday)} hint="vencem hoje" cls="border-amber-200 bg-amber-50 text-amber-800" href="/tarefas?prazo=hoje" />
         <Tile label="Atrasadas" emoji="🔴" value={String(d.overdue)} hint="precisam de atenção" cls="border-red-200 bg-red-50 text-red-700" href="/tarefas?atrasadas=1" />
@@ -76,13 +80,13 @@ export default async function InicioPage() {
         <Tile label="Horas hoje" emoji="⏱️" value={`${d.hoursToday}h`} hint="apontadas" cls="border-teal-200 bg-teal-50 text-teal-800" />
       </div>
 
-      <section className="card mb-5">
+      <section className="card mb-4">
         <div className="flex items-center justify-between border-b border-hair px-5 py-3">
           <h2 className="text-[15px] font-semibold text-brand-900">🏢 Tarefas por cliente</h2>
           <Link href="/clientes" className="text-sm text-brand-700 hover:underline">Ver clientes →</Link>
         </div>
         {d.byClient.length ? (
-          <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-2.5 p-3 md:grid-cols-2 xl:grid-cols-3">
             {d.byClient.map((c) => (
               <div key={c.id ?? "interna"} className="rounded-xl border border-hair p-4">
                 <div className="flex items-start justify-between gap-2">
@@ -107,7 +111,7 @@ export default async function InicioPage() {
         )}
       </section>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <section className="card">
           <div className="flex items-center justify-between border-b border-hair px-5 py-3">
             <h2 className="text-[15px] font-semibold text-brand-900">☀️ Para fazer hoje</h2>
@@ -160,7 +164,29 @@ export default async function InicioPage() {
         </section>
       </div>
 
-      <p className="mt-5 text-sm"><Link href="/painel" className="text-brand-700 hover:underline">Abrir painel detalhado do gestor →</Link></p>
-    </>
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <section className="card"><div className="border-b border-hair px-5 py-3"><h2 className="text-[15px] font-semibold text-brand-900">🔴 Tarefas atrasadas</h2></div>
+          {m.overdue.rows.length ? <TaskTable rows={m.overdue.rows} compact showAssignee={false} caption="Tarefas atrasadas" /> : <p className="p-5 text-sm text-slate-500">Nenhuma tarefa atrasada. 🎉</p>}
+        </section>
+        <section className="card"><div className="border-b border-hair px-5 py-3"><h2 className="text-[15px] font-semibold text-brand-900">🔍 Em revisão</h2></div>
+          {m.review.rows.length ? <TaskTable rows={m.review.rows} compact showAssignee={false} caption="Tarefas em revisão" /> : <p className="p-5 text-sm text-slate-500">Nenhuma tarefa em revisão.</p>}
+        </section>
+        <section className="card"><div className="border-b border-hair px-5 py-3"><h2 className="text-[15px] font-semibold text-brand-900">⏳ Aguardando cliente</h2></div>
+          {m.waitingClient.rows.length ? <TaskTable rows={m.waitingClient.rows} compact showAssignee={false} caption="Tarefas aguardando cliente" /> : <p className="p-5 text-sm text-slate-500">Nenhuma tarefa aguardando cliente.</p>}
+        </section>
+        <section className="card"><div className="border-b border-hair px-5 py-3"><h2 className="text-[15px] font-semibold text-brand-900">👥 Carga por operador</h2></div>
+          {m.workload.length ? (
+            <ul className="space-y-3 p-5">
+              {m.workload.map((w) => (
+                <li key={w.assigneeId ?? "none"}>
+                  <div className="flex items-center justify-between text-sm"><span className="font-medium">{w.name}</span><span className="text-xs text-slate-600">{w.open} abertas · <span className={w.overdue ? "font-semibold text-red-700" : ""}>{w.overdue} atrasadas</span> · {fmtMinutes(w.estimatedMinutes)}</span></div>
+                  <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-slate-100" aria-hidden><div className="bg-red-500" style={{ width: `${(w.overdue / maxLoad) * 100}%` }} /><div className="bg-brand-500" style={{ width: `${((w.open - w.overdue) / maxLoad) * 100}%` }} /></div>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="p-5 text-sm text-slate-500">Sem tarefas abertas.</p>}
+        </section>
+      </div>
+    </div>
   );
 }
