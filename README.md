@@ -168,6 +168,8 @@ openssl rand -base64 32
 | `AUTH_SECRET` | Assinatura das sessões (obrigatório) |
 | `AUTH_TRUST_HOST` | `true` quando atrás de proxy/host próprio |
 | `CRON_SECRET` | Token da rota do agendador (mín. 16 caracteres) |
+| `RESEND_API_KEY` | (Opcional) Chave do Resend para enviar e-mails: resumo diário e link de assinatura |
+| `MAIL_FROM` | (Opcional) Remetente, ex.: `Rosan Finanças <avisos@seudominio.com.br>` (domínio verificado no Resend) |
 | `APP_TIMEZONE` | Fuso das rotinas (padrão `America/Sao_Paulo`) |
 | `NEXT_PUBLIC_APP_NAME` | Nome exibido |
 | `SCHEDULER_INTERVAL_MINUTES` | Intervalo do worker opcional (padrão 60) |

@@ -7,10 +7,11 @@ import { ConfirmAction } from "@/components/confirm-action";
 import { removeDistratoAction, setContractStatusAction, startDistratoAction } from "@/app/actions/contracts";
 import { fmtLocalDate, fmtMoney } from "@/lib/format";
 import { CopyButton } from "@/components/copy-button";
-import { cancelSignLinkAction, createSignLinkAction } from "@/app/actions/signature";
+import { cancelSignLinkAction, createSignLinkAction, emailSignLinkAction } from "@/app/actions/signature";
 import { maskCpf } from "@/domain/signature";
 import { headers } from "next/headers";
 import { latestSignLink } from "@/server/services/signature";
+import { prisma } from "@/server/db";
 import { requirePermission } from "@/server/context";
 import { orNotFound } from "@/server/page-utils";
 import { getContract } from "@/server/services/contracts";
@@ -25,6 +26,7 @@ export default async function ContractPage({ params, searchParams }: { params: P
   const sign = await latestSignLink(actor, id);
   const h = await headers();
   const signUrl = sign ? `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}/assinar/${sign.token}` : null;
+  const clientEmail = c.client ? (await prisma.client.findUnique({ where: { id: c.client.id }, select: { contactEmail: true } }))?.contactEmail : null;
   const draft = c.status === "RASCUNHO";
   const hasDistrato = c.distratoClauses !== null;
   const anyValue = c.pendingMonthly !== null || c.unbilled !== null || c.credits !== null;
@@ -58,6 +60,7 @@ export default async function ContractPage({ params, searchParams }: { params: P
 
       <Card title="Assinatura eletrônica" description="O cliente abre o link, lê o contrato e assina com nome, CPF e aceite. Ficam registrados data, hora, IP e a impressão digital do documento." className="mb-6">
         {sp.erro && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{sp.erro}</p>}
+        {sp.enviado && <p className="mb-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">✅ E-mail enviado ao cliente.</p>}
         {sign?.status === "ASSINADO" ? (
           <div className="space-y-2 text-sm">
             <p>✅ Assinado por <strong>{sign.signerName}</strong> (CPF {maskCpf(sign.signerCpf ?? "")}) em {sign.signedAt?.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}.</p>
@@ -72,6 +75,10 @@ export default async function ContractPage({ params, searchParams }: { params: P
               <form action={createSignLinkAction.bind(null, id)}><button className="btn-secondary btn-sm">Gerar novo link</button></form>
               <form action={cancelSignLinkAction.bind(null, id)}><button className="btn-ghost btn-sm">Cancelar</button></form>
             </div>
+            <form action={emailSignLinkAction.bind(null, id)} className="flex flex-wrap items-center gap-2">
+              <input type="email" name="email" required defaultValue={clientEmail ?? ""} placeholder="e-mail do cliente" className="input min-w-0 flex-1 text-sm" />
+              <button className="btn-secondary btn-sm">✉️ Enviar por e-mail</button>
+            </form>
             <p className="text-xs text-slate-500">Alterar o contrato depois do envio invalida o link: gere outro.</p>
           </div>
         ) : draft ? (

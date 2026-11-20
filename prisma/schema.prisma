@@ -72,6 +72,8 @@ model User {
   active             Boolean           @default(true)
   /// Usuários criados pelo seed de demonstração. Bloqueados em produção.
   isDemo             Boolean           @default(false)
+  /// Recebe o resumo diário por e-mail.
+  emailDigest        Boolean           @default(true)
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
 
