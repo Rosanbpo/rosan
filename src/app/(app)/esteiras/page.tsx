@@ -2,16 +2,16 @@ import Link from "next/link";
 import { ArrowRight, Layers, ListChecks, Users } from "lucide-react";
 import { EsteiraIcon } from "@/components/esteira-icon";
 import { PageHeader } from "@/components/ui/layout";
-import { ESTEIRAS, esteiraCounts } from "@/domain/esteiras";
+import { esteiraCounts } from "@/domain/esteiras";
 import { cx, TONE } from "@/lib/ui";
 import { requirePermission } from "@/server/context";
-import { esteiraProgress } from "@/server/services/esteiras";
+import { esteiraProgress, listEsteirasFor } from "@/server/services/esteiras";
 
 export const metadata = { title: "Esteiras" };
 
 export default async function EsteirasPage() {
   const actor = await requirePermission("projects.manage");
-  const progress = await esteiraProgress(actor);
+  const [progress, ESTEIRAS] = await Promise.all([esteiraProgress(actor), listEsteirasFor(actor.organizationId)]);
   return (
     <>
       <PageHeader

@@ -1,4 +1,4 @@
-import type { JourneyStage, Priority, TaskCategory } from "./enums";
+import { CATEGORY_LABEL, PRIORITIES, PRIORITY_LABEL, TASK_CATEGORIES, type JourneyStage, type Priority, type TaskCategory } from "./enums";
 
 export type Tone = "sky" | "teal" | "emerald" | "amber" | "indigo" | "violet" | "orange" | "slate" | "red";
 
@@ -350,4 +350,71 @@ export function esteiraCounts(e: Esteira) {
 
 export function taskKey(slug: string, stageIdx: number, taskIdx: number) {
   return `${slug}:${stageIdx}:${taskIdx}`;
+}
+
+/** Converte etapas em texto editável:  ## Etapa / ### Título | Categoria | dia | minutos | Prioridade / - item */
+export function stagesToText(stages: EsteiraStage[]): string {
+  return stages
+    .map((s) =>
+      [
+        `## ${s.name}`,
+        ...s.tasks.map((k) =>
+          [
+            `### ${[k.title, CATEGORY_LABEL[k.category], k.day, k.minutes, k.priority && k.priority !== "NORMAL" ? PRIORITY_LABEL[k.priority] : ""].join(" | ").replace(/ \| $/, "")}`,
+            ...(k.description ? [`> ${k.description}`] : []),
+            ...k.items.map((i) => `- ${i}`),
+          ].join("\n"),
+        ),
+      ].join("\n\n"),
+    )
+    .join("\n\n");
+}
+
+const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+
+/** Lê o texto editado. Lança Error com a linha problemática. */
+export function textToStages(text: string): EsteiraStage[] {
+  const stages: EsteiraStage[] = [];
+  let task: EsteiraTask | null = null;
+  const lines = text.split(/\r?\n/);
+  lines.forEach((raw, idx) => {
+    const line = raw.trim();
+    if (!line) return;
+    const at = `Linha ${idx + 1}`;
+    if (line.startsWith("### ")) {
+      const stage = stages.at(-1);
+      if (!stage) throw new Error(`${at}: crie uma etapa com "## Nome" antes da tarefa.`);
+      const [title, cat, day, min, prio] = line.slice(4).split("|").map((p) => p.trim());
+      if (!title) throw new Error(`${at}: a tarefa precisa de um título.`);
+      const category = TASK_CATEGORIES.find((c) => norm(CATEGORY_LABEL[c]) === norm(cat ?? "") || c === cat) ;
+      if (!category) throw new Error(`${at}: categoria "${cat ?? ""}" não existe. Use, por exemplo, "Documentação" ou "Cobrança".`);
+      const d = Number(day), m = Number(min);
+      if (!Number.isInteger(d) || d < 0 || d > 365) throw new Error(`${at}: o dia deve ser um número inteiro (0 a 365).`);
+      if (!Number.isInteger(m) || m < 5 || m > 1440) throw new Error(`${at}: os minutos devem ser um número inteiro (5 a 1440).`);
+      let priority: Priority | undefined;
+      if (prio) {
+        priority = PRIORITIES.find((p) => norm(PRIORITY_LABEL[p]) === norm(prio) || p === prio);
+        if (!priority) throw new Error(`${at}: prioridade "${prio}" não existe (Baixa, Normal, Alta, Crítica).`);
+      }
+      task = { title, category, day: d, minutes: m, items: [], ...(priority && priority !== "NORMAL" ? { priority } : {}) };
+      stage.tasks.push(task);
+    } else if (line.startsWith("## ")) {
+      const name = line.slice(3).trim();
+      if (!name) throw new Error(`${at}: a etapa precisa de um nome.`);
+      stages.push({ name, tasks: [] });
+      task = null;
+    } else if (line.startsWith("> ")) {
+      if (!task) throw new Error(`${at}: a descrição precisa ficar abaixo de uma tarefa.`);
+      task.description = line.slice(2).trim();
+    } else if (line.startsWith("- ")) {
+      if (!task) throw new Error(`${at}: o item de checklist precisa ficar abaixo de uma tarefa.`);
+      const item = line.slice(2).trim();
+      if (item) task.items.push(item);
+    } else {
+      throw new Error(`${at}: não entendi. Use "## Etapa", "### Tarefa | Categoria | dia | minutos", "> descrição" ou "- item".`);
+    }
+  });
+  if (!stages.length) throw new Error("Crie ao menos uma etapa.");
+  if (stages.some((s) => !s.tasks.length)) throw new Error("Toda etapa precisa de ao menos uma tarefa.");
+  return stages;
 }
