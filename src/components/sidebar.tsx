@@ -25,6 +25,9 @@ import {
   Hourglass,
   LineChart,
   UserMinus,
+  CalendarDays,
+  Flag,
+  SlidersHorizontal,
   Menu,
   Repeat,
   Settings,
@@ -60,6 +63,9 @@ const ICONS = {
   executivo: Gauge,
   relatorios: BarChart3,
   churn: UserMinus,
+  agenda: CalendarDays,
+  metas: Flag,
+  simulador: SlidersHorizontal,
 };
 
 export interface NavItem {

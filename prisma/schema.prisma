@@ -1161,3 +1161,14 @@ model ChecklistTemplate {
 
   @@unique([organizationId, kind])
 }
+
+/// Metas da empresa (MRR, clientes ativos, NPS, utilização da capacidade).
+model GoalTarget {
+  id             String   @id @default(cuid())
+  organizationId String
+  metric         String
+  target         Decimal  @db.Decimal(14, 2)
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, metric])
+}
