@@ -4,5 +4,5 @@ import { requireActor } from "@/server/context";
 
 export default async function Home() {
   const actor = await requireActor();
-  redirect(can(actor, "dashboard.view") ? "/painel" : "/minha-operacao");
+  redirect(can(actor, "dashboard.view") ? "/inicio" : "/minha-operacao");
 }
