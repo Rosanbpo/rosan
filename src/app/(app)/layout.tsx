@@ -39,6 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(dash ? [{ group: "Análise", href: "/executivo", label: "Executivo", icon: "executivo" as const }] : []),
     ...(fin ? [{ group: "Análise", href: "/carteira", label: "Rentabilidade", icon: "carteira" as const }] : []),
     ...(dash ? [{ group: "Análise", href: "/equipe", label: "Equipe", icon: "equipe" as const }] : []),
+    ...(dash ? [{ group: "Análise", href: "/churn", label: "Saídas", icon: "churn" as const }] : []),
     ...(dash ? [{ group: "Análise", href: "/relatorios", label: "Relatórios", icon: "relatorios" as const }] : []),
     { group: "Ferramentas", href: "/pops", label: "Processos e POPs", icon: "pops" },
     { group: "Ferramentas", href: "/projetos", label: "Projetos", icon: "projetos" },

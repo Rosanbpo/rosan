@@ -24,6 +24,7 @@ import {
   FolderKanban,
   Hourglass,
   LineChart,
+  UserMinus,
   Menu,
   Repeat,
   Settings,
@@ -58,6 +59,7 @@ const ICONS = {
   central: Radar,
   executivo: Gauge,
   relatorios: BarChart3,
+  churn: UserMinus,
 };
 
 export interface NavItem {

@@ -64,9 +64,13 @@ import { DiagnosisPanel } from "@/components/diagnosis-panel";
 import { volumeOverview } from "@/server/services/diagnosis";
 import { CopyButton } from "@/components/copy-button";
 import { saveOnboardingAction, createOnboardingTasksAction } from "@/app/actions/onboarding";
-import { getOnboarding, ONBOARDING_STEPS } from "@/server/services/onboarding";
+import { getOnboarding } from "@/server/services/onboarding";
+import { onboardingSteps } from "@/server/services/checklists";
 import { getDiagnosis } from "@/server/services/diagnosis";
 import { headers } from "next/headers";
+import { prisma } from "@/server/db";
+import { CHURN_REASONS } from "@/domain/renewal";
+import { closeClientAction } from "@/app/actions/gestao";
 import { NpsCard } from "@/components/nps-card";
 import { clientNps } from "@/server/services/nps";
 import { ClosingPanel } from "@/components/closing-panel";
@@ -233,10 +237,14 @@ export default async function ClientPage({
   const closingHist = aba === "fechamentos" ? await closingHistory(actor, id) : [];
   const vol = aba === "dados" ? await volumeOverview(actor, id) : null;
   const onb = aba === "onboarding" ? await getOnboarding(actor, id) : null;
+  const obSteps = aba === "onboarding" ? await onboardingSteps(actor.organizationId) : [];
   const onbDiag = aba === "onboarding" ? await getDiagnosis(actor, id) : null;
   const hdr = aba === "onboarding" ? await headers() : null;
   const origin = hdr ? `${hdr.get("x-forwarded-proto") ?? "https"}://${hdr.get("x-forwarded-host") ?? hdr.get("host")}` : "";
   const npsData = aba === "resumo" ? await clientNps(actor, id) : null;
+  const npsTok = aba === "resumo" ? await prisma.npsLink.findUnique({ where: { clientId: id } }) : null;
+  const hdr2 = aba === "resumo" ? await headers() : null;
+  const npsLinkUrl = npsTok && hdr2 ? `${hdr2.get("x-forwarded-proto") ?? "https"}://${hdr2.get("x-forwarded-host") ?? hdr2.get("host")}/nps/${npsTok.token}` : null;
   const hasLogo = !!(await getClientLogo(actor, id));
   const ours = openTasks.rows.filter((t) => t.status === "A_FAZER" || t.status === "EM_ANDAMENTO" || t.status === "EM_REVISAO");
   const clientSide = pendings.rows.filter((p) => p.type === "CLIENTE");
@@ -521,7 +529,7 @@ export default async function ClientPage({
       )}
 
       {aba === "resumo" && npsData && (
-        <div className="mt-6"><NpsCard clientId={id} rows={npsData.rows} nps={npsData.nps} manage={manage} flash={{ ok: sp.nps, erro: sp.npserro }} /></div>
+        <div className="mt-6"><NpsCard clientId={id} rows={npsData.rows} nps={npsData.nps} manage={manage} flash={{ ok: sp.nps === "ok" ? "ok" : undefined, erro: sp.npserro }} link={npsLinkUrl} /></div>
       )}
 
       {aba === "onboarding" && (
@@ -545,8 +553,8 @@ export default async function ClientPage({
             </section>
 
             <section className="rounded-xl border border-hair bg-slate-50 p-4 text-sm">
-              <h3 className="font-semibold text-brand-900">Checklist de onboarding ({ONBOARDING_STEPS.length} etapas)</h3>
-              <p className="mt-1 text-slate-600">{ONBOARDING_STEPS.map((s) => s.title).join(" · ")}</p>
+              <h3 className="font-semibold text-brand-900">Checklist de onboarding ({obSteps.length} etapas)</h3>
+              <p className="mt-1 text-slate-600">{obSteps.map((s) => s.title).join(" · ")}</p>
               <p className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">💡 Quer um passo a passo pronto de cada etapa? Em Esteiras, aplique a esteira de Onboarding a este cliente (abaixo).</p>
             </section>
 
@@ -565,7 +573,7 @@ export default async function ClientPage({
           </form>
 
           <form action={createOnboardingTasksAction.bind(null, id)}>
-            <button type="submit" className="btn-secondary">➕ Criar as {ONBOARDING_STEPS.length} tarefas de onboarding</button>
+            <button type="submit" className="btn-secondary">➕ Criar as {obSteps.length} tarefas de onboarding</button>
           </form>
 
           <div className="space-y-4 border-t border-hair pt-5">
@@ -887,6 +895,18 @@ export default async function ClientPage({
             )}
           </div>
         </div>
+      )}
+
+      {aba === "dados" && manage && client.status !== "ENCERRADO" && (
+        <details className="mt-6 rounded-xl border border-red-200 bg-red-50/40 p-4">
+          <summary className="cursor-pointer text-sm font-medium text-red-700">Encerrar cliente (registrar saída)</summary>
+          <form action={closeClientAction.bind(null, id)} className="mt-3 grid gap-3 md:grid-cols-3">
+            <label className="text-sm"><span className="font-medium text-slate-700">Motivo</span>
+              <select name="reason" required className="input mt-1" defaultValue=""><option value="" disabled>Escolha</option>{CHURN_REASONS.map((r) => <option key={r}>{r}</option>)}</select></label>
+            <label className="text-sm md:col-span-2"><span className="font-medium text-slate-700">Detalhes (opcional)</span><input name="detail" maxLength={1000} className="input mt-1" /></label>
+            <div><button type="submit" className="btn-secondary border-red-300 text-red-700">Encerrar e registrar saída</button></div>
+          </form>
+        </details>
       )}
 
       {aba === "dados" && vol && <DiagnosisPanel clientId={id} diagnosis={vol.diagnosis} rows={vol.rows} manage={manage} flash={{ dx: sp.dx, erro: sp.dxerro }} />}

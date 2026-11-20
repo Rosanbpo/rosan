@@ -5,6 +5,7 @@ import { prisma } from "../db";
 import { clientScope } from "./access";
 import { buildTaskWhere } from "./tasks";
 import { npsOverview } from "./nps";
+import { renewalsDueCount } from "./renewals";
 
 export type Insight = { tone: "success" | "warning" | "danger" | "info"; emoji: string; title: string; text: string; href: string; cta: string };
 
@@ -72,12 +73,14 @@ export async function homeOverview(actor: Actor, now = new Date()) {
   const byClient = [...per.values()].sort((a, b) => b.overdue - a.overdue || b.open - a.open);
 
   const nps = await npsOverview(actor);
+  const renewals = can(actor, "contracts.manage") ? await renewalsDueCount(actor) : 0;
   const capacity = org.capacityHours ?? null;
   const usedHours = Math.round(((minutesMonth._sum.minutes ?? 0) / 60) * 10) / 10;
   const insights: Insight[] = [];
   if (overdueCount > 0) insights.push({ tone: "danger", emoji: "🔴", title: `${overdueCount} tarefa${overdueCount > 1 ? "s" : ""} atrasada${overdueCount > 1 ? "s" : ""}`, text: "Tarefas com prazo vencido pedem atenção para não virar problema com o cliente.", href: "/tarefas?atrasadas=1", cta: "Ver atrasadas" });
   if (waitingClient > 0) insights.push({ tone: "warning", emoji: "⏳", title: `${waitingClient} tarefa${waitingClient > 1 ? "s" : ""} esperando o cliente`, text: "Cobre o cliente para destravar o fechamento do mês.", href: "/pendencias?type=CLIENTE", cta: "Ver pendências" });
   if (noOwner > 0) insights.push({ tone: "info", emoji: "👤", title: `${noOwner} cliente${noOwner > 1 ? "s" : ""} sem responsável`, text: "Cliente sem dono tende a ser negligenciado na operação.", href: "/clientes", cta: "Atribuir responsável" });
+  if (renewals > 0) insights.push({ tone: "warning", emoji: "🔄", title: `${renewals} contrato${renewals > 1 ? "s" : ""} para renovar ou reajustar`, text: "Fim de prazo ou aniversário do contrato nos próximos 60 dias.", href: "/contratos/renovacoes", cta: "Ver renovações" });
   if (nps.detractors.length > 0) insights.push({ tone: "danger", emoji: "😟", title: `${nps.detractors.length} cliente${nps.detractors.length > 1 ? "s" : ""} detrator${nps.detractors.length > 1 ? "es" : ""}`, text: `Nota até 6 na última pesquisa: ${nps.detractors.slice(0, 3).map((c) => c.tradeName).join(", ")}. Converse com eles.`, href: "/clientes", cta: "Ver clientes" });
   else if (nps.stale.length > 0) insights.push({ tone: "info", emoji: "⭐", title: `${nps.stale.length} cliente${nps.stale.length > 1 ? "s" : ""} sem nota de satisfação`, text: "Peça uma nota de 0 a 10 a cada trimestre para enxergar problemas cedo.", href: "/clientes", cta: "Registrar notas" });
   if (capacity) {

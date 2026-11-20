@@ -1,5 +1,6 @@
 import { instantToLocalDate, localDateTimeToInstant, makeLocalDate, parseLocalDate } from "@/domain/dates";
-import { DEFAULT_CLOSING_ITEMS, isCompetenceMonth } from "@/domain/closing";
+import { isCompetenceMonth } from "@/domain/closing";
+import { getChecklistLines } from "./checklists";
 import { NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
 import { APP_TIMEZONE } from "../config";
 import { prisma } from "../db";
@@ -50,13 +51,14 @@ export async function startClosing(actor: Actor, clientId: string, month: string
   checkMonth(month);
   const existing = await prisma.clientClosing.findUnique({ where: { clientId_competence: { clientId, competence: month } } });
   if (existing) return existing;
+  const labels = await getChecklistLines(actor.organizationId, "CLOSING");
   return prisma.$transaction(async (tx) => {
     const row = await tx.clientClosing.create({
       data: {
         organizationId: actor.organizationId,
         clientId,
         competence: month,
-        items: { create: DEFAULT_CLOSING_ITEMS.map((label, position) => ({ label, position })) },
+        items: { create: labels.map((label, position) => ({ label, position })) },
       },
     });
     await recordAudit(tx, { organizationId: actor.organizationId, actorId: actor.userId, entityType: "Client", entityId: clientId, clientId, action: "CLOSING_STARTED", summary: `Fechamento ${month} iniciado` });

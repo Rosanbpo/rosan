@@ -1,11 +1,13 @@
 import { recordNpsAction } from "@/app/actions/nps";
 import { classifyNps } from "@/domain/nps";
+import { createNpsLinkAction } from "@/app/actions/gestao";
+import { CopyButton } from "@/components/copy-button";
 import { Card } from "@/components/ui/layout";
 
 type Row = { id: string; score: number; comment: string | null; answeredAt: Date };
 const CLS = { PROMOTOR: ["😍 Promotor", "text-emerald-700"], NEUTRO: ["😐 Neutro", "text-amber-700"], DETRATOR: ["😟 Detrator", "text-red-700"] } as const;
 
-export function NpsCard({ clientId, rows, nps, manage, flash }: { clientId: string; rows: Row[]; nps: number | null; manage: boolean; flash: { ok?: string; erro?: string } }) {
+export function NpsCard({ clientId, rows, nps, manage, flash, link }: { link: string | null; clientId: string; rows: Row[]; nps: number | null; manage: boolean; flash: { ok?: string; erro?: string } }) {
   const last = rows[0];
   return (
     <Card title="⭐ Satisfação (NPS)" description="Registre a nota (0 a 10) que o cliente deu. Acompanhe a evolução ao longo do tempo.">
@@ -22,6 +24,13 @@ export function NpsCard({ clientId, rows, nps, manage, flash }: { clientId: stri
           <label className="min-w-60 flex-1 text-sm"><span className="font-medium text-slate-700">Comentário (opcional)</span><input name="comment" maxLength={1000} className="input mt-1" /></label>
           <button type="submit" className="btn-primary">Registrar nota</button>
         </form>
+      )}
+      {manage && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-hair pt-4 text-sm">
+          <span className="text-slate-600">Prefere que o cliente responda sozinho?</span>
+          <form action={createNpsLinkAction.bind(null, clientId)}><button type="submit" className="btn-secondary btn-sm">{link ? "Gerar novo link" : "Gerar link da pesquisa"}</button></form>
+          {link && <CopyButton text={link} label="Copiar link" />}
+        </div>
       )}
       {last?.comment && <p className="mt-3 text-sm text-slate-600">💬 “{last.comment}”</p>}
     </Card>
