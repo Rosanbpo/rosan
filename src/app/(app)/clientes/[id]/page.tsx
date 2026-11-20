@@ -396,6 +396,23 @@ export default async function ClientPage({
                     title="Nenhuma tarefa aberta"
                     description="Crie uma tarefa ou vincule uma rotina recorrente a este cliente."
                   />
+                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-sm">
+                    <p className="font-semibold text-brand-900">Primeiros passos com este cliente</p>
+                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-700">
+                      <li>
+                        Complete bancos e sistema em <Link href={`/clientes/${id}?aba=bancos`} className="font-medium text-brand-700 hover:underline">Bancos</Link> e guarde os acessos no <Link href={`/clientes/${id}?aba=cofre`} className="font-medium text-brand-700 hover:underline">Cofre</Link>.
+                      </li>
+                      <li>
+                        Registre o que é específico dele em <Link href={`/clientes/${id}?aba=particularidades`} className="font-medium text-brand-700 hover:underline">Particularidades</Link>.
+                      </li>
+                      <li>
+                        Crie as rotinas do mês em <Link href="/rotinas/recorrencias" className="font-medium text-brand-700 hover:underline">Modelos e recorrências</Link>.
+                      </li>
+                      <li>
+                        Ou comece pela primeira <Link href={`/tarefas/nova?clientId=${id}`} className="font-medium text-brand-700 hover:underline">tarefa</Link>.
+                      </li>
+                    </ol>
+                  </div>
                 </div>
               )}
             </Card>

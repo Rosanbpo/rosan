@@ -113,7 +113,7 @@ export function TaskForm({
       <div className="card grid gap-4 p-5 md:grid-cols-3">
         <h2 className="text-sm font-semibold text-slate-900 md:col-span-3">Responsabilidades e prazo</h2>
         <Field label="Responsável pela execução" name="assigneeId" hint={lockPlanning ? "Operadores criam tarefas para si mesmos." : undefined}>
-          <select id="assigneeId" name="assigneeId" className="input" defaultValue={values.assigneeId ?? (lockPlanning ? selfId : "")} disabled={lockPlanning}>
+          <select id="assigneeId" name="assigneeId" className="input" defaultValue={values.assigneeId ?? selfId} disabled={lockPlanning}>
             <option value="">Sem responsável</option>
             {eligible.map((p) => (
               <option key={p.id} value={p.id}>
