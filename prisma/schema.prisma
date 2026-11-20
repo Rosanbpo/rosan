@@ -1224,3 +1224,11 @@ model EsteiraCustom {
 
   @@unique([organizationId, slug])
 }
+
+/// Link secreto da agenda de cada usuário, para assinar no Google Calendar (somente leitura).
+model AgendaFeed {
+  userId         String   @id
+  organizationId String
+  token          String   @unique
+  createdAt      DateTime @default(now())
+}
