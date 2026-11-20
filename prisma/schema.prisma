@@ -140,6 +140,7 @@ model Client {
   clientNotes           ClientNote[]
   logo                  ClientLogo?
   diagnosis             ClientDiagnosis?
+  onboarding            ClientOnboarding?
   volumes               ClientVolume[]
   closings              ClientClosing[]
   documentRequirements  DocumentRequirement[]
@@ -1087,4 +1088,19 @@ model ClientVolume {
 
   @@unique([clientId, competence])
   @@index([organizationId, competence])
+}
+
+/// Combinados do onboarding do cliente.
+model ClientOnboarding {
+  clientId               String   @id
+  organizationId         String
+  goals                  String?
+  ourResponsibilities    String?
+  clientResponsibilities String?
+  officialChannel        String?
+  erp                    String?
+  defaultEmail           String?
+  updatedAt              DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
