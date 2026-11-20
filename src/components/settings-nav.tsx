@@ -4,6 +4,7 @@ import { cx } from "@/lib/ui";
 const TABS = [
   { href: "/configuracoes", label: "Empresa e agendador" },
   { href: "/configuracoes/usuarios", label: "Usuários" },
+  { href: "/configuracoes/checklists", label: "Checklists" },
   { href: "/configuracoes/feriados", label: "Feriados" },
   { href: "/configuracoes/backup", label: "Backup" },
 ];

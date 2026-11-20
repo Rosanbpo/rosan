@@ -25,9 +25,12 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
         title="Contratos"
         description="Contratos e distratos de prestação de serviços, com cláusulas editáveis."
         actions={
+          <>
+          <Link href="/contratos/renovacoes" className="btn-secondary">🔄 Renovações e reajustes</Link>
           <Link href="/contratos/novo" className="btn-primary">
             <Plus aria-hidden className="h-4 w-4" /> Novo contrato
           </Link>
+          </>
         }
       />
       {rows.length === 0 ? (
