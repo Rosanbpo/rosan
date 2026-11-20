@@ -105,3 +105,20 @@ export async function deleteTaskAction(taskId: string, redirectTo: string | null
   if (res?.ok && redirectTo) redirect(redirectTo);
   return res;
 }
+
+/** Cria uma tarefa avulsa (sem cliente) sem sair da tela. */
+export async function quickAvulsaAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await tasks.createTask(actor, {
+      clientId: "interna",
+      title: fd.get("title"),
+      category: "OUTRAS",
+      priority: String(fd.get("priority") ?? "NORMAL"),
+      dueDate: fd.get("dueDate"),
+      dueTime: String(fd.get("dueTime") || "18:00"),
+      assigneeId: fd.get("assigneeId") || undefined,
+      checklist: [],
+    });
+    return "Tarefa avulsa criada.";
+  }, { revalidate: ["/avulsas", "/tarefas"] });
+}
