@@ -60,6 +60,7 @@ import { moneyInput } from "@/lib/format";
 import { ClientStatusBadge } from "@/components/ui/badges";
 import { TaskTable } from "@/components/task-table";
 import { ClientDashboardTop } from "@/components/client-dashboard-top";
+import { JourneyStepper } from "@/components/journey-stepper";
 import { DiagnosisPanel } from "@/components/diagnosis-panel";
 import { volumeOverview } from "@/server/services/diagnosis";
 import { CopyButton } from "@/components/copy-button";
@@ -335,6 +336,7 @@ export default async function ClientPage({
             billing={finance?.billingDay ? billingDaysLabel(finance.billingDay, finance.billingDay2) : null}
             overdue={indicators.overdue}
           />
+          <JourneyStepper current={client.journeyStage} clientId={id} />
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <Stat
               label="Abertas"

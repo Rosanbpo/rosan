@@ -1,3 +1,4 @@
+import { JOURNEY_STAGES, STAGE_LABEL } from "@/domain/enums";
 import Link from "next/link";
 import { STATUS_LABEL } from "@/domain/enums";
 import { fmtDateTime, fmtMoney } from "@/lib/format";
@@ -79,6 +80,28 @@ export default async function InicioPage() {
         <Tile label="Abertas" emoji="🗂️" value={String(d.openTotal)} hint="tarefas em aberto" cls="border-slate-200 bg-white text-slate-700" href="/tarefas" />
         <Tile label="Horas hoje" emoji="⏱️" value={`${d.hoursToday}h`} hint="apontadas" cls="border-teal-200 bg-teal-50 text-teal-800" />
       </div>
+
+      <section className="card mb-4">
+        <div className="flex items-center justify-between border-b border-hair px-5 py-3">
+          <h2 className="text-[15px] font-semibold text-brand-900">🧭 Jornada dos clientes</h2>
+          <Link href="/esteiras" className="text-sm text-brand-700 hover:underline">Ver esteiras →</Link>
+        </div>
+        <div className="grid grid-cols-2 gap-2 p-3 md:grid-cols-4 xl:grid-cols-8">
+          {JOURNEY_STAGES.map((st) => {
+            const list = d.journey[st] ?? [];
+            return (
+              <div key={st} className={`rounded-lg border p-2.5 ${list.length ? "border-brand-200 bg-brand-50/40" : "border-hair bg-slate-50/60"}`}>
+                <p className="text-[11px] font-medium text-slate-500">{STAGE_LABEL[st]}</p>
+                <p className={`text-xl font-bold ${list.length ? "text-brand-900" : "text-slate-300"}`}>{list.length}</p>
+                <ul className="mt-1 space-y-0.5">
+                  {list.slice(0, 3).map((c) => <li key={c.id}><Link href={`/clientes/${c.id}`} className="block truncate text-[12px] text-brand-700 hover:underline">{c.name}</Link></li>)}
+                  {list.length > 3 && <li className="text-[11px] text-slate-500">+{list.length - 3}</li>}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="card mb-4">
         <div className="flex items-center justify-between border-b border-hair px-5 py-3">

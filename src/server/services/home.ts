@@ -91,7 +91,10 @@ export async function homeOverview(actor: Actor, now = new Date()) {
   }
   if (!insights.length) insights.push({ tone: "success", emoji: "🎉", title: "Operação em dia", text: "Nenhum alerta no momento.", href: "/tarefas", cta: "Ver tarefas" });
 
+  const journey = clients.filter((c) => c.journeyStage).reduce<Record<string, { id: string; name: string }[]>>((acc, c) => { (acc[c.journeyStage!] ??= []).push({ id: c.id, name: c.tradeName }); return acc; }, {});
+
   return {
+    journey,
     today, mrr, activeClients: active.length, onboarding, dueToday: dueTodayCount, overdue: overdueCount, waitingClient,
     hoursToday: Math.round(((minutesToday._sum.minutes ?? 0) / 60) * 10) / 10,
     nps: nps.nps, insights, byClient, byStatus: byStatus.map((s) => ({ status: s.status, count: s._count._all })), next7, todayList,
