@@ -21,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const dash = can(actor, "dashboard.view");
   const fin = can(actor, "finance.view");
   const items: NavItem[] = [
-    ...(dash ? [{ href: "/painel", label: "Início", icon: "inicio" as const }] : []),
+    ...(dash ? [{ href: "/inicio", label: "Início", icon: "inicio" as const }] : []),
     { href: "/tarefas", label: "Tarefas", icon: "tarefas" },
     ...(can(actor, "recurrences.manage") ? [{ href: "/rotinas", label: "Modelos", icon: "rotinas" as const }] : []),
     { href: "/pendencias", label: "Pendências", icon: "pendencias" },
