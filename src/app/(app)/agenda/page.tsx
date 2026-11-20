@@ -1,4 +1,8 @@
 import Link from "next/link";
+import { headers } from "next/headers";
+import { createFeedAction, disableFeedAction } from "@/app/actions/agenda";
+import { CopyButton } from "@/components/copy-button";
+import { prisma } from "@/server/db";
 import { PageHeader } from "@/components/ui/layout";
 import { monthLabel } from "@/components/closing-panel";
 import { isCompetenceMonth, shiftMonth } from "@/domain/closing";
@@ -28,6 +32,10 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   while (cells.length % 7) cells.push(null);
   const by = new Map<string, AgendaEvent[]>();
   for (const e of events) by.set(e.date, [...(by.get(e.date) ?? []), e]);
+  const feed = await prisma.agendaFeed.findUnique({ where: { userId: actor.userId } });
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const feedUrl = feed ? `${proto}://${h.get("host")}/agenda/feed/${feed.token}.ics` : null;
   const href = (mm: string) => `/agenda?mes=${mm}`;
   const todayKey = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
   return (
@@ -60,7 +68,26 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
           })}
         </div>
       </div>
-      <p className="mt-3 text-xs text-slate-500">Para ver este calendário no Google Agenda, crie as reuniões como tarefas com categoria “Reunião com cliente” e use o conector do Google Agenda no Claude.</p>
+      <section className="card mt-4 p-4">
+        <h2 className="text-sm font-semibold text-brand-900">📲 Ver esta agenda no Google Agenda</h2>
+        {feedUrl ? (
+          <>
+            <p className="mt-1 text-sm text-slate-600">No Google Agenda, abra “Outras agendas” → “Por URL” e cole o link abaixo. As reuniões, prazos e vencimentos aparecem lá, e o Google atualiza sozinho (pode levar algumas horas). É somente leitura.</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <input readOnly value={feedUrl} className="input min-w-0 flex-1 text-xs" />
+              <CopyButton text={feedUrl} label="Copiar link" />
+              <form action={createFeedAction.bind(null, true)}><button className="btn-secondary btn-sm" title="Gera outro link e desativa o atual">Gerar novo link</button></form>
+              <form action={disableFeedAction}><button className="btn-secondary btn-sm">Desativar</button></form>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">Quem tiver este link vê os seus compromissos. Não compartilhe; se vazar, gere um novo.</p>
+          </>
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-slate-600">Gere um link secreto e assine no Google Agenda ou em qualquer calendário que aceite iCal.</p>
+            <form action={createFeedAction.bind(null, false)} className="mt-2"><button className="btn-primary btn-sm">Gerar link da agenda</button></form>
+          </>
+        )}
+      </section>
     </>
   );
 }

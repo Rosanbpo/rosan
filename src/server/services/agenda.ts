@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+import type { IcsEvent } from "@/domain/ics";
 import { addDays, dbDateToLocalDate, instantToLocalDate, localDateTimeToInstant, makeLocalDate, parseLocalDate, type LocalDate } from "@/domain/dates";
 import { contractTimeline } from "@/domain/renewal";
 import { assertCan, can, type Actor } from "@/domain/permissions";
@@ -48,4 +50,37 @@ export async function agendaMonth(actor: Actor, month: string) {
   }
   events.sort((a, b) => a.date.localeCompare(b.date));
   return { first, days: new Date(Date.UTC(y, m, 0)).getUTCDate(), events, addDays };
+}
+
+/** Eventos do mês anterior até 3 meses à frente, prontos para o calendário externo. */
+export async function feedEvents(actor: Actor, origin: string): Promise<IcsEvent[]> {
+  const now = instantToLocalDate(new Date(), APP_TIMEZONE);
+  const { y, m } = parseLocalDate(now);
+  const out: IcsEvent[] = [];
+  for (let delta = -1; delta <= 3; delta++) {
+    const t = new Date(Date.UTC(y, m - 1 + delta, 1));
+    const month = `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, "0")}`;
+    const { events } = await agendaMonth(actor, month);
+    for (const e of events) {
+      const emoji = { REUNIAO: "🤝", TAREFA: "✅", LEAD: "📞", CONTRATO: "🔄", VENCIMENTO: "💰" }[e.kind];
+      out.push({ uid: `${e.kind}-${e.href}-${e.date}@centralbpo`.replace(/[^\w@.:/-]/g, "_"), date: e.date, summary: `${emoji} ${e.label}`, url: origin + e.href });
+    }
+  }
+  return out;
+}
+
+export async function getOrCreateFeedToken(actor: Actor, regenerate = false) {
+  const existing = await prisma.agendaFeed.findUnique({ where: { userId: actor.userId } });
+  if (existing && !regenerate) return existing.token;
+  const token = randomBytes(24).toString("hex");
+  await prisma.agendaFeed.upsert({
+    where: { userId: actor.userId },
+    create: { userId: actor.userId, organizationId: actor.organizationId, token },
+    update: { token, createdAt: new Date() },
+  });
+  return token;
+}
+
+export async function disableFeed(actor: Actor) {
+  await prisma.agendaFeed.deleteMany({ where: { userId: actor.userId } });
 }
