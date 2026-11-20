@@ -484,6 +484,8 @@ export const clientNoteSchema = z.object({
   content: z.string({ required_error: "Escreva o conteúdo." }).trim().min(2, "Escreva o conteúdo.").max(30_000),
   meetingDate: optionalLocalDate,
   participants: optionalText(500),
+  tone: z.enum(["ATENCAO", "COMBINADO", "PREFERENCIA", "PROIBIDO", "DICA", "INFO"]).optional().catch(undefined),
+  pinned: z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean()),
 });
 export type ClientNoteInput = z.infer<typeof clientNoteSchema>;
 

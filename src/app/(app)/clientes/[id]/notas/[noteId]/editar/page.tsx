@@ -20,7 +20,7 @@ export default async function EditClientNotePage({ params }: { params: Promise<{
       <ClientNoteForm
         action={updateClientNoteAction.bind(null, noteId)}
         kind={note.kind}
-        values={{ title: note.title, content: note.content, meetingDate: note.meetingDateLocal, participants: note.participants }}
+        values={{ title: note.title, content: note.content, meetingDate: note.meetingDateLocal, participants: note.participants, tone: note.tone, pinned: note.pinned }}
         submitLabel="Salvar alterações"
         cancelHref={`/clientes/${id}?aba=${aba}`}
       />

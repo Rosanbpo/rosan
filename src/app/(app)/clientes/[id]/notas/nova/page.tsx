@@ -17,7 +17,7 @@ export default async function NewClientNotePage({ params, searchParams }: { para
   return (
     <>
       <PageHeader
-        title={kind === "ATA" ? "Nova ata de reunião" : "Nova particularidade"}
+        title={kind === "ATA" ? "Nova ata de reunião" : "Nova observação"}
         description={client.tradeName}
         breadcrumb={{ href: `/clientes/${id}?aba=${aba}`, label: "Voltar ao cliente" }}
       />

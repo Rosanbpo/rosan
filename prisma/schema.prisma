@@ -961,6 +961,10 @@ model ClientNote {
   content        String
   meetingDate    DateTime?      @db.Date
   participants   String?
+  /// Destaque da observação: ATENCAO, COMBINADO, PREFERENCIA, PROIBIDO, DICA ou INFO.
+  tone           String?
+  /// Observações fixadas aparecem primeiro e no resumo do cliente.
+  pinned         Boolean        @default(false)
   authorId       String?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt

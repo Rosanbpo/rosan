@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { POP_COVER, POP_EMOJI } from "@/domain/pop-style";
 import { Plus } from "lucide-react";
 import { CATEGORY_LABEL, PROCEDURE_STATUSES, PROCEDURE_STATUS_LABEL, TASK_CATEGORIES, type ProcedureStatus, type TaskCategory } from "@/domain/enums";
 import { can } from "@/domain/permissions";
@@ -89,24 +90,26 @@ export default async function ProceduresPage({ searchParams }: { searchParams: P
           {[...grouped.entries()].map(([cat, items]) => (
             <section key={cat} aria-label={CATEGORY_LABEL[cat]}>
               <h2 className="mb-2 text-sm font-semibold text-slate-700">{CATEGORY_LABEL[cat]}</h2>
-              <ul className="card divide-y divide-slate-100">
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {items.map((p) => (
-                  <li key={p.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                    <div className="min-w-0 flex-1">
-                      <Link href={`/pops/${p.id}`} className="font-medium text-slate-900 hover:text-brand-700 hover:underline">
-                        {p.title}
-                      </Link>
-                      <p className="text-xs text-slate-500">
-                        Versão {p.version}
-                        {p.owner && ` · ${p.owner.name}`}
-                        {p.reviewedAt && ` · revisado em ${fmtLocalDate(dbDateToLocalDate(p.reviewedAt))}`}
-                      </p>
-                    </div>
-                    {manage && (
-                      <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset", STATUS_STYLE[p.status as ProcedureStatus])}>
-                        {PROCEDURE_STATUS_LABEL[p.status as ProcedureStatus]}
-                      </span>
-                    )}
+                  <li key={p.id}>
+                    <Link href={`/pops/${p.id}`} className="group block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
+                      <div className={`h-14 bg-gradient-to-r ${POP_COVER[p.category as TaskCategory]}`} aria-hidden />
+                      <div className="px-4 pb-4">
+                        <div className="-mt-5 text-3xl leading-none" aria-hidden>{POP_EMOJI[p.category as TaskCategory]}</div>
+                        <p className="mt-2 font-semibold leading-snug text-slate-900 group-hover:text-brand-700">{p.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Versão {p.version}
+                          {p.owner && ` · ${p.owner.name}`}
+                          {p.reviewedAt && ` · revisado em ${fmtLocalDate(dbDateToLocalDate(p.reviewedAt))}`}
+                        </p>
+                        {manage && (
+                          <span className={cx("mt-2 inline-block rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset", STATUS_STYLE[p.status as ProcedureStatus])}>
+                            {PROCEDURE_STATUS_LABEL[p.status as ProcedureStatus]}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
                   </li>
                 ))}
               </ul>
