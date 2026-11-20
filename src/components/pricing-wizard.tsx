@@ -37,9 +37,9 @@ function Meter({ label, value, text, tone }: { label: string; value: number; tex
 
 export type WizardClient = { id: string; name: string; diagnosis: Diagnosis | null };
 
-export function PricingWizard({ hourCost, capacityHours, usedHours, defaultWage, clients }: { hourCost: number | null; capacityHours: number | null; usedHours: number; defaultWage: number; clients: WizardClient[] }) {
+export function PricingWizard({ hourCost, capacityHours, usedHours, defaultWage, clients, initialCompany }: { initialCompany?: string; hourCost: number | null; capacityHours: number | null; usedHours: number; defaultWage: number; clients: WizardClient[] }) {
   const [step, setStep] = useState(0);
-  const [company, setCompany] = useState("");
+  const [company, setCompany] = useState(initialCompany ?? "");
   const [d, setD] = useState<Diagnosis>({ regime: "SIMPLES", revenue: 50000, bankAccounts: 1, statementLines: 300, entries: 100, employees: 0, inventory: false, multiCnpj: false, cardsAndMarketplaces: false, books: "ORGANIZADA", catchUpMonths: 0, wantsReports: true });
   const [wage, setWage] = useState(defaultWage);
   const [overhead, setOverhead] = useState(15);
