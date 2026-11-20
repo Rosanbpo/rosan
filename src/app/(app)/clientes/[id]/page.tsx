@@ -62,6 +62,11 @@ import { TaskTable } from "@/components/task-table";
 import { ClientDashboardTop } from "@/components/client-dashboard-top";
 import { DiagnosisPanel } from "@/components/diagnosis-panel";
 import { volumeOverview } from "@/server/services/diagnosis";
+import { CopyButton } from "@/components/copy-button";
+import { saveOnboardingAction, createOnboardingTasksAction } from "@/app/actions/onboarding";
+import { getOnboarding, ONBOARDING_STEPS } from "@/server/services/onboarding";
+import { getDiagnosis } from "@/server/services/diagnosis";
+import { headers } from "next/headers";
 import { ClosingPanel } from "@/components/closing-panel";
 import { ClientLogoBox } from "@/components/client-logo-box";
 import { getClosing, closingHistory, currentCompetence } from "@/server/services/closings";
@@ -225,6 +230,10 @@ export default async function ClientPage({
   const closingData = aba === "fechamentos" ? await getClosing(actor, id, closingMonth) : null;
   const closingHist = aba === "fechamentos" ? await closingHistory(actor, id) : [];
   const vol = aba === "dados" ? await volumeOverview(actor, id) : null;
+  const onb = aba === "onboarding" ? await getOnboarding(actor, id) : null;
+  const onbDiag = aba === "onboarding" ? await getDiagnosis(actor, id) : null;
+  const hdr = aba === "onboarding" ? await headers() : null;
+  const origin = hdr ? `${hdr.get("x-forwarded-proto") ?? "https"}://${hdr.get("x-forwarded-host") ?? hdr.get("host")}` : "";
   const hasLogo = !!(await getClientLogo(actor, id));
   const ours = openTasks.rows.filter((t) => t.status === "A_FAZER" || t.status === "EM_ANDAMENTO" || t.status === "EM_REVISAO");
   const clientSide = pendings.rows.filter((p) => p.type === "CLIENTE");
@@ -509,16 +518,54 @@ export default async function ClientPage({
       )}
 
       {aba === "onboarding" && (
-        <div className="space-y-4">
-          <p className="text-sm text-slate-600">
-            Etapa atual: <strong>{client.journeyStage ? STAGE_LABEL[client.journeyStage] : "não definida"}</strong>
-            {manage && (
-              <>
-                {" "}
-                · <Link href={`/clientes/${id}/editar`} className="font-medium text-brand-700 hover:underline">alterar</Link>
-              </>
-            )}
-          </p>
+        <div className="max-w-4xl space-y-5">
+          {sp.ob && <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{sp.ob === "tarefas" ? "Tarefas de onboarding criadas." : "Onboarding salvo."}</p>}
+          {sp.oberro && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{sp.oberro}</p>}
+          <form action={saveOnboardingAction.bind(null, id)} className="space-y-5">
+            <label className="block text-sm"><span className="font-medium text-slate-700">Objetivos da parceria (um por linha)</span>
+              <textarea name="goals" rows={4} defaultValue={onb?.goals ?? ""} className="input mt-1" placeholder="Ex.: Organização completa dos processos financeiros" /></label>
+
+            <section className="rounded-xl border border-hair bg-slate-50 p-4 text-sm">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="font-semibold text-brand-900">Diagnóstico financeiro do cliente</h3>
+                <span className="text-xs text-slate-500">{onbDiag?.submittedAt ? "✅ Respondido pelo cliente" : onbDiag ? "Lançado manualmente" : "Aguardando o cliente preencher"}</span>
+              </div>
+              <p className="mt-1 text-slate-600">Mande esse link para o cliente novo preencher sozinho (regime tributário, faturamento, bancos, plataformas), sem precisar de conta no sistema.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {onbDiag?.token ? <CopyButton text={`${origin}/diagnostico/${onbDiag.token}`} label="Copiar link do diagnóstico" /> : <span className="text-xs text-slate-500">Gere o link em Dados, no bloco Diagnóstico.</span>}
+                <Link href={`/clientes/${id}?aba=dados`} className="btn-secondary btn-sm">Ver diagnóstico em Dados</Link>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-hair bg-slate-50 p-4 text-sm">
+              <h3 className="font-semibold text-brand-900">Checklist de onboarding ({ONBOARDING_STEPS.length} etapas)</h3>
+              <p className="mt-1 text-slate-600">{ONBOARDING_STEPS.map((s) => s.title).join(" · ")}</p>
+              <p className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">💡 Quer um passo a passo pronto de cada etapa? Em Esteiras, aplique a esteira de Onboarding a este cliente (abaixo).</p>
+            </section>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block text-sm"><span className="font-medium text-slate-700">Nossas responsabilidades (uma por linha)</span>
+                <textarea name="ourResponsibilities" rows={5} defaultValue={onb?.ourResponsibilities ?? ""} className="input mt-1" /></label>
+              <label className="block text-sm"><span className="font-medium text-slate-700">Responsabilidades do cliente (uma por linha)</span>
+                <textarea name="clientResponsibilities" rows={5} defaultValue={onb?.clientResponsibilities ?? ""} className="input mt-1" /></label>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="block text-sm"><span className="font-medium text-slate-700">Canal oficial</span><input name="officialChannel" defaultValue={onb?.officialChannel ?? ""} className="input mt-1" placeholder="Ex.: grupo de WhatsApp" /></label>
+              <label className="block text-sm"><span className="font-medium text-slate-700">ERP / sistema usado</span><input name="erp" defaultValue={onb?.erp ?? client.software ?? ""} className="input mt-1" /></label>
+              <label className="block text-sm"><span className="font-medium text-slate-700">E-mail padrão de atendimento</span><input name="defaultEmail" type="email" defaultValue={onb?.defaultEmail ?? ""} className="input mt-1" /></label>
+            </div>
+            <button type="submit" className="btn-primary">Salvar onboarding</button>
+          </form>
+
+          <form action={createOnboardingTasksAction.bind(null, id)}>
+            <button type="submit" className="btn-secondary">➕ Criar as {ONBOARDING_STEPS.length} tarefas de onboarding</button>
+          </form>
+
+          <div className="space-y-4 border-t border-hair pt-5">
+            <p className="text-sm text-slate-600">
+              Etapa atual: <strong>{client.journeyStage ? STAGE_LABEL[client.journeyStage] : "não definida"}</strong>
+              {manage && (<>{" "}· <Link href={`/clientes/${id}/editar`} className="font-medium text-brand-700 hover:underline">alterar</Link></>)}
+            </p>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {ESTEIRAS.filter((e) => e.slug === "pre-onboarding" || e.slug === "onboarding" || e.slug === "implantacao").map((e) => {
               const tone = TONE[e.tone];
@@ -555,6 +602,7 @@ export default async function ClientPage({
               );
             })}
           </div>
+        </div>
         </div>
       )}
 
