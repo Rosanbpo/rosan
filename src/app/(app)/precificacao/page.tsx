@@ -3,6 +3,8 @@ import { PricingTabs } from "@/components/pricing-tabs";
 import { PricingWizard } from "@/components/pricing-wizard";
 import { requirePermission } from "@/server/context";
 import { prisma } from "@/server/db";
+import { clientScope } from "@/server/services/access";
+import { toDiagnosis } from "@/server/services/diagnosis";
 import { DEFAULT_MINIMUM_WAGE } from "@/domain/consultive-pricing";
 
 export const metadata = { title: "Precificação" };
@@ -13,6 +15,8 @@ export default async function PricingPage() {
   const monthStart = new Date(`${new Date().toISOString().slice(0, 7)}-01T00:00:00-03:00`);
   const used = await prisma.timeEntry.aggregate({ where: { organizationId: actor.organizationId, workedOn: { gte: monthStart } }, _sum: { minutes: true } });
   const usedHours = Math.round(((used._sum.minutes ?? 0) / 60) * 10) / 10;
+  const rows = await prisma.client.findMany({ where: { ...clientScope(actor), archivedAt: null }, orderBy: { tradeName: "asc" }, select: { id: true, tradeName: true, diagnosis: true } });
+  const clients = rows.map((c) => ({ id: c.id, name: c.tradeName, diagnosis: c.diagnosis ? toDiagnosis(c.diagnosis) : null }));
   return (
     <>
       <PageHeader title="Precificação consultiva" description="Do diagnóstico ao contrato: descubra quanto cobrar de um novo cliente sem perder margem." />
@@ -22,6 +26,7 @@ export default async function PricingPage() {
         capacityHours={org.capacityHours}
         usedHours={usedHours}
         defaultWage={DEFAULT_MINIMUM_WAGE}
+        clients={clients}
       />
     </>
   );

@@ -25,3 +25,16 @@ describe("precificação consultiva", () => {
     expect(bad.risk).toBeGreaterThan(base.risk);
   });
 });
+
+import { checkVolume } from "@/domain/consultive-pricing";
+describe("acompanhamento de movimentação", () => {
+  const base: Diagnosis = { regime: "SIMPLES", revenue: 80_000, bankAccounts: 2, statementLines: 600, entries: 200, employees: 3, inventory: false, multiCnpj: false, cardsAndMarketplaces: false, books: "ORGANIZADA", catchUpMonths: 0, wantsReports: true };
+  const as = { minimumWage: 1621, hourCost: 40, overheadPct: 15, taxPct: 6 };
+  it("mesmo volume fica ok", () => expect(checkVolume(base, { statementLines: 600, entries: 200 }, as, 2440).level).toBe("ok"));
+  it("volume 50% maior pede reajuste e sugere valor", () => {
+    const r = checkVolume(base, { statementLines: 900, entries: 300 }, as, 2440);
+    expect(r.level).toBe("reajustar");
+    expect(r.growth).toBeCloseTo(0.5, 1);
+    expect(r.suggestedFee).not.toBeNull();
+  });
+});
