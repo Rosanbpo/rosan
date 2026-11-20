@@ -214,7 +214,7 @@ export default async function ClientPage({
       >
         <div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <h1 className="mt-1.5 flex flex-wrap items-center gap-3 font-serif text-[1.9rem] leading-tight text-brand-100">
+            <h1 className="mt-1.5 flex flex-wrap items-center gap-3 text-[1.9rem] leading-tight font-semibold text-white">
               {client.tradeName} <ClientStatusBadge status={client.status} />
               {client.journeyStage && (
                 <span className="rounded-full bg-white/10 px-2.5 py-0.5 font-sans text-xs font-medium text-brand-100">{STAGE_LABEL[client.journeyStage]}</span>

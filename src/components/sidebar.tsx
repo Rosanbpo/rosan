@@ -128,11 +128,13 @@ export function Sidebar({
               onClick={() => setOpen(false)}
               aria-current={active ? "page" : undefined}
               className={cx(
-                "group flex items-center gap-3 rounded-md px-3 py-2 text-[13.5px] transition-colors",
+                "group flex items-center gap-3 rounded-lg px-2.5 py-1.5 text-[13.5px] transition-colors",
                 active ? "bg-white/[0.07] font-medium text-white shadow-[inset_2px_0_0_#7ea3dc]" : "text-slate-300/90 hover:bg-white/[0.04] hover:text-white",
               )}
             >
-              <Icon aria-hidden className={cx("h-[18px] w-[18px] shrink-0", active ? "text-brand-500" : "text-slate-500 group-hover:text-brand-200")} />
+              <span className={cx("flex h-7 w-7 shrink-0 items-center justify-center rounded-lg", ICON_COLOR[item.icon])}>
+                <Icon aria-hidden className="h-4 w-4" />
+              </span>
               <span className="flex-1">{item.label}</span>
               {!!item.badge && (
                 <span className="rounded-full bg-red-500/90 px-1.5 text-xs font-medium text-white" aria-label={`${item.badge} itens`}>
