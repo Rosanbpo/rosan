@@ -27,7 +27,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
   const occupancy = capacityHours ? Math.round((totalHours / capacityHours) * 100) : null;
   return (
     <>
-      <PageHeader title="Equipe" description="Carga, atrasos, entregas e horas de cada pessoa." />
+      <PageHeader title="Equipe" description="Carga, atrasos, entregas e horas de cada pessoa." actions={<Link href="/equipe/trilha" className="btn-secondary">🎓 Trilha de onboarding</Link>} />
       <div className="mb-5 flex items-center gap-2 text-sm">
         <Link href={`/equipe?mes=${shift(month, -1)}`} className="btn-secondary btn-sm">
           ‹ Anterior

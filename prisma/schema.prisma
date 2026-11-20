@@ -77,28 +77,29 @@ model User {
 
   memberships        Membership[]
   clientMemberships  ClientMember[]
-  responsibleClients Client[]        @relation("ClientResponsible")
-  managedClients     Client[]        @relation("ClientManager")
-  assignedTasks      Task[]          @relation("TaskAssignee")
-  reviewTasks        Task[]          @relation("TaskReviewer")
-  createdTasks       Task[]          @relation("TaskCreator")
-  completedTasks     Task[]          @relation("TaskCompletedBy")
-  reviewedTasks      Task[]          @relation("TaskReviewedBy")
-  executedTasks      Task[]          @relation("TaskExecutedBy")
+  responsibleClients Client[]           @relation("ClientResponsible")
+  managedClients     Client[]           @relation("ClientManager")
+  assignedTasks      Task[]             @relation("TaskAssignee")
+  reviewTasks        Task[]             @relation("TaskReviewer")
+  createdTasks       Task[]             @relation("TaskCreator")
+  completedTasks     Task[]             @relation("TaskCompletedBy")
+  reviewedTasks      Task[]             @relation("TaskReviewedBy")
+  executedTasks      Task[]             @relation("TaskExecutedBy")
   comments           Comment[]
   evidences          Evidence[]
   checklistDone      ChecklistItem[]
   auditEvents        AuditEvent[]
-  pendingsCreated    Pending[]       @relation("PendingCreatedBy")
-  pendingsResolved   Pending[]       @relation("PendingResolvedBy")
-  closingItemsDone   ClosingItem[]   @relation("ClosingItemDoneBy")
-  recurrenceAssignee Recurrence[]    @relation("RecurrenceAssignee")
-  recurrenceReviewer Recurrence[]    @relation("RecurrenceReviewer")
+  pendingsCreated    Pending[]          @relation("PendingCreatedBy")
+  pendingsResolved   Pending[]          @relation("PendingResolvedBy")
+  closingItemsDone   ClosingItem[]      @relation("ClosingItemDoneBy")
+  trainingProgress   TrainingProgress[]
+  recurrenceAssignee Recurrence[]       @relation("RecurrenceAssignee")
+  recurrenceReviewer Recurrence[]       @relation("RecurrenceReviewer")
   timeEntries        TimeEntry[]
-  ownedLeads         Lead[]          @relation("LeadOwner")
+  ownedLeads         Lead[]             @relation("LeadOwner")
   leadActivities     LeadActivity[]
-  ownedProcedures    Procedure[]     @relation("ProcedureOwner")
-  ownedProjects      Project[]       @relation("ProjectOwner")
+  ownedProcedures    Procedure[]        @relation("ProcedureOwner")
+  ownedProjects      Project[]          @relation("ProjectOwner")
   proposals          Proposal[]
 }
 
@@ -1171,4 +1172,44 @@ model GoalTarget {
   updatedAt      DateTime @updatedAt
 
   @@unique([organizationId, metric])
+}
+
+/// Biblioteca: modelos de documentos, roteiros, e-mails e links úteis.
+model Material {
+  id             String   @id @default(cuid())
+  organizationId String
+  title          String
+  category       String
+  body           String?
+  url            String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId, category])
+}
+
+/// Trilha de onboarding de colaboradores.
+model TrainingItem {
+  id             String  @id @default(cuid())
+  organizationId String
+  title          String
+  description    String?
+  url            String?
+  position       Int     @default(0)
+
+  progress TrainingProgress[]
+
+  @@index([organizationId, position])
+}
+
+model TrainingProgress {
+  itemId String
+  userId String
+  doneAt DateTime @default(now())
+
+  item TrainingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, userId])
 }
