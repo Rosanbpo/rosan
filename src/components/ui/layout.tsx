@@ -3,6 +3,14 @@ import type { ReactNode } from "react";
 import { Inbox } from "lucide-react";
 import { cx } from "@/lib/ui";
 
+const TITLE_EMOJI: Record<string, string> = {
+  "Avulsas": "📥", "CRM comercial": "🎯", "Carteira e rentabilidade": "📈", "Central operacional": "🛰️", "Clientes": "🏢", "Cofre": "🔐",
+  "Configurações": "⚙️", "Contratos": "✍️", "Custo por hora e planos": "🧮", "Cópia dos dados": "💾", "Documentos dos clientes": "📄",
+  "Equipe": "👥", "Esteiras": "🚀", "Implantação de cliente novo": "🚀", "Importar clientes": "📤", "Minha conta": "🙋",
+  "Modelos e recorrências": "🔁", "Painel do gestor": "📊", "Painel executivo": "🧭", "Pendências externas": "⏳",
+  "Precificação consultiva": "🧭", "Processos e POPs": "📚", "Projetos": "🗂️", "Propostas": "📑", "Relatórios": "📊", "Tarefas": "✅",
+};
+
 export function PageHeader({
   title,
   description,
@@ -22,7 +30,7 @@ export function PageHeader({
             ← {breadcrumb.label}
           </Link>
         )}
-        <h1 className="page-title mt-1">{title}</h1>
+        <h1 className="page-title mt-1">{typeof title === "string" && TITLE_EMOJI[title] ? <span aria-hidden className="mr-2">{TITLE_EMOJI[title]}</span> : null}{title}</h1>
         {description && <p className="mt-1.5 max-w-2xl text-sm text-slate-500">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
