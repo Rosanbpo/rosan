@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { recordPricingAction } from "@/app/actions/diagnosis";
 import { analyze, recommend, TARGET_MARGIN, type Books, type Diagnosis, type Regime } from "@/domain/consultive-pricing";
 
 const STEPS = ["Diagnóstico", "Análise", "Recomendação", "Decisão", "Proposta", "Contrato"] as const;
@@ -34,13 +35,17 @@ function Meter({ label, value, text, tone }: { label: string; value: number; tex
   );
 }
 
-export function PricingWizard({ hourCost, capacityHours, usedHours, defaultWage }: { hourCost: number | null; capacityHours: number | null; usedHours: number; defaultWage: number }) {
+export type WizardClient = { id: string; name: string; diagnosis: Diagnosis | null };
+
+export function PricingWizard({ hourCost, capacityHours, usedHours, defaultWage, clients }: { hourCost: number | null; capacityHours: number | null; usedHours: number; defaultWage: number; clients: WizardClient[] }) {
   const [step, setStep] = useState(0);
   const [company, setCompany] = useState("");
   const [d, setD] = useState<Diagnosis>({ regime: "SIMPLES", revenue: 50000, bankAccounts: 1, statementLines: 300, entries: 100, employees: 0, inventory: false, multiCnpj: false, cardsAndMarketplaces: false, books: "ORGANIZADA", catchUpMonths: 0, wantsReports: true });
   const [wage, setWage] = useState(defaultWage);
   const [overhead, setOverhead] = useState(15);
   const [tax, setTax] = useState(6);
+  const [clientId, setClientId] = useState("");
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [chosen, setChosen] = useState<number | null>(null);
   const set = <K extends keyof Diagnosis>(k: K, v: Diagnosis[K]) => setD((p) => ({ ...p, [k]: v }));
 
@@ -70,6 +75,13 @@ export function PricingWizard({ hourCost, capacityHours, usedHours, defaultWage 
         {step === 0 && (
           <div className="space-y-4">
             <h2 className="text-base font-semibold text-brand-900">🔎 Diagnóstico do cliente</h2>
+            <label className="block text-sm"><span className="font-medium text-slate-700">Cliente já cadastrado (opcional)</span>
+              <select className="input mt-1" value={clientId} onChange={(e) => { const c = clients.find((x) => x.id === e.target.value); setClientId(e.target.value); setSaveMsg(null); if (c) { setCompany(c.name); if (c.diagnosis) setD(c.diagnosis); } }}>
+                <option value="">Novo prospect (sem cadastro)</option>
+                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}{c.diagnosis ? " — com diagnóstico" : ""}</option>)}
+              </select>
+              <span className="text-xs text-slate-500">Ao escolher, carregamos o diagnóstico salvo (lançado por você ou respondido pelo cliente pelo link na aba Dados).</span>
+            </label>
             <label className="block text-sm"><span className="font-medium text-slate-700">Empresa (prospect)</span><input className="input mt-1" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Nome da empresa" /></label>
             <div className="grid gap-4 md:grid-cols-3">
               <label className="block text-sm"><span className="font-medium text-slate-700">Regime tributário</span>
@@ -151,6 +163,15 @@ export function PricingWizard({ hourCost, capacityHours, usedHours, defaultWage 
               </div>
               <div className="rounded-xl border border-hair p-4 text-sm"><p className="font-semibold">Risco {an.riskLabel.toLowerCase()}</p><p className="mt-1">{an.risk >= 65 ? "Considere cobrar o premium e limitar o escopo." : an.risk >= 35 ? "Combine bem o escopo e os prazos de entrega dos documentos." : "Cliente de baixo risco."}</p></div>
             </div>
+            {clientId ? (
+              <div className="rounded-xl border border-hair p-4 text-sm">
+                <p>💾 Guarde este diagnóstico e a mensalidade de {brl(price)} no cliente. Depois você acompanha a movimentação mensal e é avisada se for hora de reajustar.</p>
+                <button type="button" className="btn-primary mt-2" onClick={async () => { const r = await recordPricingAction(clientId, { diagnosis: { ...d }, fee: price, hours: an.hours }); setSaveMsg(r.ok ? "Salvo no cliente." : r.error ?? "Não foi possível salvar."); }}>Salvar no cliente</button>
+                {saveMsg && <p className="mt-2 font-medium text-emerald-700">{saveMsg}</p>}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">Para guardar o diagnóstico e acompanhar a movimentação, escolha um cliente cadastrado na etapa 1.</p>
+            )}
           </div>
         )}
 

@@ -139,6 +139,8 @@ model Client {
   procedures            Procedure[]
   clientNotes           ClientNote[]
   logo                  ClientLogo?
+  diagnosis             ClientDiagnosis?
+  volumes               ClientVolume[]
   closings              ClientClosing[]
   documentRequirements  DocumentRequirement[]
   contracts             Contract[]
@@ -1034,4 +1036,55 @@ model ClosingItem {
   doneBy  User?         @relation("ClosingItemDoneBy", fields: [doneById], references: [id])
 
   @@index([closingId])
+}
+
+/// Diagnóstico do cliente: base da precificação (preenchido por nós ou pelo próprio cliente pelo link).
+model ClientDiagnosis {
+  clientId             String    @id
+  organizationId       String
+  token                String?   @unique
+  tokenCreatedAt       DateTime?
+  /// MANUAL (lançado por nós) ou CLIENTE (respondido pelo link).
+  source               String    @default("MANUAL")
+  submittedAt          DateTime?
+  regime               String    @default("SIMPLES")
+  revenue              Decimal   @default(0) @db.Decimal(14, 2)
+  bankAccounts         Int       @default(0)
+  statementLines       Int       @default(0)
+  entries              Int       @default(0)
+  employees            Int       @default(0)
+  inventory            Boolean   @default(false)
+  multiCnpj            Boolean   @default(false)
+  cardsAndMarketplaces Boolean   @default(false)
+  wantsReports         Boolean   @default(true)
+  books                String    @default("ORGANIZADA")
+  catchUpMonths        Int       @default(0)
+  banks                String?
+  platforms            String?
+  cards                String?
+  notes                String?
+  /// Mensalidade e horas usadas na precificação (base para acompanhar reajuste).
+  pricedFee            Decimal?  @db.Decimal(12, 2)
+  pricedHours          Decimal?  @db.Decimal(8, 2)
+  pricedAt             DateTime?
+  updatedAt            DateTime  @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+/// Movimentação real do cliente em cada mês, para comparar com o que foi precificado.
+model ClientVolume {
+  id             String   @id @default(cuid())
+  organizationId String
+  clientId       String
+  competence     String
+  statementLines Int      @default(0)
+  entries        Int      @default(0)
+  notes          String?
+  updatedAt      DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, competence])
+  @@index([organizationId, competence])
 }

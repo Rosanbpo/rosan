@@ -60,6 +60,8 @@ import { moneyInput } from "@/lib/format";
 import { ClientStatusBadge } from "@/components/ui/badges";
 import { TaskTable } from "@/components/task-table";
 import { ClientDashboardTop } from "@/components/client-dashboard-top";
+import { DiagnosisPanel } from "@/components/diagnosis-panel";
+import { volumeOverview } from "@/server/services/diagnosis";
 import { ClosingPanel } from "@/components/closing-panel";
 import { ClientLogoBox } from "@/components/client-logo-box";
 import { getClosing, closingHistory, currentCompetence } from "@/server/services/closings";
@@ -222,6 +224,7 @@ export default async function ClientPage({
   const closingSummary = aba === "resumo" ? await getClosing(actor, id, currentCompetence()) : null;
   const closingData = aba === "fechamentos" ? await getClosing(actor, id, closingMonth) : null;
   const closingHist = aba === "fechamentos" ? await closingHistory(actor, id) : [];
+  const vol = aba === "dados" ? await volumeOverview(actor, id) : null;
   const hasLogo = !!(await getClientLogo(actor, id));
   const ours = openTasks.rows.filter((t) => t.status === "A_FAZER" || t.status === "EM_ANDAMENTO" || t.status === "EM_REVISAO");
   const clientSide = pendings.rows.filter((p) => p.type === "CLIENTE");
@@ -830,6 +833,8 @@ export default async function ClientPage({
           </div>
         </div>
       )}
+
+      {aba === "dados" && vol && <DiagnosisPanel clientId={id} diagnosis={vol.diagnosis} rows={vol.rows} manage={manage} flash={{ dx: sp.dx, erro: sp.dxerro }} />}
 
       {aba === "dados" && (
         <div className="mt-6">

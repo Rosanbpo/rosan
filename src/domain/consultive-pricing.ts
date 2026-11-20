@@ -128,3 +128,31 @@ export function recommend(d: Diagnosis, an: Analysis, a: PricingAssumptions): Re
     priceForTargetMargin: up10(an.realCost / (1 - tax - TARGET_MARGIN)),
   };
 }
+
+export interface VolumeCheck {
+  baselineUnits: number;
+  currentUnits: number;
+  growth: number;
+  level: "ok" | "atencao" | "reajustar";
+  suggestedFee: number | null;
+}
+
+/** "Unidades de trabalho" do mês: linhas de extrato (11 s) + lançamentos (3 min), em minutos. */
+export function volumeUnits(v: { statementLines: number; entries: number }) {
+  return (n(v.statementLines) * 11) / 60 + n(v.entries) * 3;
+}
+
+/**
+ * Compara a movimentação do mês com a que foi usada na precificação.
+ * Cresceu 15% ou mais: atenção. 30% ou mais (ou a recomendação nova passa 10% da mensalidade): reajustar.
+ */
+export function checkVolume(d: Diagnosis, current: { statementLines: number; entries: number }, a: PricingAssumptions, pricedFee: number | null): VolumeCheck {
+  const baselineUnits = volumeUnits(d);
+  const currentUnits = volumeUnits(current);
+  const growth = baselineUnits > 0 ? currentUnits / baselineUnits - 1 : 0;
+  const next = { ...d, statementLines: current.statementLines, entries: current.entries };
+  const suggested = recommend(next, analyze(next, a), a).recommended;
+  const overFee = pricedFee !== null && pricedFee > 0 && suggested > pricedFee * 1.1;
+  const level = growth >= 0.3 || (overFee && growth >= 0.15) ? "reajustar" : growth >= 0.15 ? "atencao" : "ok";
+  return { baselineUnits: Math.round(baselineUnits), currentUnits: Math.round(currentUnits), growth, level, suggestedFee: level === "ok" ? null : suggested };
+}
