@@ -33,34 +33,6 @@ import {
 } from "lucide-react";
 import { cx } from "@/lib/ui";
 
-/** Cor de cada ícone do menu (identidade Rosan + toques de cor para leitura rápida). */
-const ICON_COLOR: Record<keyof typeof ICONS, string> = {
-  painel: "bg-sky-500/20 text-sky-300",
-  inicio: "bg-sky-500/20 text-sky-300",
-  avulsas: "bg-orange-500/20 text-orange-300",
-  equipe: "bg-teal-500/20 text-teal-300",
-  cofre: "bg-amber-500/20 text-amber-300",
-  operacao: "bg-emerald-500/20 text-emerald-300",
-  tarefas: "bg-emerald-500/20 text-emerald-300",
-  pendencias: "bg-orange-500/20 text-orange-300",
-  documentos: "bg-teal-500/20 text-teal-300",
-  clientes: "bg-brand-500/25 text-brand-200",
-  carteira: "bg-brand-500/25 text-brand-200",
-  crm: "bg-sky-500/20 text-sky-300",
-  propostas: "bg-sky-500/20 text-sky-300",
-  contratos: "bg-sky-500/20 text-sky-300",
-  precificacao: "bg-sky-500/20 text-sky-300",
-  projetos: "bg-violet-500/20 text-violet-300",
-  esteiras: "bg-violet-500/20 text-violet-300",
-  central: "bg-emerald-500/20 text-emerald-300",
-  executivo: "bg-amber-500/20 text-amber-300",
-  relatorios: "bg-sky-500/20 text-sky-300",
-  pops: "bg-amber-500/20 text-amber-300",
-  rotinas: "bg-violet-500/20 text-violet-300",
-  config: "bg-slate-500/25 text-slate-300",
-  conta: "bg-slate-500/25 text-slate-300",
-};
-
 const ICONS = {
   painel: BarChart3,
   inicio: Home,
@@ -115,26 +87,24 @@ export function Sidebar({
   const [open, setOpen] = useState(false);
 
   const nav = (
-    <nav aria-label="Menu principal" className="flex flex-1 flex-col gap-0.5 px-3">
+    <nav aria-label="Menu principal" className="flex flex-1 flex-col gap-px px-3 pb-4">
       {items.map((item, idx) => {
         const Icon = ICONS[item.icon];
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         const heading = item.group && item.group !== items[idx - 1]?.group ? item.group : null;
         return (
           <div key={item.href} className="flex flex-col">
-            {heading && <p className="mt-5 mb-1.5 px-3 text-xs font-medium text-slate-500">{heading}</p>}
+            {heading && <p className="mt-4 mb-1 px-3 text-[10.5px] font-semibold tracking-[0.08em] text-slate-500 uppercase">{heading}</p>}
             <Link
               href={item.href}
               onClick={() => setOpen(false)}
               aria-current={active ? "page" : undefined}
               className={cx(
-                "group flex items-center gap-3 rounded-lg px-2.5 py-1.5 text-[13.5px] transition-colors",
-                active ? "bg-white/[0.07] font-medium text-white shadow-[inset_2px_0_0_#7ea3dc]" : "text-slate-300/90 hover:bg-white/[0.04] hover:text-white",
+                "group relative flex items-center gap-3 rounded-md px-3 py-[7px] text-[13.5px] transition-colors",
+                active ? "bg-white/10 font-medium text-white before:absolute before:inset-y-1.5 before:left-0 before:w-[3px] before:rounded-r before:bg-sky-400" : "text-slate-400 hover:bg-white/[0.05] hover:text-white",
               )}
             >
-              <span className={cx("flex h-7 w-7 shrink-0 items-center justify-center rounded-lg", ICON_COLOR[item.icon])}>
-                <Icon aria-hidden className="h-4 w-4" />
-              </span>
+              <Icon aria-hidden className={cx("h-[17px] w-[17px] shrink-0", active ? "text-sky-300" : "text-slate-500 group-hover:text-slate-300")} strokeWidth={1.75} />
               <span className="flex-1">{item.label}</span>
               {!!item.badge && (
                 <span className="rounded-full bg-red-500/90 px-1.5 text-xs font-medium text-white" aria-label={`${item.badge} itens`}>
@@ -149,8 +119,8 @@ export function Sidebar({
   );
 
   const brand = (
-    <div className="flex flex-col items-center px-6 pt-5 pb-3">
-      <Image src="/logo.png" alt={appName} width={620} height={530} priority className="h-auto w-36" />
+    <div className="flex flex-col items-center px-6 pt-4 pb-3">
+      <Image src="/logo.png" alt={appName} width={620} height={530} priority className="h-auto w-28" />
       <p className="mt-1 truncate text-xs text-brand-200/70">Escritório virtual</p>
     </div>
   );
