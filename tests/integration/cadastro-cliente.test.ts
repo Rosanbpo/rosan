@@ -69,3 +69,13 @@ describe("importar e exportar clientes", () => {
     await expect(importClientsCsv(s.admin, "sem dados")).rejects.toBeInstanceOf(ValidationError);
   });
 });
+
+describe("dois vencimentos", () => {
+  it("salva o segundo vencimento e recusa o mesmo dia", async () => {
+    const s = await setupOrg();
+    const c = await createClient(s.admin, { legalName: "Loja Dois Vencimentos Ltda", tradeName: "Loja Dois Venc", status: "ATIVO", services: [], memberIds: [], monthlyFee: "1000,00", billingDay: "5", billingDay2: "20", firstInstallmentPct: "40" });
+    const row = await prisma.client.findUniqueOrThrow({ where: { id: c.id } });
+    expect(row).toMatchObject({ billingDay: 5, billingDay2: 20, firstInstallmentPct: 40 });
+    await expect(createClient(s.admin, { legalName: "Outra Loja Ltda", tradeName: "Outra Loja", status: "ATIVO", services: [], memberIds: [], billingDay: "5", billingDay2: "5" })).rejects.toThrow(/outro dia/);
+  });
+});

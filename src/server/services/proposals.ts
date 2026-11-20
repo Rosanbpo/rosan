@@ -1,3 +1,4 @@
+import { checkSecondDue } from "@/domain/installments";
 import { Prisma } from "@prisma/client";
 import { dbDateToLocalDate, instantToLocalDate, localDateToDbDate } from "@/domain/dates";
 import { STAGES_BEFORE_PROPOSAL, nextProposalNumber, type ProposalStatus } from "@/domain/proposal";
@@ -78,6 +79,8 @@ function toData(input: ReturnType<typeof proposalSchema.parse>) {
     exclusions: input.exclusions,
     monthlyFee: input.monthlyFee,
     billingDay: input.billingDay,
+    billingDay2: input.billingDay2 ?? null,
+    firstInstallmentPct: input.firstInstallmentPct,
     termMonths: input.termMonths,
     validUntil: localDateToDbDate(input.validUntil),
     notes: input.notes ?? null,
@@ -87,6 +90,8 @@ function toData(input: ReturnType<typeof proposalSchema.parse>) {
 export async function createProposal(actor: Actor, raw: unknown) {
   assertCan(actor, "crm.manage");
   const input = parseInput(proposalSchema, raw);
+  const dueErr = checkSecondDue(input.billingDay, input.billingDay2);
+  if (dueErr) throw new ValidationError(dueErr, { billingDay2: dueErr });
   await assertLead(actor, input.leadId);
   const year = Number(today().slice(0, 4));
 
@@ -123,6 +128,8 @@ export async function createProposal(actor: Actor, raw: unknown) {
 export async function updateProposal(actor: Actor, id: string, raw: unknown) {
   assertCan(actor, "crm.manage");
   const input = parseInput(proposalSchema, raw);
+  const dueErr = checkSecondDue(input.billingDay, input.billingDay2);
+  if (dueErr) throw new ValidationError(dueErr, { billingDay2: dueErr });
   const current = await getProposal(actor, id);
   if (current.status === "ACEITA") throw new ValidationError("Propostas aceitas não podem ser alteradas. Crie uma nova proposta.");
   await assertLead(actor, input.leadId);

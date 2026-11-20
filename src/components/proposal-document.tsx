@@ -1,3 +1,4 @@
+import { monthlyInstallments } from "@/domain/installments";
 import Image from "next/image";
 import { Check, X } from "lucide-react";
 import { splitPair } from "@/domain/proposal";
@@ -14,6 +15,8 @@ export interface ProposalDocData {
   exclusions: string[];
   monthlyFee: number;
   billingDay: number;
+  billingDay2?: number | null;
+  firstInstallmentPct?: number;
   termMonths: number;
   validUntilLocal: string;
   notes: string | null;
@@ -46,7 +49,7 @@ export function ProposalDocument({ proposal: p, issuer }: { proposal: ProposalDo
     `Agradecemos a oportunidade. Apresentamos como a ${issuer.name} assume a rotina financeira da ${p.companyName}, com números organizados e confiáveis para você decidir com segurança.`;
 
   const conditions = [
-    { label: "Pagamento", text: `Todo dia ${p.billingDay}, por boleto ou PIX. O primeiro honorário é pago na assinatura do contrato.` },
+    { label: "Pagamento", text: p.billingDay2 ? `Em duas parcelas: ${monthlyInstallments(p.monthlyFee, p.billingDay, p.billingDay2, p.firstInstallmentPct ?? 50).map((i) => `${fmtMoney(i.amount)} no dia ${i.day}`).join(" e ")}, por boleto ou PIX. O primeiro honorário é pago na assinatura do contrato.` : `Todo dia ${p.billingDay}, por boleto ou PIX. O primeiro honorário é pago na assinatura do contrato.` },
     { label: "Vigência", text: `Contrato inicial de ${p.termMonths} meses, com renovação automática. Aviso prévio de 30 dias para encerrar.` },
     { label: "Revisão do plano", text: "Após 3 meses, analisamos juntos os limites do plano e os ajustamos, se necessário." },
     { label: "Reajuste", text: `Anual, pelo IPCA, a partir do 13º mês de contrato.` },

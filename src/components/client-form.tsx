@@ -15,6 +15,8 @@ export interface ClientFormValues {
   startDate?: string | null;
   monthlyFee?: string;
   billingDay?: number | null;
+  billingDay2?: number | null;
+  firstInstallmentPct?: number;
   journeyStage?: string | null;
   software?: string | null;
   directCost?: string;
@@ -86,6 +88,12 @@ export function ClientForm({
         </Field>
         <Field label="Dia de vencimento" name="billingDay" hint="Dia do mês em que a mensalidade é cobrada (1 a 31).">
           <input id="billingDay" name="billingDay" type="number" min={1} max={31} className="input" defaultValue={values.billingDay ?? ""} />
+        </Field>
+        <Field label="Segundo vencimento (opcional)" name="billingDay2" hint="Para o cliente pagar em duas parcelas no mês.">
+          <input id="billingDay2" name="billingDay2" type="number" min={1} max={31} className="input" defaultValue={values.billingDay2 ?? ""} />
+        </Field>
+        <Field label="% no primeiro vencimento" name="firstInstallmentPct" hint="Só vale com dois vencimentos. O restante vai no segundo.">
+          <input id="firstInstallmentPct" name="firstInstallmentPct" type="number" min={1} max={99} className="input" defaultValue={values.firstInstallmentPct ?? 50} />
         </Field>
       </section>
 

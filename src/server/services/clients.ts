@@ -1,3 +1,4 @@
+import { checkSecondDue } from "@/domain/installments";
 import type { Prisma } from "@prisma/client";
 import { dbDateToLocalDate, localDateToDbDate } from "@/domain/dates";
 import { assertCan, can, ValidationError, type Actor } from "@/domain/permissions";
@@ -129,6 +130,8 @@ function toData(input: ClientInput) {
     notes: input.notes ?? null,
     monthlyFee: input.monthlyFee ?? null,
     billingDay: input.billingDay ?? null,
+    billingDay2: input.billingDay2 ?? null,
+    firstInstallmentPct: input.firstInstallmentPct,
     journeyStage: input.journeyStage ?? null,
     software: input.software ?? null,
     directCost: input.directCost ?? null,
@@ -148,6 +151,8 @@ async function assertUniqueCnpj(actor: Actor, cnpj: string | undefined, exceptId
 export async function createClient(actor: Actor, raw: unknown) {
   assertCan(actor, "clients.manage");
   const input = parseInput(clientSchema, raw);
+  const dueErr = checkSecondDue(input.billingDay, input.billingDay2);
+  if (dueErr) throw new ValidationError(dueErr, { billingDay2: dueErr });
   await assertUniqueCnpj(actor, input.cnpj);
   const memberIds = await validateMembers(actor, input);
   return prisma.$transaction(async (tx) => {
@@ -175,6 +180,8 @@ export async function updateClient(actor: Actor, clientId: string, raw: unknown)
   assertCan(actor, "clients.manage");
   const before = await assertClientAccess(actor, clientId);
   const input = parseInput(clientSchema, raw);
+  const dueErr = checkSecondDue(input.billingDay, input.billingDay2);
+  if (dueErr) throw new ValidationError(dueErr, { billingDay2: dueErr });
   await assertUniqueCnpj(actor, input.cnpj, clientId);
   const memberIds = await validateMembers(actor, input);
   const data = toData(input);

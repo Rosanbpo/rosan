@@ -1,3 +1,4 @@
+import { installmentsClauseText } from "./installments";
 /**
  * Modelos de contrato e distrato (baseados nos modelos da Rosan).
  * Os textos ficam editáveis no sistema. Valores que mudam com os campos do
@@ -57,6 +58,8 @@ export interface TokenVars {
   inicio?: string | null;
   vigenciaMeses?: number | null;
   diaPagamento?: number | null;
+  diaPagamento2?: number | null;
+  primeiraParcelaPct?: number | null;
   cidade?: string | null;
   dataContrato?: string | null;
   encerramento?: string | null;
@@ -77,7 +80,7 @@ export function fillTokens(text: string, v: TokenVars): string {
   const map: Record<string, string> = {
     inicio: shortDate(v.inicio),
     vigencia: v.vigenciaMeses ? `${numeroExtenso(v.vigenciaMeses)} meses` : "___ (_____) meses",
-    dia_pagamento: v.diaPagamento ? String(v.diaPagamento) : "___",
+    dia_pagamento: v.diaPagamento ? installmentsClauseText(v.diaPagamento, v.diaPagamento2, v.primeiraParcelaPct ?? 50) : "___",
     cidade: v.cidade?.trim() || "____________________",
     data_contrato: shortDate(v.dataContrato),
     encerramento: shortDate(v.encerramento),

@@ -1,3 +1,4 @@
+import { billingDaysLabel } from "@/domain/installments";
 import Link from "next/link";
 import { CLIENT_STATUS_LABEL } from "@/domain/enums";
 import { marginTone } from "@/domain/profitability";
@@ -118,7 +119,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
                       <Link href={`/clientes/${r.id}`} className="font-medium text-slate-900 hover:text-brand-700 hover:underline">
                         {r.tradeName}
                       </Link>
-                      <p className="text-xs text-slate-500">{r.operator ?? "Sem operador"}{r.billingDay ? ` · vence dia ${r.billingDay}` : ""}</p>
+                      <p className="text-xs text-slate-500">{r.operator ?? "Sem operador"}{r.billingDay ? ` · vence ${billingDaysLabel(r.billingDay, r.billingDay2)}` : ""}</p>
                     </td>
                     <td>
                       <ClientStatusBadge status={r.status} />

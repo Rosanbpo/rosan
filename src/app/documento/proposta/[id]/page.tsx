@@ -37,6 +37,8 @@ export default async function ProposalDocumentPage({ params }: { params: Promise
             exclusions: proposal.exclusions,
             monthlyFee: proposal.monthlyFee,
             billingDay: proposal.billingDay,
+            billingDay2: proposal.billingDay2,
+            firstInstallmentPct: proposal.firstInstallmentPct,
             termMonths: proposal.termMonths,
             validUntilLocal: proposal.validUntilLocal,
             notes: proposal.notes,

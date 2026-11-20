@@ -1,3 +1,4 @@
+import { billingDaysLabel, monthlyInstallments } from "@/domain/installments";
 import Link from "next/link";
 import {
   Briefcase,
@@ -267,7 +268,7 @@ export default async function ClientPage({
                 <HeroFact
                   icon={Wallet}
                   label="Mensalidade"
-                  value={`${fmtMoney(finance.monthlyFee)}${finance.billingDay ? ` · dia ${finance.billingDay}` : ""}`}
+                  value={`${fmtMoney(finance.monthlyFee)}${finance.billingDay ? ` · ${billingDaysLabel(finance.billingDay, finance.billingDay2)}` : ""}`}
                 />
               )}
             </dl>
@@ -597,7 +598,19 @@ export default async function ClientPage({
                   </dd>
                   <dt className="text-slate-500">Vencimento</dt>
                   <dd>
-                    {finance.billingDay ? `Dia ${finance.billingDay}` : "—"}
+                    {finance.billingDay ? (
+                      finance.billingDay2 ? (
+                        <span>
+                          {monthlyInstallments(finance.monthlyFee ?? 0, finance.billingDay, finance.billingDay2, finance.firstInstallmentPct)
+                            .map((i) => `${fmtMoney(i.amount)} no dia ${i.day}`)
+                            .join(" e ")}
+                        </span>
+                      ) : (
+                        `Dia ${finance.billingDay}`
+                      )
+                    ) : (
+                      "—"
+                    )}
                   </dd>
                   <dt className="text-slate-500">Horas no mês</dt>
                   <dd>{fmtHours(finance.minutes)}</dd>

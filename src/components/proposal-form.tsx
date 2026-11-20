@@ -19,6 +19,8 @@ export interface ProposalFormValues {
   exclusions?: string;
   monthlyFee?: string;
   billingDay?: number;
+  billingDay2?: number | null;
+  firstInstallmentPct?: number;
   termMonths?: number;
   validUntil?: string;
   notes?: string | null;
@@ -104,6 +106,12 @@ export function ProposalForm({
         </Field>
         <Field label="Vence todo dia" name="billingDay">
           <input id="billingDay" name="billingDay" type="number" min={1} max={31} className="input" defaultValue={values.billingDay ?? 10} />
+        </Field>
+        <Field label="Segundo vencimento (opcional)" name="billingDay2" hint="Para o cliente pagar em duas parcelas no mês.">
+          <input id="billingDay2" name="billingDay2" type="number" min={1} max={31} className="input" defaultValue={values.billingDay2 ?? ""} />
+        </Field>
+        <Field label="% no primeiro vencimento" name="firstInstallmentPct" hint="Só vale com dois vencimentos. O restante vai no segundo.">
+          <input id="firstInstallmentPct" name="firstInstallmentPct" type="number" min={1} max={99} className="input" defaultValue={values.firstInstallmentPct ?? 50} />
         </Field>
         <Field label="Vigência (meses)" name="termMonths">
           <input id="termMonths" name="termMonths" type="number" min={1} max={60} className="input" defaultValue={values.termMonths ?? 6} />

@@ -1,3 +1,4 @@
+import { billingDaysLabel } from "@/domain/installments";
 import Link from "next/link";
 import { FileSignature, FileText, Pencil } from "lucide-react";
 import { instantToLocalDate } from "@/domain/dates";
@@ -47,7 +48,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Situação" value={expired ? "Vencida" : PROPOSAL_STATUS_LABEL[status]} tone={status === "ACEITA" ? "success" : expired ? "warning" : "default"} />
-        <Stat label="Mensalidade" value={fmtMoney(p.monthlyFee)} hint={`Vence dia ${p.billingDay} · ${p.termMonths} meses`} />
+        <Stat label="Mensalidade" value={fmtMoney(p.monthlyFee)} hint={`Vence ${billingDaysLabel(p.billingDay, p.billingDay2)} · ${p.termMonths} meses`} />
         <Stat label="Válida até" value={fmtLocalDate(p.validUntilLocal)} tone={expired ? "danger" : "default"} />
         <Stat label="Lead" value={p.lead ? <Link className="text-base text-brand-700 hover:underline" href={`/crm/${p.lead.id}`}>{p.lead.companyName}</Link> : "—"} />
       </div>
