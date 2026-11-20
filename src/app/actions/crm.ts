@@ -1,7 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionState } from "@/lib/action-state";
+import { getActor } from "@/server/context";
 import { formObject, runAction } from "@/server/action-utils";
 import * as leads from "@/server/services/leads";
 
@@ -45,4 +47,12 @@ export async function convertLeadAction(id: string, _: ActionState): Promise<Act
   });
   if (res?.ok) redirect(`/clientes/${clientId}/editar`);
   return res;
+}
+
+/** Avança o lead para a próxima etapa direto do quadro (sem motivo de perda). */
+export async function advanceLeadAction(id: string, stage: string): Promise<void> {
+  const actor = await getActor();
+  if (!actor) throw new Error("Não autorizado");
+  await leads.changeLeadStage(actor, id, { stage });
+  revalidatePath("/crm");
 }

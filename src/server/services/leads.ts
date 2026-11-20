@@ -67,6 +67,8 @@ export async function listLeads(actor: Actor, filters: LeadFilters = {}) {
     nextActionAt: r.nextActionAt ? dbDateToLocalDate(r.nextActionAt) : null,
     source: r.source,
     closedAt: r.closedAt,
+    contactPhone: r.contactPhone,
+    updatedAt: r.updatedAt,
   }));
   const forecast = weightedForecast(leads);
   const won = leads.filter((l) => l.stage === "GANHO").length;

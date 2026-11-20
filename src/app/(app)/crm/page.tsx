@@ -9,10 +9,15 @@ import { APP_TIMEZONE } from "@/server/config";
 import { requirePermission } from "@/server/context";
 import { str } from "@/server/page-utils";
 import { listLeads } from "@/server/services/leads";
+import { advanceLeadAction } from "@/app/actions/crm";
 
 export const metadata = { title: "CRM comercial" };
 
 type SP = Record<string, string | string[] | undefined>;
+
+const STAGE_EMOJI: Record<LeadStage, string> = { NOVO: "🆕", CONTATO: "📞", REUNIAO: "🤝", PROPOSTA: "📄", NEGOCIACAO: "💬", GANHO: "🏆", PERDIDO: "❌" };
+const NEXT: Partial<Record<LeadStage, LeadStage>> = { NOVO: "CONTATO", CONTATO: "REUNIAO", REUNIAO: "PROPOSTA", PROPOSTA: "NEGOCIACAO", NEGOCIACAO: "GANHO" };
+const wa = (phone: string | null) => { const d = (phone ?? "").replace(/\D/g, ""); return d.length >= 10 ? `https://wa.me/${d.length <= 11 ? "55" + d : d}` : null; };
 
 const COLUMN_TONE: Record<LeadStage, string> = {
   NOVO: "border-t-slate-400",
@@ -24,6 +29,8 @@ const COLUMN_TONE: Record<LeadStage, string> = {
   PERDIDO: "border-t-zinc-400",
 };
 
+const days = (d: Date) => Math.floor((Date.now() - d.getTime()) / 86_400_000);
+
 export default async function CrmPage({ searchParams }: { searchParams: Promise<SP> }) {
   const actor = await requirePermission("crm.manage");
   const sp = await searchParams;
@@ -32,13 +39,14 @@ export default async function CrmPage({ searchParams }: { searchParams: Promise<
   const today = instantToLocalDate(new Date(), APP_TIMEZONE);
   const showClosed = str(sp, "encerrados") === "1";
   const stages = LEAD_STAGES.filter((s) => showClosed || (s !== "GANHO" && s !== "PERDIDO"));
+  const due = leads.filter((l) => l.nextActionAt && l.nextActionAt <= today && l.stage !== "GANHO" && l.stage !== "PERDIDO");
   const overdueActions = leads.filter((l) => l.nextActionAt && l.nextActionAt < today && l.stage !== "GANHO" && l.stage !== "PERDIDO").length;
 
   return (
     <>
       <PageHeader
         title="CRM comercial"
-        description="Funil de novos clientes, do primeiro contato ao contrato."
+        description="Funil de novos clientes, do primeiro contato ao contrato. Use Avançar nos cartões para andar com o lead."
         actions={
           <Link href="/crm/novo" className="btn-primary">
             <Plus aria-hidden className="h-4 w-4" /> Novo lead
@@ -46,12 +54,31 @@ export default async function CrmPage({ searchParams }: { searchParams: Promise<
         }
       />
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Mensalidade em aberto" value={fmtMoney(forecast.openFee)} hint="Soma dos leads em andamento" />
-        <Stat label="Previsão ponderada" value={fmtMoney(forecast.weightedFee)} hint="Valor × chance por etapa" tone="info" />
-        <Stat label="Conversão" value={fmtPercent(conversion)} hint={`${won} ganho(s) · ${lost} perdido(s)`} tone="success" />
-        <Stat label="Ações atrasadas" value={overdueActions} tone={overdueActions ? "danger" : "default"} hint="Próximas ações com data vencida" />
+        <Stat label="💰 Mensalidade em aberto" value={fmtMoney(forecast.openFee)} hint="Soma dos leads em andamento" />
+        <Stat label="🎯 Previsão ponderada" value={fmtMoney(forecast.weightedFee)} hint="Valor × chance por etapa" tone="info" />
+        <Stat label="🏆 Conversão" value={fmtPercent(conversion)} hint={`${won} ganho(s) · ${lost} perdido(s)`} tone="success" />
+        <Stat label="⏰ Ações atrasadas" value={overdueActions} tone={overdueActions ? "danger" : "default"} hint="Próximas ações com data vencida" />
       </div>
 
+      {due.length > 0 && (
+        <section className="card mb-6">
+          <div className="border-b border-hair px-5 py-3"><h2 className="text-[15px] font-semibold text-brand-900">📞 Para fazer agora ({due.length})</h2></div>
+          <ul className="divide-y divide-hair">
+            {due.map((l) => (
+              <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-2.5 text-sm">
+                <div className="min-w-0">
+                  <Link href={`/crm/${l.id}`} className="font-medium hover:underline">{l.companyName}</Link>
+                  <p className="text-xs text-slate-500">{l.nextAction ?? "Retomar contato"}</p>
+                </div>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className={l.nextActionAt! < today ? "font-semibold text-red-700" : "text-amber-700"}>{l.nextActionAt! < today ? "Atrasada · " : "Hoje · "}{fmtLocalDate(l.nextActionAt)}</span>
+                  {wa(l.contactPhone) && <a href={wa(l.contactPhone)!} target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline">💬 WhatsApp</a>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {leads.length === 0 ? (
         <EmptyState
@@ -68,7 +95,7 @@ export default async function CrmPage({ searchParams }: { searchParams: Promise<
               <section key={stage} aria-label={LEAD_STAGE_LABEL[stage]} className={cx("rounded-lg border border-t-4 border-slate-200 bg-slate-100/60", COLUMN_TONE[stage])}>
                 <header className="px-3 py-2">
                   <h2 className="text-sm font-semibold text-slate-800">
-                    {LEAD_STAGE_LABEL[stage]} <span className="font-normal text-slate-500">({items.length})</span>
+                    {STAGE_EMOJI[stage]} {LEAD_STAGE_LABEL[stage]} <span className="font-normal text-slate-500">({items.length})</span>
                   </h2>
                   <p className="text-xs text-slate-500">
                     {fmtMoney(total)}
@@ -90,8 +117,17 @@ export default async function CrmPage({ searchParams }: { searchParams: Promise<
                               {l.nextActionAt && ` · ${fmtLocalDate(l.nextActionAt)}`}
                             </p>
                           )}
-                          {l.ownerName && <p className="mt-1 text-xs text-slate-400">{l.ownerName}</p>}
+                          <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-slate-400">
+                            {l.ownerName && <span>👤 {l.ownerName}</span>}
+                            {l.source && <span>📍 {l.source}</span>}
+                            {stage !== "GANHO" && stage !== "PERDIDO" && days(l.updatedAt) >= 7 && <span className="font-medium text-amber-700">🕒 parado há {days(l.updatedAt)} dias</span>}
+                          </p>
                         </Link>
+                        {NEXT[stage] && (
+                          <form action={advanceLeadAction.bind(null, l.id, NEXT[stage]!)} className="mt-1 text-right">
+                            <button type="submit" className="text-xs text-brand-700 hover:underline">Avançar para {LEAD_STAGE_LABEL[NEXT[stage]!]} →</button>
+                          </form>
+                        )}
                       </li>
                     );
                   })}
