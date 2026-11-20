@@ -2,7 +2,7 @@ import { assertCan, NotFoundError, ValidationError, type Actor } from "@/domain/
 import { prisma } from "../db";
 import { decryptSecret, encryptSecret, vaultConfigured } from "../crypto";
 import { parseInput, vaultItemSchema } from "../validation";
-import { assertClientAccess } from "./access";
+import { assertClientAccess, clientScope } from "./access";
 import { recordAudit } from "./audit";
 
 /** Cofre do cliente: o segredo nunca sai nas listagens; ver a senha é uma ação auditada. */
@@ -77,4 +77,20 @@ export async function deleteVaultItem(actor: Actor, itemId: string) {
     await recordAudit(tx, { organizationId: actor.organizationId, actorId: actor.userId, entityType: "VaultItem", entityId: row.id, clientId: row.clientId, action: "vault.deleted", summary: `Acesso removido do cofre: ${row.label}` });
   });
   return row;
+}
+
+/** Cofre de todos os clientes que a pessoa pode ver, com busca. Nunca devolve o segredo. */
+export async function listAllVault(actor: Actor, filters: { q?: string; category?: string; clientId?: string } = {}) {
+  const rows = await prisma.clientVaultItem.findMany({
+    where: {
+      organizationId: actor.organizationId,
+      client: clientScope(actor),
+      ...(filters.clientId ? { clientId: filters.clientId } : {}),
+      ...(filters.category ? { category: filters.category as never } : {}),
+      ...(filters.q ? { OR: [{ label: { contains: filters.q, mode: "insensitive" } }, { username: { contains: filters.q, mode: "insensitive" } }, { url: { contains: filters.q, mode: "insensitive" } }, { client: { tradeName: { contains: filters.q, mode: "insensitive" } } }] } : {}),
+    },
+    orderBy: [{ client: { tradeName: "asc" } }, { label: "asc" }],
+    include: { client: { select: { id: true, tradeName: true } } },
+  });
+  return rows.map(({ secretEnc, ...r }) => ({ ...r, hasSecret: !!secretEnc }));
 }

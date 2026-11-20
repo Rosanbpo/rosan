@@ -6,6 +6,10 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
   BarChart3,
+  Home,
+  Inbox,
+  Users,
+  KeyRound,
   BookOpen,
   Briefcase,
   CalendarClock,
@@ -32,6 +36,10 @@ import { cx } from "@/lib/ui";
 /** Cor de cada ícone do menu (identidade Rosan + toques de cor para leitura rápida). */
 const ICON_COLOR: Record<keyof typeof ICONS, string> = {
   painel: "bg-sky-500/20 text-sky-300",
+  inicio: "bg-sky-500/20 text-sky-300",
+  avulsas: "bg-orange-500/20 text-orange-300",
+  equipe: "bg-teal-500/20 text-teal-300",
+  cofre: "bg-amber-500/20 text-amber-300",
   operacao: "bg-emerald-500/20 text-emerald-300",
   tarefas: "bg-emerald-500/20 text-emerald-300",
   pendencias: "bg-orange-500/20 text-orange-300",
@@ -55,6 +63,10 @@ const ICON_COLOR: Record<keyof typeof ICONS, string> = {
 
 const ICONS = {
   painel: BarChart3,
+  inicio: Home,
+  avulsas: Inbox,
+  equipe: Users,
+  cofre: KeyRound,
   operacao: CalendarClock,
   tarefas: ClipboardList,
   pendencias: Hourglass,
