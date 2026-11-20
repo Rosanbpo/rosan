@@ -1,3 +1,4 @@
+import { checkSecondDue } from "@/domain/installments";
 import { Prisma } from "@prisma/client";
 import { dbDateToLocalDate, instantToLocalDate, localDateToDbDate } from "@/domain/dates";
 import { buildContractClauses, buildDistratoClauses, type Clause, type ContractStatus } from "@/domain/contract";
@@ -80,7 +81,7 @@ export async function contractDefaults(actor: Actor, proposalId?: string) {
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: actor.organizationId }, select: { city: true } });
   const base = { clauses: buildContractClauses(), signCity: org.city ?? "", proposalId: null as string | null };
   if (!proposalId) {
-    return { ...base, partyName: "", monthlyFee: null as number | null, billingDay: 10, termMonths: 6, services: [] as string[], volumes: [] as string[] };
+    return { ...base, partyName: "", monthlyFee: null as number | null, billingDay: 10, billingDay2: null as number | null, firstInstallmentPct: 50, termMonths: 6, services: [] as string[], volumes: [] as string[] };
   }
   const p = await prisma.proposal.findFirst({ where: { id: proposalId, organizationId: actor.organizationId } });
   if (!p) throw new NotFoundError("Proposta não encontrada.");
@@ -90,6 +91,8 @@ export async function contractDefaults(actor: Actor, proposalId?: string) {
     partyName: p.companyName,
     monthlyFee: Number(p.monthlyFee) as number | null,
     billingDay: p.billingDay,
+    billingDay2: p.billingDay2,
+    firstInstallmentPct: p.firstInstallmentPct,
     termMonths: p.termMonths,
     services: p.services,
     volumes: p.volumes,
@@ -121,6 +124,8 @@ function toData(i: ReturnType<typeof contractSchema.parse>) {
     issuerRepCpf: i.issuerRepCpf ?? null,
     monthlyFee: i.monthlyFee,
     billingDay: i.billingDay,
+    billingDay2: i.billingDay2 ?? null,
+    firstInstallmentPct: i.firstInstallmentPct,
     termMonths: i.termMonths,
     startDate: i.startDate ? localDateToDbDate(i.startDate) : null,
     signDate: i.signDate ? localDateToDbDate(i.signDate) : null,
@@ -134,6 +139,8 @@ function toData(i: ReturnType<typeof contractSchema.parse>) {
 export async function createContract(actor: Actor, raw: unknown) {
   assertCan(actor, "contracts.manage");
   const input = parseInput(contractSchema, raw);
+  const dueErr = checkSecondDue(input.billingDay, input.billingDay2);
+  if (dueErr) throw new ValidationError(dueErr, { billingDay2: dueErr });
   await Promise.all([assertClient(actor, input.clientId), assertProposal(actor, input.proposalId)]);
   const year = Number(today().slice(0, 4));
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -168,6 +175,8 @@ export async function createContract(actor: Actor, raw: unknown) {
 export async function updateContract(actor: Actor, id: string, raw: unknown) {
   assertCan(actor, "contracts.manage");
   const input = parseInput(contractSchema, raw);
+  const dueErr = checkSecondDue(input.billingDay, input.billingDay2);
+  if (dueErr) throw new ValidationError(dueErr, { billingDay2: dueErr });
   const current = await getContract(actor, id);
   if (current.status !== "RASCUNHO") throw new ValidationError("Contratos assinados ou encerrados não podem ser editados. Reabra o contrato como rascunho para alterar.");
   await Promise.all([assertClient(actor, input.clientId), assertProposal(actor, input.proposalId)]);

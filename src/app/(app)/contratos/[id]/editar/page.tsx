@@ -35,6 +35,8 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
           issuerRepCpf: c.issuerRepCpf,
           monthlyFee: c.monthlyFee.toFixed(2).replace(".", ","),
           billingDay: c.billingDay,
+          billingDay2: c.billingDay2,
+          firstInstallmentPct: c.firstInstallmentPct,
           termMonths: c.termMonths,
           startDate: c.startDate,
           signDate: c.signDate,

@@ -32,6 +32,8 @@ export default async function EditProposalPage({ params }: { params: Promise<{ i
           exclusions: p.exclusions.join("\n"),
           monthlyFee: p.monthlyFee.toFixed(2).replace(".", ","),
           billingDay: p.billingDay,
+          billingDay2: p.billingDay2,
+          firstInstallmentPct: p.firstInstallmentPct,
           termMonths: p.termMonths,
           validUntil: p.validUntilLocal,
           notes: p.notes,

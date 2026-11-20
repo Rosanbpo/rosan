@@ -44,6 +44,7 @@ export async function getPortfolio(actor: Actor, month: string) {
         status: true,
         monthlyFee: true,
         billingDay: true,
+        billingDay2: true,
         directCost: true,
         services: true,
         responsibleOperator: { select: { name: true } },
@@ -82,6 +83,7 @@ export async function getPortfolio(actor: Actor, month: string) {
       tradeName: c.tradeName,
       status: c.status,
       billingDay: c.billingDay,
+      billingDay2: c.billingDay2,
       services: c.services,
       operator: c.responsibleOperator?.name ?? null,
       manager: c.manager?.name ?? null,
@@ -128,7 +130,7 @@ export async function clientMonthSummary(actor: Actor, clientId: string) {
   const { from, to } = monthRange(currentMonth());
   const [org, client, time] = await Promise.all([
     prisma.organization.findUniqueOrThrow({ where: { id: actor.organizationId }, select: { hourCost: true } }),
-    prisma.client.findUniqueOrThrow({ where: { id: clientId }, select: { monthlyFee: true, billingDay: true, directCost: true } }),
+    prisma.client.findUniqueOrThrow({ where: { id: clientId }, select: { monthlyFee: true, billingDay: true, billingDay2: true, firstInstallmentPct: true, directCost: true } }),
     prisma.timeEntry.aggregate({ where: { clientId, workedOn: { gte: from, lt: to } }, _sum: { minutes: true } }),
   ]);
   const monthlyFee = client.monthlyFee === null ? null : Number(client.monthlyFee);
@@ -136,6 +138,8 @@ export async function clientMonthSummary(actor: Actor, clientId: string) {
   return {
     monthlyFee,
     billingDay: client.billingDay,
+    billingDay2: client.billingDay2,
+    firstInstallmentPct: client.firstInstallmentPct,
     minutes,
     ...clientProfitability({ monthlyFee, minutes, hourCost: org.hourCost === null ? null : Number(org.hourCost), directCost: client.directCost === null ? null : Number(client.directCost) }),
   };

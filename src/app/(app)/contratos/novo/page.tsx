@@ -29,6 +29,8 @@ export default async function NewContractPage({ searchParams }: { searchParams: 
           partyName: d.partyName,
           monthlyFee: d.monthlyFee === null ? "" : d.monthlyFee.toFixed(2).replace(".", ","),
           billingDay: d.billingDay,
+          billingDay2: d.billingDay2,
+          firstInstallmentPct: d.firstInstallmentPct,
           termMonths: d.termMonths,
           signCity: d.signCity,
           services: d.services.join("\n"),

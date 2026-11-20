@@ -1,3 +1,4 @@
+import { monthlyInstallments } from "@/domain/installments";
 import Image from "next/image";
 import {
   fillTokens,
@@ -22,6 +23,8 @@ export interface ContractDocData {
   issuerRepCpf: string | null;
   monthlyFee: number;
   billingDay: number;
+  billingDay2?: number | null;
+  firstInstallmentPct?: number;
   termMonths: number;
   startDate: string | null;
   signDate: string | null;
@@ -153,7 +156,7 @@ function Block({ kind, c }: { kind: NonNullable<Clause["block"]>; c: ContractDoc
       <div className="mt-2 rounded bg-[#0c1633] px-4 py-3 text-[#f3e7cc]">
         <p className="text-[7.5pt] tracking-[0.2em] text-[#b08d57] uppercase">Mensalidade contratada</p>
         <p className="doc-serif text-[17pt] leading-tight">{fmtMoney(c.monthlyFee)}</p>
-        <p className="text-[8.5pt] text-[#e6d1a5]">Pagamento até o dia {c.billingDay} de cada mês, por boleto ou PIX.</p>
+        <p className="text-[8.5pt] text-[#e6d1a5]">{c.billingDay2 ? `Pagamento em duas parcelas: ${monthlyInstallments(c.monthlyFee, c.billingDay, c.billingDay2, c.firstInstallmentPct ?? 50).map((i) => `${fmtMoney(i.amount)} até o dia ${i.day}`).join(" e ")}, por boleto ou PIX.` : `Pagamento até o dia ${c.billingDay} de cada mês, por boleto ou PIX.`}</p>
       </div>
     );
   }
@@ -242,6 +245,8 @@ export function ContractDocument({ contract: c, issuer }: { contract: ContractDo
     inicio: c.startDate,
     vigenciaMeses: c.termMonths,
     diaPagamento: c.billingDay,
+    diaPagamento2: c.billingDay2,
+    primeiraParcelaPct: c.firstInstallmentPct,
     cidade: c.signCity,
   };
   return (

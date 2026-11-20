@@ -1,3 +1,4 @@
+import { billingDaysLabel } from "@/domain/installments";
 import Link from "next/link";
 import { FileText, Pencil } from "lucide-react";
 import { CONTRACT_STATUS_LABEL, settlementBalance } from "@/domain/contract";
@@ -41,7 +42,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Situação" value={CONTRACT_STATUS_LABEL[c.status]} tone={c.status === "ASSINADO" ? "success" : c.status === "ENCERRADO" ? "warning" : "default"} />
-        <Stat label="Mensalidade" value={fmtMoney(c.monthlyFee)} hint={`Vence dia ${c.billingDay} · ${c.termMonths} meses`} />
+        <Stat label="Mensalidade" value={fmtMoney(c.monthlyFee)} hint={`Vence ${billingDaysLabel(c.billingDay, c.billingDay2)} · ${c.termMonths} meses`} />
         <Stat label="Início" value={fmtLocalDate(c.startDate)} />
         <Stat label="Cliente" value={c.client ? <Link className="text-base text-brand-700 hover:underline" href={`/clientes/${c.client.id}`}>{c.client.tradeName}</Link> : "—"} />
       </div>
