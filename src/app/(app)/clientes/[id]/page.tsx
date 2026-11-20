@@ -2,12 +2,11 @@ import Link from "next/link";
 import {
   Briefcase,
   CalendarCheck,
-  FileCheck2,
+  Hourglass,
   FileSignature,
   FolderKanban,
   History,
   Landmark,
-  LayoutDashboard,
   Mail,
   Pencil,
   Phone,
@@ -91,13 +90,7 @@ const TABS: Array<{
     finance: unknown,
   ) => boolean;
 }> = [
-  { key: "resumo", label: "Resumo", icon: LayoutDashboard, show: () => true },
-  {
-    key: "documentos",
-    label: "Documentos",
-    icon: FileCheck2,
-    show: () => true,
-  },
+  { key: "dados", label: "Dados", icon: UserRound, show: () => true },
   {
     key: "financeiro",
     label: "Financeiro",
@@ -108,17 +101,24 @@ const TABS: Array<{
       e.contracts.length > 0 ||
       e.proposals.length > 0,
   },
-  { key: "jornada", label: "Jornada", icon: Workflow, show: () => true },
   { key: "bancos", label: "Bancos", icon: Landmark, show: () => true },
   { key: "cofre", label: "Cofre", icon: KeyRound, show: () => true },
-  { key: "pops", label: "POPs", icon: BookOpenCheck, show: () => true },
-  { key: "particularidades", label: "Particularidades", icon: StickyNote, show: () => true },
+  { key: "onboarding", label: "Onboarding", icon: Workflow, show: () => true },
+  { key: "rotinas", label: "Rotina", icon: Repeat, show: () => true },
+  { key: "pops", label: "POPs e particularidades", icon: BookOpenCheck, show: () => true },
+  { key: "pendencias", label: "Pendências", icon: Hourglass, show: () => true },
   { key: "atas", label: "Atas", icon: NotebookPen, show: () => true },
   { key: "projetos", label: "Projetos", icon: FolderKanban, show: () => true },
-  { key: "rotinas", label: "Rotinas", icon: Repeat, show: () => true },
-  { key: "cadastro", label: "Cadastro", icon: UserRound, show: () => true },
   { key: "historico", label: "Histórico", icon: History, show: () => true },
 ];
+
+const LEGACY_TABS: Record<string, string> = {
+  resumo: "rotinas",
+  cadastro: "dados",
+  jornada: "onboarding",
+  documentos: "pendencias",
+  particularidades: "pops",
+};
 
 export const metadata = { title: "Painel do cliente" };
 
@@ -132,9 +132,8 @@ export default async function ClientPage({
   const actor = await requireActor();
   const { id } = await params;
   const sp = await searchParams;
-  const aba = TABS.some((t) => t.key === sp.aba)
-    ? (sp.aba as string)
-    : "resumo";
+  const requested = LEGACY_TABS[sp.aba ?? ""] ?? sp.aba;
+  const aba = TABS.some((t) => t.key === requested) ? (requested as string) : "dados";
   const competence = isCompetence(sp.competencia)
     ? sp.competencia
     : previousCompetence(instantToLocalDate(new Date(), APP_TIMEZONE));
@@ -159,7 +158,7 @@ export default async function ClientPage({
     getRunningTimer(actor),
     clientPanelExtras(actor, id),
     clientIndicators(actor, id),
-    listTasks(actor, { clientId: id, open: true, pageSize: 15 }),
+    listTasks(actor, { clientId: id, open: true, pageSize: aba === "pendencias" ? 50 : 15 }),
     listTasks(actor, {
       clientId: id,
       status: ["CONCLUIDA"],
@@ -174,8 +173,8 @@ export default async function ClientPage({
     aba === "cofre" ? vaultAccessLog(actor, id) : Promise.resolve([]),
     aba === "pops" ? listClientProcedures(actor, id) : Promise.resolve([]),
     aba === "pops" && can(actor, "procedures.manage") ? procedureOptions(actor) : Promise.resolve([]),
-    aba === "particularidades" || aba === "atas" ? listClientNotes(actor, id, aba === "atas" ? "ATA" : "PARTICULARIDADE") : Promise.resolve([]),
-    aba === "jornada" ? esteiraProgress(actor, { clientId: id }) : Promise.resolve({}),
+    aba === "pops" || aba === "atas" ? listClientNotes(actor, id, aba === "atas" ? "ATA" : "PARTICULARIDADE") : Promise.resolve([]),
+    aba === "onboarding" ? esteiraProgress(actor, { clientId: id }) : Promise.resolve({}),
   ]);
   const routineForm =
     aba === "rotinas" && can(actor, "recurrences.manage")
@@ -199,6 +198,10 @@ export default async function ClientPage({
     ? await clientMonthSummary(actor, id)
     : null;
   const now = new Date();
+  const ours = openTasks.rows.filter((t) => t.status === "A_FAZER" || t.status === "EM_ANDAMENTO" || t.status === "EM_REVISAO");
+  const clientSide = pendings.rows.filter((p) => p.type === "CLIENTE");
+  const thirdSide = pendings.rows.filter((p) => p.type === "TERCEIRO");
+  const missingDocs = documents.filter((d) => !d.receivedAt);
 
   return (
     <>
@@ -216,6 +219,9 @@ export default async function ClientPage({
             </p>
             <h1 className="mt-1.5 flex flex-wrap items-center gap-3 font-serif text-[1.9rem] leading-tight text-brand-100">
               {client.tradeName} <ClientStatusBadge status={client.status} />
+              {client.journeyStage && (
+                <span className="rounded-full bg-white/10 px-2.5 py-0.5 font-sans text-xs font-medium text-brand-100">{STAGE_LABEL[client.journeyStage]}</span>
+              )}
               {client.archivedAt && (
                 <span className="rounded bg-zinc-200 px-2 py-0.5 font-sans text-xs text-zinc-700">
                   Arquivado
@@ -333,7 +339,7 @@ export default async function ClientPage({
         ))}
       </nav>
 
-      {aba === "resumo" && (
+      {aba === "rotinas" && (
         <>
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <Stat
@@ -403,7 +409,7 @@ export default async function ClientPage({
                         Complete bancos e sistema em <Link href={`/clientes/${id}?aba=bancos`} className="font-medium text-brand-700 hover:underline">Bancos</Link> e guarde os acessos no <Link href={`/clientes/${id}?aba=cofre`} className="font-medium text-brand-700 hover:underline">Cofre</Link>.
                       </li>
                       <li>
-                        Registre o que é específico dele em <Link href={`/clientes/${id}?aba=particularidades`} className="font-medium text-brand-700 hover:underline">Particularidades</Link>.
+                        Registre o que é específico dele em <Link href={`/clientes/${id}?aba=pops`} className="font-medium text-brand-700 hover:underline">Particularidades</Link>.
                       </li>
                       <li>
                         Crie as rotinas do mês em <Link href="/rotinas/recorrencias" className="font-medium text-brand-700 hover:underline">Modelos e recorrências</Link>.
@@ -414,33 +420,6 @@ export default async function ClientPage({
                     </ol>
                   </div>
                 </div>
-              )}
-            </Card>
-
-            <Card title="Pendências em aberto">
-              {pendings.rows.length ? (
-                <ul className="divide-y divide-slate-100">
-                  {pendings.rows.map((p) => (
-                    <li key={p.id} className="py-2 text-sm">
-                      <Link
-                        href={`/tarefas/${p.task.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {p.task.title}
-                      </Link>
-                      <p>{p.reason}</p>
-                      <p className="text-xs text-slate-500">
-                        Aguardando {PENDING_TYPE_LABEL[p.type].toLowerCase()} há{" "}
-                        {waitingTime(p.requestedAt, now)} · acompanhar em{" "}
-                        {fmtLocalDate(dbDateToLocalDate(p.followUpAt))}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-slate-500">
-                  Nenhuma pendência em aberto.
-                </p>
               )}
             </Card>
 
@@ -462,12 +441,44 @@ export default async function ClientPage({
         </>
       )}
 
-      {aba === "documentos" && (
-        <div className="max-w-2xl">
-          <Card
-            title="Documentos do cliente"
-            description="O que o cliente precisa enviar por mês"
-          >
+      {aba === "pendencias" && (
+        <div className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Stat label="Dependem de nós" value={String(ours.length)} tone={ours.some((t) => t.dueAt < now) ? "danger" : "default"} hint="Tarefas abertas com a equipe" />
+            <Stat label="Dependem do cliente" value={String(clientSide.length + missingDocs.length)} tone="warning" hint="Pendências e documentos" />
+            <Stat label="Dependem de terceiros" value={String(thirdSide.length)} tone="info" hint="Banco, contador, órgãos" />
+          </div>
+
+          <Card title="Dependem de nós" description="Tarefas abertas deste cliente que estão com a equipe" bodyClassName="p-0">
+            {ours.length ? (
+              <TaskTable rows={ours} showClient={false} compact caption="Tarefas que dependem da equipe" actor={actor} running={running} />
+            ) : (
+              <p className="p-4 text-sm text-slate-500">Nada pendente com a equipe. Tudo em dia.</p>
+            )}
+          </Card>
+
+          <Card title="Dependem do cliente" description="Informações e documentos que estamos esperando dele">
+            {clientSide.length ? (
+              <ul className="divide-y divide-slate-100">
+                {clientSide.map((p) => (
+                  <li key={p.id} className="py-2 text-sm">
+                    <Link href={`/tarefas/${p.task.id}`} className="font-medium hover:underline">
+                      {p.task.title}
+                    </Link>
+                    <p>{p.reason}</p>
+                    <p className="text-xs text-slate-500">
+                      Aguardando há {waitingTime(p.requestedAt, now)}
+                      {p.respondent ? ` · com ${p.respondent}` : ""} · acompanhar em {fmtLocalDate(dbDateToLocalDate(p.followUpAt))}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-500">Nenhuma pendência com o cliente.</p>
+            )}
+          </Card>
+
+          <Card title="Documentos do mês" description="O que o cliente precisa enviar por mês. Marque o que já chegou.">
             <DocumentChecklist
               clientId={id}
               competence={competence}
@@ -478,6 +489,27 @@ export default async function ClientPage({
               }))}
             />
           </Card>
+
+          <Card title="Dependem de terceiros" description="Aguardando banco, contador, órgãos ou fornecedores">
+            {thirdSide.length ? (
+              <ul className="divide-y divide-slate-100">
+                {thirdSide.map((p) => (
+                  <li key={p.id} className="py-2 text-sm">
+                    <Link href={`/tarefas/${p.task.id}`} className="font-medium hover:underline">
+                      {p.task.title}
+                    </Link>
+                    <p>{p.reason}</p>
+                    <p className="text-xs text-slate-500">
+                      Aguardando há {waitingTime(p.requestedAt, now)}
+                      {p.respondent ? ` · com ${p.respondent}` : ""} · acompanhar em {fmtLocalDate(dbDateToLocalDate(p.followUpAt))}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-500">Nenhuma pendência com terceiros.</p>
+            )}
+          </Card>
         </div>
       )}
 
@@ -485,13 +517,28 @@ export default async function ClientPage({
 
       {aba === "cofre" && <ClientVaultPanel clientId={id} items={vaultItems} log={vaultLog} canEdit={manage} configured={vaultConfigured()} />}
 
-      {aba === "pops" && <ClientProceduresPanel clientId={id} rows={clientPops} standard={standardPops} canManage={can(actor, "procedures.manage")} />}
-
-      {(aba === "particularidades" || aba === "atas") && (
-        <ClientNotesPanel clientId={id} kind={aba === "atas" ? "ATA" : "PARTICULARIDADE"} rows={clientNotes} canDelete={manage} />
+      {aba === "pops" && (
+        <div className="space-y-8">
+          <section aria-labelledby="sec-part">
+            <h2 id="sec-part" className="mb-3 text-sm font-semibold tracking-wide text-brand-900 uppercase">
+              Particularidades
+            </h2>
+            <ClientNotesPanel clientId={id} kind="PARTICULARIDADE" rows={clientNotes} canDelete={manage} />
+          </section>
+          <section aria-labelledby="sec-pops">
+            <h2 id="sec-pops" className="mb-3 text-sm font-semibold tracking-wide text-brand-900 uppercase">
+              POPs
+            </h2>
+            <ClientProceduresPanel clientId={id} rows={clientPops} standard={standardPops} canManage={can(actor, "procedures.manage")} />
+          </section>
+        </div>
       )}
 
-      {aba === "jornada" && (
+      {aba === "atas" && (
+        <ClientNotesPanel clientId={id} kind="ATA" rows={clientNotes} canDelete={manage} />
+      )}
+
+      {aba === "onboarding" && (
         <div className="space-y-4">
           <p className="text-sm text-slate-600">
             Etapa atual: <strong>{client.journeyStage ? STAGE_LABEL[client.journeyStage] : "não definida"}</strong>
@@ -503,7 +550,7 @@ export default async function ClientPage({
             )}
           </p>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {ESTEIRAS.map((e) => {
+            {ESTEIRAS.filter((e) => e.slug === "pre-onboarding" || e.slug === "onboarding" || e.slug === "implantacao").map((e) => {
               const tone = TONE[e.tone];
               const c = esteiraCounts(e);
               const prog = (journey as Record<string, { clients: Array<{ total: number; done: number }> }>)[e.slug]?.clients[0];
@@ -812,10 +859,16 @@ export default async function ClientPage({
         </div>
       )}
 
-      {aba === "cadastro" && (
+      {aba === "dados" && (
         <div className="max-w-2xl">
           <Card title="Cadastro">
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+              <dt className="text-slate-500">CNPJ</dt>
+              <dd>{client.cnpj ? fmtCnpj(client.cnpj) : "—"}</dd>
+              <dt className="text-slate-500">Razão social</dt>
+              <dd>{client.legalName}</dd>
+              <dt className="text-slate-500">Nome fantasia</dt>
+              <dd>{client.tradeName}</dd>
               <dt className="text-slate-500">Contato</dt>
               <dd>{client.contactName ?? "—"}</dd>
               <dt className="text-slate-500">E-mail</dt>

@@ -150,7 +150,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
               <Card
                 title={`Documentos de ${fmtCompetence(wanted)}`}
                 actions={
-                  <Link className="text-sm text-brand-700 hover:underline" href={`/clientes/${project.clientId}?aba=documentos&competencia=${wanted}`}>
+                  <Link className="text-sm text-brand-700 hover:underline" href={`/clientes/${project.clientId}?aba=pendencias&competencia=${wanted}`}>
                     Abrir
                   </Link>
                 }
