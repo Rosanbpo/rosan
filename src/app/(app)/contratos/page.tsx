@@ -30,23 +30,6 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
           </Link>
         }
       />
-      <form className="card mb-4 grid grid-cols-2 gap-3 p-4 md:grid-cols-4" aria-label="Filtros de contratos">
-        <div className="col-span-2">
-          <label htmlFor="f-q" className="label text-xs">
-            Pesquisa
-          </label>
-          <input id="f-q" name="q" className="input" defaultValue={str(sp, "q")} placeholder="Cliente ou número" />
-        </div>
-        <Select name="situacao" label="Situação" value={status} options={STATUSES.map((s) => ({ value: s, label: CONTRACT_STATUS_LABEL[s] }))} />
-        <div className="flex items-end gap-2">
-          <button className="btn-primary" type="submit">
-            Filtrar
-          </button>
-          <Link href="/contratos" className="btn-secondary">
-            Limpar
-          </Link>
-        </div>
-      </form>
       {rows.length === 0 ? (
         <EmptyState title="Nenhum contrato ainda" description="Crie um contrato a partir de uma proposta ou do zero." action={<Link href="/contratos/novo" className="btn-primary">Criar contrato</Link>} />
       ) : (

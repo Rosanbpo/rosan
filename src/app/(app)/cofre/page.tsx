@@ -25,21 +25,6 @@ export default async function VaultPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader title="Cofre" description="Acessos e senhas de todos os clientes. Senhas criptografadas; cada visualização fica registrada." />
-      <form className="card mb-6 flex flex-wrap items-end gap-3 p-4" role="search">
-        <div className="min-w-56 flex-1">
-          <label htmlFor="q" className="label">
-            Buscar
-          </label>
-          <input id="q" name="q" defaultValue={q} className="input" placeholder="Cliente, sistema, usuário ou link" />
-        </div>
-        <Select name="tipo" label="Tipo" value={category} options={VAULT_CATEGORIES.map((c) => ({ value: c, label: VAULT_CATEGORY_LABEL[c] }))} />
-        <button className="btn-primary" type="submit">
-          Filtrar
-        </button>
-        <Link href="/cofre" className="btn-secondary">
-          Limpar
-        </Link>
-      </form>
       {items.length === 0 ? (
         <EmptyState title="Nenhum acesso encontrado" description="Guarde os acessos na aba Cofre de cada cliente." />
       ) : (

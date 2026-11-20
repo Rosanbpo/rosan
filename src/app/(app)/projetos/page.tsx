@@ -33,23 +33,6 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
           )
         }
       />
-      <form className="card mb-4 grid grid-cols-2 gap-3 p-4 md:grid-cols-4" aria-label="Filtros de projetos">
-        <div className="col-span-2">
-          <label htmlFor="f-q" className="label text-xs">
-            Pesquisa
-          </label>
-          <input id="f-q" name="q" className="input" defaultValue={str(sp, "q")} placeholder="Nome do projeto" />
-        </div>
-        <Select name="situacao" label="Situação" value={status} placeholder="Em aberto" options={PROJECT_STATUSES.map((s) => ({ value: s, label: PROJECT_STATUS_LABEL[s] }))} />
-        <div className="flex items-end gap-2">
-          <button className="btn-primary" type="submit">
-            Filtrar
-          </button>
-          <Link href="/projetos" className="btn-secondary">
-            Limpar
-          </Link>
-        </div>
-      </form>
 
       {rows.length === 0 ? (
         <EmptyState

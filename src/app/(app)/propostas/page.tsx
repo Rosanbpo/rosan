@@ -33,23 +33,6 @@ export default async function ProposalsPage({ searchParams }: { searchParams: Pr
           </Link>
         }
       />
-      <form className="card mb-4 grid grid-cols-2 gap-3 p-4 md:grid-cols-4" aria-label="Filtros de propostas">
-        <div className="col-span-2">
-          <label htmlFor="f-q" className="label text-xs">
-            Pesquisa
-          </label>
-          <input id="f-q" name="q" className="input" defaultValue={str(sp, "q")} placeholder="Empresa ou número" />
-        </div>
-        <Select name="situacao" label="Situação" value={status} options={PROPOSAL_STATUSES.map((s) => ({ value: s, label: PROPOSAL_STATUS_LABEL[s] }))} />
-        <div className="flex items-end gap-2">
-          <button className="btn-primary" type="submit">
-            Filtrar
-          </button>
-          <Link href="/propostas" className="btn-secondary">
-            Limpar
-          </Link>
-        </div>
-      </form>
 
       {rows.length === 0 ? (
         <EmptyState title="Nenhuma proposta ainda" description="Crie a primeira proposta a partir de um lead ou do zero." action={<Link href="/propostas/nova" className="btn-primary">Criar proposta</Link>} />

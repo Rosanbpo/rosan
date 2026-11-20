@@ -52,23 +52,6 @@ export default async function CrmPage({ searchParams }: { searchParams: Promise<
         <Stat label="Ações atrasadas" value={overdueActions} tone={overdueActions ? "danger" : "default"} hint="Próximas ações com data vencida" />
       </div>
 
-      <form className="card mb-4 flex flex-wrap items-end gap-3 p-4" aria-label="Filtros do CRM">
-        <div className="min-w-60 flex-1">
-          <label htmlFor="f-q" className="label text-xs">
-            Pesquisa
-          </label>
-          <input id="f-q" name="q" className="input" defaultValue={q} placeholder="Empresa ou contato" />
-        </div>
-        <label className="flex items-center gap-2 pb-2 text-sm">
-          <input type="checkbox" name="encerrados" value="1" defaultChecked={showClosed} /> Mostrar ganhos e perdidos
-        </label>
-        <button className="btn-primary" type="submit">
-          Filtrar
-        </button>
-        <Link href="/crm" className="btn-secondary">
-          Limpar
-        </Link>
-      </form>
 
       {leads.length === 0 ? (
         <EmptyState
