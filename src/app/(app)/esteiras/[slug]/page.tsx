@@ -4,18 +4,16 @@ import { applyEsteiraAction } from "@/app/actions/esteiras";
 import { EsteiraApplyForm } from "@/components/esteira-apply-form";
 import { EsteiraIcon } from "@/components/esteira-icon";
 import { instantToLocalDate } from "@/domain/dates";
-import { esteiraCounts, getEsteira } from "@/domain/esteiras";
+import { esteiraCounts } from "@/domain/esteiras";
+import { can } from "@/domain/permissions";
 import { cx, TONE } from "@/lib/ui";
 import { APP_TIMEZONE } from "@/server/config";
 import { requirePermission } from "@/server/context";
 import { clientOptions } from "@/server/services/clients";
-import { esteiraProgress } from "@/server/services/esteiras";
+import { esteiraProgress, getEsteiraFor } from "@/server/services/esteiras";
 import { assignableUsers } from "@/server/services/tasks";
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const e = getEsteira((await params).slug);
-  return { title: e ? `Esteira ${e.name}` : "Esteira" };
-}
+export const metadata = { title: "Esteira" };
 
 export default async function EsteiraPage({
   params,
@@ -26,9 +24,9 @@ export default async function EsteiraPage({
 }) {
   const { slug } = await params;
   const sp = await searchParams;
-  const esteira = getEsteira(slug);
-  if (!esteira) notFound();
   const actor = await requirePermission("projects.manage");
+  const esteira = await getEsteiraFor(actor.organizationId, slug);
+  if (!esteira) notFound();
   const [clients, people, progress] = await Promise.all([clientOptions(actor), assignableUsers(actor), esteiraProgress(actor)]);
   const tone = TONE[esteira.tone];
   const c = esteiraCounts(esteira);
@@ -45,12 +43,17 @@ export default async function EsteiraPage({
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20">
               <EsteiraIcon icon={esteira.icon} className="h-8 w-8" />
             </span>
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-semibold">{esteira.name}</h1>
               <p className="text-sm text-white/85">
                 {esteira.summary} · {c.stages} etapas · {c.tasks} tarefas · {c.items} itens de checklist
               </p>
             </div>
+            {can(actor, "templates.manage") && (
+              <Link href={`/esteiras/${esteira.slug}/editar`} className="rounded-lg bg-white/20 px-3 py-2 text-sm font-medium hover:bg-white/30">
+                ✏️ Editar esteira
+              </Link>
+            )}
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { addDays, localDateTimeToInstant, localDateToDbDate, weekday } from "@/domain/dates";
-import { getEsteira, taskKey } from "@/domain/esteiras";
+import { ESTEIRAS, getEsteira as getDefaultEsteira, taskKey, textToStages, type Esteira, type EsteiraStage } from "@/domain/esteiras";
 import { assertCan, NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
 import { APP_TIMEZONE } from "../config";
 import { prisma } from "../db";
@@ -19,7 +19,7 @@ const businessDay = (date: string) => {
 export async function applyEsteira(actor: Actor, raw: unknown) {
   assertCan(actor, "projects.manage");
   const input = parseInput(esteiraApplySchema, raw);
-  const esteira = getEsteira(input.slug);
+  const esteira = await getEsteiraFor(actor.organizationId, input.slug);
   if (!esteira) throw new NotFoundError("Esteira não encontrada.");
   await assertClientAccess(actor, input.clientId);
   if (input.ownerId) {
@@ -131,4 +131,36 @@ export async function esteiraProgress(actor: Actor, opts: { clientId?: string } 
   }
   for (const e of Object.values(out)) e.clients.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   return out;
+}
+
+/** Esteiras da empresa: o catálogo padrão com as personalizações salvas por cima. */
+export async function listEsteirasFor(organizationId: string): Promise<Array<Esteira & { custom: boolean }>> {
+  const rows = await prisma.esteiraCustom.findMany({ where: { organizationId } });
+  const by = new Map(rows.map((r) => [r.slug, r.stages as unknown as EsteiraStage[]]));
+  return ESTEIRAS.map((e) => ({ ...e, stages: by.get(e.slug) ?? e.stages, custom: by.has(e.slug) }));
+}
+
+export async function getEsteiraFor(organizationId: string, slug: string) {
+  return (await listEsteirasFor(organizationId)).find((e) => e.slug === slug);
+}
+
+export async function saveEsteiraText(actor: Actor, slug: string, text: string) {
+  assertCan(actor, "templates.manage");
+  if (!getDefaultEsteira(slug)) throw new NotFoundError("Esteira não encontrada.");
+  let stages: EsteiraStage[];
+  try {
+    stages = textToStages(text);
+  } catch (e) {
+    throw new ValidationError((e as Error).message, { text: (e as Error).message });
+  }
+  await prisma.esteiraCustom.upsert({
+    where: { organizationId_slug: { organizationId: actor.organizationId, slug } },
+    create: { organizationId: actor.organizationId, slug, stages: stages as unknown as object },
+    update: { stages: stages as unknown as object },
+  });
+}
+
+export async function resetEsteira(actor: Actor, slug: string) {
+  assertCan(actor, "templates.manage");
+  await prisma.esteiraCustom.deleteMany({ where: { organizationId: actor.organizationId, slug } });
 }

@@ -19,3 +19,22 @@ export async function applyEsteiraAction(_: ActionState, fd: FormData): Promise<
   }
   return res;
 }
+
+export async function saveEsteiraAction(slug: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  const res = await runAction(async (actor) => {
+    await esteiras.saveEsteiraText(actor, slug, String(fd.get("text") ?? ""));
+  });
+  if (res?.ok) {
+    revalidatePath("/esteiras");
+    redirect(`/esteiras/${slug}?salva=1`);
+  }
+  return res;
+}
+
+export async function resetEsteiraAction(slug: string) {
+  await runAction(async (actor) => {
+    await esteiras.resetEsteira(actor, slug);
+  });
+  revalidatePath("/esteiras");
+  redirect(`/esteiras/${slug}`);
+}

@@ -36,11 +36,11 @@ import { ClientNotesPanel } from "@/components/client-notes-panel";
 import { ClientProceduresPanel } from "@/components/client-procedures-panel";
 import { BankAccountsPanel } from "@/components/bank-accounts-panel";
 import { EsteiraIcon } from "@/components/esteira-icon";
-import { ESTEIRAS, esteiraCounts } from "@/domain/esteiras";
+import { esteiraCounts } from "@/domain/esteiras";
 import { STAGE_LABEL } from "@/domain/enums";
 import { TONE } from "@/lib/ui";
 import { listBankAccounts } from "@/server/services/bank-accounts";
-import { esteiraProgress } from "@/server/services/esteiras";
+import { esteiraProgress, listEsteirasFor } from "@/server/services/esteiras";
 import { PROPOSAL_STATUS_LABEL, type ProposalStatus } from "@/domain/proposal";
 import { can } from "@/domain/permissions";
 import { Card, EmptyState, Stat } from "@/components/ui/layout";
@@ -185,6 +185,7 @@ export default async function ClientPage({
     standardPops,
     clientNotes,
     journey,
+    ESTEIRAS,
   ] = await Promise.all([
     getRunningTimer(actor),
     clientPanelExtras(actor, id),
@@ -206,6 +207,7 @@ export default async function ClientPage({
     aba === "pops" && can(actor, "procedures.manage") ? procedureOptions(actor) : Promise.resolve([]),
     aba === "pops" || aba === "atas" ? listClientNotes(actor, id, aba === "atas" ? "ATA" : "PARTICULARIDADE") : Promise.resolve([]),
     aba === "onboarding" ? esteiraProgress(actor, { clientId: id }) : Promise.resolve({}),
+    aba === "onboarding" ? listEsteirasFor(actor.organizationId) : Promise.resolve([]),
   ]);
   const routineForm =
     aba === "rotinas" && can(actor, "recurrences.manage")

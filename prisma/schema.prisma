@@ -1213,3 +1213,14 @@ model TrainingProgress {
 
   @@id([itemId, userId])
 }
+
+/// Personalização da empresa sobre uma esteira padrão (substitui as etapas inteiras).
+model EsteiraCustom {
+  id             String   @id @default(cuid())
+  organizationId String
+  slug           String
+  stages         Json
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, slug])
+}
