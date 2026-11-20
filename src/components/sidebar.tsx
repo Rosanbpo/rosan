@@ -26,6 +26,7 @@ import {
   LineChart,
   UserMinus,
   CalendarDays,
+  Library,
   Flag,
   SlidersHorizontal,
   Menu,
@@ -64,6 +65,7 @@ const ICONS = {
   relatorios: BarChart3,
   churn: UserMinus,
   agenda: CalendarDays,
+  biblioteca: Library,
   metas: Flag,
   simulador: SlidersHorizontal,
 };

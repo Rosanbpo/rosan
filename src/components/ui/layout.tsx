@@ -4,6 +4,7 @@ import { Inbox } from "lucide-react";
 import { cx } from "@/lib/ui";
 
 const TITLE_EMOJI: Record<string, string> = {
+  "Biblioteca de materiais": "📚", "Trilha de onboarding": "🎓",
   "Agenda": "📅", "Metas da empresa": "🚩", "Simulador de cenários": "🎛️", "Saídas de clientes": "🚪", "Renovações e reajustes": "🔄",
   "Avulsas": "📥", "CRM comercial": "🎯", "Carteira e rentabilidade": "📈", "Central operacional": "🛰️", "Clientes": "🏢", "Cofre": "🔐",
   "Configurações": "⚙️", "Contratos": "✍️", "Custo por hora e planos": "🧮", "Cópia dos dados": "💾", "Documentos dos clientes": "📄",
