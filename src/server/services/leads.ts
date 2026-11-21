@@ -69,6 +69,7 @@ export async function listLeads(actor: Actor, filters: LeadFilters = {}) {
     closedAt: r.closedAt,
     contactPhone: r.contactPhone,
     updatedAt: r.updatedAt,
+    createdAt: r.createdAt,
   }));
   const forecast = weightedForecast(leads);
   const won = leads.filter((l) => l.stage === "GANHO").length;
@@ -213,3 +214,30 @@ export async function convertLeadToClient(actor: Actor, id: string) {
 }
 
 export const STAGES_FOR_BOARD = LEAD_STAGES;
+
+// ---- Mensagens padrão -------------------------------------------------------
+
+export async function listMyMessageTemplates(actor: Actor) {
+  assertCan(actor, "crm.manage");
+  return prisma.messageTemplate.findMany({
+    where: { organizationId: actor.organizationId, authorId: actor.userId },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function createMessageTemplate(actor: Actor, raw: Record<string, unknown>) {
+  assertCan(actor, "crm.manage");
+  const title = String(raw.title ?? "").trim().slice(0, 120);
+  const body = String(raw.body ?? "").trim().slice(0, 4000);
+  if (!title) throw new ValidationError("Informe o título.", { title: "Informe o título." });
+  if (!body) throw new ValidationError("Escreva o texto da mensagem.", { body: "Escreva o texto da mensagem." });
+  const stage = String(raw.stage ?? "");
+  return prisma.messageTemplate.create({
+    data: { organizationId: actor.organizationId, authorId: actor.userId, title, body, stage: (LEAD_STAGES as readonly string[]).includes(stage) ? stage : null },
+  });
+}
+
+export async function deleteMessageTemplate(actor: Actor, id: string) {
+  assertCan(actor, "crm.manage");
+  await prisma.messageTemplate.deleteMany({ where: { id, organizationId: actor.organizationId, authorId: actor.userId } });
+}

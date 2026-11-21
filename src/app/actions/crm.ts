@@ -56,3 +56,18 @@ export async function advanceLeadAction(id: string, stage: string): Promise<void
   await leads.changeLeadStage(actor, id, { stage });
   revalidatePath("/crm");
 }
+
+export async function createMessageTemplateAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await leads.createMessageTemplate(actor, formObject(fd));
+    revalidatePath("/crm");
+    return "Template criado.";
+  });
+}
+
+export async function deleteMessageTemplateAction(id: string): Promise<void> {
+  await runAction(async (actor) => {
+    await leads.deleteMessageTemplate(actor, id);
+    revalidatePath("/crm");
+  });
+}

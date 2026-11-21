@@ -34,28 +34,24 @@ export default async function EsteiraPage({
 
   return (
     <>
-      <div className={cx("mb-6 overflow-hidden rounded-2xl bg-gradient-to-r text-white shadow-sm", tone.band)}>
-        <div className="px-6 py-5">
-          <Link href="/esteiras" className="text-sm text-white/80 hover:text-white hover:underline">
-            ← Esteiras
-          </Link>
-          <div className="mt-2 flex items-center gap-4">
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20">
-              <EsteiraIcon icon={esteira.icon} className="h-8 w-8" />
-            </span>
-            <div className="flex-1">
-              <h1 className="text-2xl font-semibold">{esteira.name}</h1>
-              <p className="text-sm text-white/85">
-                {esteira.summary} · {c.stages} etapas · {c.tasks} tarefas · {c.items} itens de checklist
-              </p>
-            </div>
-            {can(actor, "templates.manage") && (
-              <Link href={`/esteiras/${esteira.slug}/editar`} className="rounded-lg bg-white/20 px-3 py-2 text-sm font-medium hover:bg-white/30">
-                ✏️ Editar esteira
-              </Link>
-            )}
-          </div>
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <Link href="/esteiras" className="btn-secondary btn-sm">
+          ← Voltar
+        </Link>
+        <span className={cx("flex h-9 w-9 items-center justify-center rounded-lg", tone.soft, tone.text)}>
+          <EsteiraIcon icon={esteira.icon} className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-semibold text-slate-900">{esteira.name}</h1>
+          <p className="text-xs text-slate-500">
+            {esteira.summary} · {c.stages} etapas · {c.tasks} tarefas · {c.items} itens de checklist
+          </p>
         </div>
+        {can(actor, "templates.manage") && (
+          <Link href={`/esteiras/${esteira.slug}/editar`} className="btn-secondary btn-sm">
+            ✏️ Editar esteira
+          </Link>
+        )}
       </div>
 
       {using.length > 0 && (

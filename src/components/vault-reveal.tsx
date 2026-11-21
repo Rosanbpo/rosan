@@ -53,9 +53,12 @@ export function VaultReveal({ clientId, itemId }: { clientId: string; itemId: st
           </button>
         </>
       ) : (
-        <button type="button" onClick={reveal} disabled={busy} className="btn-secondary btn-sm">
-          <Eye aria-hidden className="h-3.5 w-3.5" /> {busy ? "Abrindo…" : "Ver senha"}
-        </button>
+        <>
+          <span aria-hidden className="tracking-widest text-slate-400">••••••••</span>
+          <button type="button" onClick={reveal} disabled={busy} className="btn-secondary btn-sm">
+            <Eye aria-hidden className="h-3.5 w-3.5" /> {busy ? "Abrindo…" : "Revelar"}
+          </button>
+        </>
       )}
       {msg && (
         <span role="status" className="text-xs text-slate-500">

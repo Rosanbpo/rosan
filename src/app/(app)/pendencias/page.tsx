@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { dbDateToLocalDate, instantToLocalDate } from "@/domain/dates";
 import { PENDING_TYPE_LABEL, type TaskStatus } from "@/domain/enums";
-import { EmptyState, PageHeader, Pagination } from "@/components/ui/layout";
+import { PageHeader, Pagination } from "@/components/ui/layout";
 import { StatusBadge } from "@/components/ui/badges";
 import { Select } from "@/components/filter-select";
+import { NewPending } from "@/components/new-pending";
 import { fmtDateTime, fmtLocalDate, waitingTime } from "@/lib/format";
 import { cx } from "@/lib/ui";
 import { APP_TIMEZONE } from "@/server/config";
@@ -32,9 +33,13 @@ export default async function PendingsPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <PageHeader
-        title="Pendências externas"
+        title="Pendências"
         description="Tarefas aguardando cliente ou terceiros. Nenhuma mensagem é enviada automaticamente: use esta lista para cobrar no canal combinado com o cliente."
+        actions={<NewPending clients={clients.map((c) => ({ id: c.id, tradeName: c.tradeName }))} today={today} />}
       />
+      <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-orange-700">
+        <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-orange-500" /> Pendências ({result.total})
+      </h2>
       <form className="card mb-4 grid grid-cols-2 gap-3 p-4 md:grid-cols-5" aria-label="Filtros de pendências">
         <Select name="clientId" label="Cliente" value={filters.clientId} options={clients.map((c) => ({ value: c.id, label: c.tradeName }))} />
         <Select
@@ -60,12 +65,13 @@ export default async function PendingsPage({ searchParams }: { searchParams: Pro
       </form>
 
       {result.total === 0 ? (
-        <EmptyState
-          title="Nenhuma pendência em aberto"
-          description="Quando uma tarefa for marcada como “aguardando cliente” ou “aguardando terceiro”, ela aparecerá aqui com o próximo acompanhamento."
-        />
+        <div className="card border-l-4 border-l-orange-400 py-14 text-center">
+          <div className="text-4xl" aria-hidden>✅</div>
+          <p className="mt-2 font-semibold text-slate-900">Sem pendências abertas</p>
+          <p className="text-sm text-slate-500">Todas as pendências foram resolvidas.</p>
+        </div>
       ) : (
-        <div className="card">
+        <div className="card border-l-4 border-l-orange-400">
           <div className="overflow-x-auto">
             <table className="table">
               <caption className="sr-only">Pendências externas em aberto</caption>

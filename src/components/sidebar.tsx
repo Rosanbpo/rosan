@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
   BarChart3,
+  Compass,
   Home,
   Inbox,
   Users,
@@ -54,6 +55,7 @@ const ICONS = {
   carteira: LineChart,
   crm: Target,
   pops: BookOpen,
+  cultura: Compass,
   projetos: FolderKanban,
   propostas: FileText,
   precificacao: Calculator,

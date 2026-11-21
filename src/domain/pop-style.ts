@@ -15,3 +15,21 @@ export const POP_COVER: Record<TaskCategory, string> = {
 };
 
 export const slugify = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+/** Cores pastel das colunas (visão "Por categoria"), no estilo do Notion. */
+export const POP_COLUMN: Record<TaskCategory, { col: string; chip: string; card: string }> = {
+  CONTAS_A_PAGAR: { col: "bg-sky-50/70", chip: "bg-sky-100 text-sky-800", card: "border-sky-100" },
+  CONTAS_A_RECEBER: { col: "bg-emerald-50/70", chip: "bg-emerald-100 text-emerald-800", card: "border-emerald-100" },
+  CONCILIACAO_BANCARIA: { col: "bg-indigo-50/70", chip: "bg-indigo-100 text-indigo-800", card: "border-indigo-100" },
+  COBRANCA: { col: "bg-rose-50/70", chip: "bg-rose-100 text-rose-800", card: "border-rose-100" },
+  FLUXO_DE_CAIXA: { col: "bg-cyan-50/70", chip: "bg-cyan-100 text-cyan-800", card: "border-cyan-100" },
+  DOCUMENTACAO: { col: "bg-amber-50/70", chip: "bg-amber-100 text-amber-800", card: "border-amber-100" },
+  FECHAMENTO_MENSAL: { col: "bg-violet-50/70", chip: "bg-violet-100 text-violet-800", card: "border-violet-100" },
+  RELATORIOS_GERENCIAIS: { col: "bg-fuchsia-50/70", chip: "bg-fuchsia-100 text-fuchsia-800", card: "border-fuchsia-100" },
+  REUNIAO_CLIENTE: { col: "bg-teal-50/70", chip: "bg-teal-100 text-teal-800", card: "border-teal-100" },
+  IMPLANTACAO: { col: "bg-orange-50/70", chip: "bg-orange-100 text-orange-800", card: "border-orange-100" },
+  EMISSAO_NF: { col: "bg-lime-50/70", chip: "bg-lime-100 text-lime-800", card: "border-lime-100" },
+  RELACIONAMENTO: { col: "bg-pink-50/70", chip: "bg-pink-100 text-pink-800", card: "border-pink-100" },
+  ESTRATEGICO: { col: "bg-yellow-50/70", chip: "bg-yellow-100 text-yellow-800", card: "border-yellow-100" },
+  OUTRAS: { col: "bg-slate-100/70", chip: "bg-slate-200 text-slate-700", card: "border-slate-200" },
+};
