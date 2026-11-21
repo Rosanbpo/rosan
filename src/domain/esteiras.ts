@@ -359,6 +359,13 @@ export function esteiraCounts(e: Esteira) {
  * Responsável e janela de prazo originais do Controle de Implantação da Rosan.
  * O prazo da tarefa usa o fim da janela; aqui fica registrada a janela inteira.
  */
+/** "Dia 1-3" vira o dia 2 depois da data de início (Dia 1 = a própria data); "Sem. 2" vira o dia 13 (fim da semana 2). */
+function windowEnd(w: string): number {
+  const n = (w.match(/\d+/g) ?? ["1"]).map(Number);
+  const last = n[n.length - 1];
+  return w.startsWith("Sem") ? last * 7 - 1 : last - 1;
+}
+
 const CONTROLE: Record<string, [string, string]> = {
   "Reunião de diagnóstico financeiro": ["BPO", "Dia 1"],
   "Assinatura do contrato de prestação de serviços": ["Cliente + BPO", "Dia 1-3"],
@@ -391,7 +398,7 @@ const CONTROLE: Record<string, [string, string]> = {
 };
 for (const e of ESTEIRAS) for (const st of e.stages) for (const k of st.tasks) {
   const c = CONTROLE[k.title];
-  if (c) { const info = `Responsável: ${c[0]}. Prazo no controle de implantação: ${c[1]}.`; k.description = k.description ? `${k.description} ${info}` : info; }
+  if (c) { k.day = windowEnd(c[1]); const info = `Responsável: ${c[0]}. Prazo no controle de implantação: ${c[1]}, contado a partir da data de início da etapa.`; k.description = k.description ? `${k.description} ${info}` : info; }
 }
 
 export function taskKey(slug: string, stageIdx: number, taskIdx: number) {

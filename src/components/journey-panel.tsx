@@ -1,4 +1,4 @@
-import { applyJourneyStageAction } from "@/app/actions/journey";
+import { applyJourneyStageAction, setStageStartAction } from "@/app/actions/journey";
 import { type JourneyStage } from "@/domain/enums";
 import { cx } from "@/lib/ui";
 import type { JourneyView } from "@/server/services/journey";
@@ -61,11 +61,23 @@ export function JourneyPanel({
                         <input type="hidden" name="clientId" value={target.clientId ?? ""} />
                         <input type="hidden" name="leadId" value={target.leadId ?? ""} />
                         <input type="hidden" name="back" value={back} />
-                        <label className="text-xs"><span className="font-medium text-slate-600">Início</span><input type="date" name="startDate" defaultValue={today} required className="input mt-0.5" /></label>
+                        <label className="text-xs"><span className="font-medium text-slate-600">📅 Início desta etapa (Dia 1)</span><input type="date" name="startDate" defaultValue={s.startSaved ? s.startDate : today} required className="input mt-0.5" /></label>
                         <label className="text-xs"><span className="font-medium text-slate-600">Responsável</span>
                           <select name="ownerId" className="input mt-0.5"><option value="">Sem responsável</option>{people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
                         </label>
                         <button type="submit" className="btn-primary btn-sm">⚡ Gerar tarefas desta etapa</button>
+                      </form>
+                    )}
+                    {canGenerate && s.generatedCount > 0 && (
+                      <form action={setStageStartAction} className="mt-2 flex flex-wrap items-end gap-2 rounded-lg bg-slate-50 p-2.5">
+                        <input type="hidden" name="slug" value={s.slug} />
+                        <input type="hidden" name="stageIdx" value={s.stageIdx} />
+                        <input type="hidden" name="clientId" value={target.clientId ?? ""} />
+                        <input type="hidden" name="leadId" value={target.leadId ?? ""} />
+                        <input type="hidden" name="back" value={back} />
+                        <label className="text-xs"><span className="font-medium text-slate-600">📅 Início desta etapa (Dia 1)</span><input type="date" name="startDate" defaultValue={s.startDate} required className="input mt-0.5" /></label>
+                        <label className="flex items-center gap-1.5 pb-2 text-xs text-slate-600"><input type="checkbox" name="recalc" defaultChecked /> Refazer o prazo das tarefas ainda abertas</label>
+                        <button type="submit" className="btn-secondary btn-sm">Atualizar data</button>
                       </form>
                     )}
                     <ol className="mt-4">
