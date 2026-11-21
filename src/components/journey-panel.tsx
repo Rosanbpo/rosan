@@ -78,7 +78,7 @@ export function JourneyPanel({
                             priority={t.priority} description={t.description} checklist={t.checklist} tone={tone} done={isDone}
                             status={g ? { label: STATUS_LABEL[g.status] ?? g.status, tone: isDone ? "done" : g.status === "CANCELADA" ? "off" : "doing", href: `/tarefas/${g.id}` } : { label: "não gerada", tone: "none" }}
                           >
-                            <StandardsBox count={t.assets.length}><JourneyAssets assets={t.assets} vars={vars} /></StandardsBox>
+                            <StandardsBox count={t.assets.length}><JourneyAssets assets={t.assets} vars={vars} scriptHref={target.leadId ? `/crm/${target.leadId}/roteiro` : undefined} /></StandardsBox>
                           </TaskCard>
                         );
                       })}

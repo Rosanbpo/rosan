@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui/layout";
+import { ScriptPreview } from "@/components/journey-assets";
+import { SCRIPT_TITLE } from "@/domain/diagnosis-script";
 import { JourneyMap, PhaseHeader, StageTitle, StandardsBox, TaskCard, toneOf } from "@/components/journey-ui";
 import { CopyButton } from "@/components/copy-button";
 import {
@@ -118,7 +120,8 @@ function AssetCard({ a, options, admin }: { a: AssetRow; options: TaskOpt; admin
       <summary className="cursor-pointer px-2.5 py-1 text-xs font-medium text-brand-800">{ASSET_EMOJI[a.kind as AssetKind]} {ASSET_LABEL[a.kind as AssetKind]}: {a.title}</summary>
       <div className="space-y-2 border-t border-hair p-2.5">
         {a.subject && <p className="text-xs text-slate-500">Assunto: <b className="text-slate-700">{a.subject}</b></p>}
-        {a.body && <pre className="max-h-56 overflow-auto whitespace-pre-wrap font-sans text-sm text-slate-700">{a.body}</pre>}
+        {a.body && (a.title === SCRIPT_TITLE ? <ScriptPreview body={a.body} /> : <pre className="max-h-56 overflow-auto whitespace-pre-wrap font-sans text-sm text-slate-700">{a.body}</pre>)}
+        {a.title === SCRIPT_TITLE && <p className="rounded-lg bg-white p-2 text-xs text-slate-500">Este roteiro vira o checklist de cada lead (aba CRM, botão “Abrir roteiro”). Para editar: <code>## Parte | 7 min</code> abre uma parte, <code>- Rótulo :: texto</code> é uma fala ou pergunta e <code>&gt; texto</code> é o aviso final.</p>}
         <p className="text-xs text-slate-400">Aparece em {a.taskRefs.length} tarefa(s).</p>
         <div className="flex flex-wrap items-center gap-2">
           {a.body && <CopyButton text={a.body} label="Copiar" />}
