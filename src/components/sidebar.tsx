@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
   BarChart3,
+  PieChart,
   Compass,
   Home,
   Inbox,
@@ -54,6 +55,7 @@ const ICONS = {
   conta: UserCircle,
   carteira: LineChart,
   crm: Target,
+  comercial: PieChart,
   pops: BookOpen,
   cultura: Compass,
   projetos: FolderKanban,
