@@ -651,6 +651,19 @@ model Lead {
   @@index([organizationId, nextActionAt])
 }
 
+/// Mensagens padrão do comercial criadas pela equipe.
+model MessageTemplate {
+  id             String   @id @default(cuid())
+  organizationId String
+  authorId       String
+  title          String
+  stage          String?
+  body           String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, authorId])
+}
+
 model LeadActivity {
   id        String   @id @default(cuid())
   leadId    String
