@@ -1,4 +1,4 @@
-import { addDays, localDateTimeToInstant, localDateToDbDate, weekday } from "@/domain/dates";
+import { addDays, dbDateToLocalDate, localDateTimeToInstant, localDateToDbDate, weekday } from "@/domain/dates";
 import { JOURNEY_STAGES, type JourneyStage } from "@/domain/enums";
 import { DEFAULT_SCRIPT_BODY, SCRIPT_TITLE } from "@/domain/diagnosis-script";
 import { taskKey, type Esteira } from "@/domain/esteiras";
@@ -131,6 +131,9 @@ export interface JourneyStageView {
   slug: string;
   stageIdx: number;
   name: string;
+  /** Data de início da etapa (a escolhida ou, se ainda não houver, a sugerida). */
+  startDate: string;
+  startSaved: boolean;
   tasks: JourneyTaskView[];
   generatedCount: number;
 }
@@ -150,21 +153,25 @@ async function build(actor: Actor, only: JourneyStage[] | null, where: { clientI
     select: { id: true, status: true, journeyKey: true },
   });
   const by = new Map(existing.map((t) => [t.journeyKey!, t]));
+  const scope = where.clientId ?? `lead:${where.leadId}`;
+  const starts = new Map((await prisma.journeyStageStart.findMany({ where: { organizationId: actor.organizationId, scope } })).map((r) => [`${r.slug}:${r.stageIdx}`, dbDateToLocalDate(r.startDate)]));
   return JOURNEY_STAGES.filter((s) => !only || only.includes(s)).flatMap((stage) =>
     esteiras.filter((e) => e.stage === stage).map((e) => ({
       stage,
       esteira: { slug: e.slug, name: e.name, summary: e.summary, icon: e.icon, tone: e.tone },
       stages: e.stages.map((s, si) => {
+        const stageStart = starts.get(`${e.slug}:${si}`);
+        const start = stageStart ?? startDate;
         const tasks = s.tasks.map((t, ti) => {
           const key = taskKey(e.slug, si, ti);
           const g = by.get(key + suffix);
           return {
-            key, title: t.title, day: t.day, dueDate: businessDay(addDays(startDate, t.day)), minutes: t.minutes, items: t.items.length, checklist: t.items, category: t.category as string, priority: (t.priority ?? null) as string | null, description: t.description ?? null,
+            key, title: t.title, day: t.day, dueDate: businessDay(addDays(start, t.day)), minutes: t.minutes, items: t.items.length, checklist: t.items, category: t.category as string, priority: (t.priority ?? null) as string | null, description: t.description ?? null,
             assets: assets.filter((a) => a.taskRefs.includes(refOf(e.slug, t.title))),
             generated: g ? { id: g.id, status: g.status } : null,
           };
         });
-        return { slug: e.slug, stageIdx: si, name: s.name, tasks, generatedCount: tasks.filter((t) => t.generated).length };
+        return { slug: e.slug, stageIdx: si, name: s.name, startDate: start, startSaved: !!stageStart, tasks, generatedCount: tasks.filter((t) => t.generated).length };
       }),
     })),
   );
@@ -189,7 +196,9 @@ export async function applyJourneyStage(actor: Actor, input: { slug: string; sta
   if (!esteira || !stage) throw new NotFoundError("Etapa não encontrada.");
   const keys = stage.tasks.map((_, ti) => `${input.stageIdx}.${ti}`);
   if (input.clientId) {
-    return applyEsteira(actor, { slug: input.slug, clientId: input.clientId, startDate: input.startDate, ownerId: input.ownerId || undefined, keys });
+    const res = await applyEsteira(actor, { slug: input.slug, clientId: input.clientId, startDate: input.startDate, ownerId: input.ownerId || undefined, keys });
+    await saveStageStart(actor.organizationId, input.clientId, input.slug, input.stageIdx, input.startDate);
+    return res;
   }
   assertCan(actor, "crm.manage");
   const lead = await prisma.lead.findFirst({ where: { id: input.leadId ?? "", organizationId: actor.organizationId } });
@@ -218,5 +227,50 @@ export async function applyJourneyStage(actor: Actor, input: { slug: string; sta
     created++;
   }
   if (!created) throw new ValidationError("As tarefas desta etapa já foram geradas para este lead.");
+  await saveStageStart(actor.organizationId, `lead:${lead.id}`, input.slug, input.stageIdx, input.startDate);
   return { created, skipped: stage.tasks.length - created, projectId: null };
+}
+
+async function saveStageStart(organizationId: string, scope: string, slug: string, stageIdx: number, startDate: string) {
+  await prisma.journeyStageStart.upsert({
+    where: { organizationId_scope_slug_stageIdx: { organizationId, scope, slug, stageIdx } },
+    create: { organizationId, scope, slug, stageIdx, startDate: localDateToDbDate(startDate) },
+    update: { startDate: localDateToDbDate(startDate) },
+  });
+}
+
+/**
+ * Escolhe a data de início de uma etapa: os prazos do controle contam a partir dela (Dia 1 = esta data).
+ * Com `recalc`, refaz o prazo das tarefas já geradas desta etapa que ainda estão abertas.
+ */
+export async function setStageStart(actor: Actor, input: { slug: string; stageIdx: number; startDate: string; clientId?: string; leadId?: string; recalc: boolean }) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate)) throw new ValidationError("Escolha uma data válida.", { startDate: "Escolha uma data válida." });
+  const esteira = (await listEsteirasFor(actor.organizationId)).find((e) => e.slug === input.slug);
+  const stage = esteira?.stages[input.stageIdx];
+  if (!esteira || !stage) throw new NotFoundError("Etapa não encontrada.");
+  let scope: string;
+  let suffix = "";
+  if (input.clientId) {
+    assertCan(actor, "projects.manage");
+    await assertClientAccess(actor, input.clientId);
+    scope = input.clientId;
+  } else {
+    assertCan(actor, "crm.manage");
+    const lead = await prisma.lead.findFirst({ where: { id: input.leadId ?? "", organizationId: actor.organizationId }, select: { id: true } });
+    if (!lead) throw new NotFoundError("Lead não encontrado.");
+    scope = `lead:${lead.id}`;
+    suffix = `${LEAD_SEP}${lead.id}`;
+  }
+  await saveStageStart(actor.organizationId, scope, input.slug, input.stageIdx, input.startDate);
+  if (!input.recalc) return { updated: 0 };
+  let updated = 0;
+  for (const [ti, t] of stage.tasks.entries()) {
+    const key = taskKey(input.slug, input.stageIdx, ti) + suffix;
+    const r = await prisma.task.updateMany({
+      where: { organizationId: actor.organizationId, journeyKey: key, archivedAt: null, status: { notIn: ["CONCLUIDA", "CANCELADA"] }, ...(input.clientId ? { clientId: input.clientId } : {}) },
+      data: { dueAt: localDateTimeToInstant(businessDay(addDays(input.startDate, t.day)), "18:00", APP_TIMEZONE) },
+    });
+    updated += r.count;
+  }
+  return { updated };
 }

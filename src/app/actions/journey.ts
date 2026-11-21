@@ -5,7 +5,7 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { NotFoundError, ValidationError } from "@/domain/permissions";
 import { formObject } from "@/server/action-utils";
 import { getActor } from "@/server/context";
-import { applyJourneyStage, deleteAsset, saveAsset } from "@/server/services/journey";
+import { applyJourneyStage, deleteAsset, saveAsset, setStageStart } from "@/server/services/journey";
 import { saveLeadScript } from "@/server/services/lead-script";
 
 async function actorOrThrow() {
@@ -69,4 +69,25 @@ export async function saveLeadScriptAction(leadId: string, input: { checked: str
     if (!friendly(e)) throw e;
     return { ok: false };
   }
+}
+
+/** Muda a data de início de uma etapa (e, se marcado, refaz os prazos das tarefas abertas dela). */
+export async function setStageStartAction(fd: FormData): Promise<void> {
+  const back = String(fd.get("back") ?? "/inicio");
+  let q = "";
+  try {
+    const r = await setStageStart(await actorOrThrow(), {
+      slug: String(fd.get("slug") ?? ""), stageIdx: Number(fd.get("stageIdx")), startDate: String(fd.get("startDate") ?? ""),
+      clientId: String(fd.get("clientId") ?? "") || undefined, leadId: String(fd.get("leadId") ?? "") || undefined, recalc: fd.get("recalc") === "on",
+    });
+    q = `inicio=${r.updated}`;
+  } catch (e) {
+    unstable_rethrow(e);
+    const m = friendly(e);
+    if (!m) throw e;
+    q = `erro=${encodeURIComponent(m)}`;
+  }
+  revalidatePath("/clientes", "layout");
+  revalidatePath("/crm", "layout");
+  redirect(`${back}${sep(back)}${q}`);
 }

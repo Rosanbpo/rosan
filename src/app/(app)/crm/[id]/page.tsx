@@ -207,6 +207,7 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
 
       <section className="mt-8">
         <h2 className="mb-3 text-lg font-semibold text-brand-900">🧭 Jornada comercial deste lead</h2>
+        {sp.inicio && <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">Data de início da etapa atualizada{Number(sp.inicio) > 0 ? `; ${sp.inicio} prazo(s) refeito(s)` : ""}.</p>}
         {sp.gerou && <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{sp.gerou} tarefa(s) criada(s). Veja em Tarefas.</p>}
         {sp.erro && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{sp.erro}</p>}
         <JourneyPanel

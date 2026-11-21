@@ -190,3 +190,26 @@ describe("Roteiro antigo", () => {
     expect(roteiros[0].body).toContain("## 1. Abertura");
   });
 });
+
+import { setStageStart } from "@/server/services/journey";
+
+describe("Data de início por etapa", () => {
+  it("cada etapa guarda a sua data, os prazos contam dela e dá para refazer os abertos", async () => {
+    const s = await setupOrg();
+    const c = await createClient(s.admin, { legalName: "Data Ltda", tradeName: "Data", status: "ATIVO", services: [], memberIds: [] });
+    await applyJourneyStage(s.admin, { slug: "implantacao", stageIdx: 0, startDate: "2026-12-07", clientId: c.id });
+    const v1 = await journeyForClient(s.admin, c.id, "2026-12-01");
+    const st = v1.find((v) => v.esteira.slug === "implantacao")!.stages;
+    expect(st[0].startSaved).toBe(true);
+    expect(st[0].startDate).toBe("2026-12-07");
+    expect(st[1].startSaved).toBe(false);
+    // "Sem. 1" = dia 6 depois do início (07/12 + 6 = 13/12, domingo → segunda 14/12)
+    expect(st[0].tasks[0].dueDate).toBe("2026-12-14");
+    await setStageStart(s.admin, { slug: "implantacao", stageIdx: 0, startDate: "2026-12-14", clientId: c.id, recalc: true });
+    const v2 = await journeyForClient(s.admin, c.id, "2026-12-01");
+    expect(v2.find((v) => v.esteira.slug === "implantacao")!.stages[0].tasks[0].dueDate).toBe("2026-12-21");
+    const task = await prisma.task.findFirstOrThrow({ where: { clientId: c.id, journeyKey: "implantacao:0:0" } });
+    expect(task.dueAt!.toISOString().slice(0, 10)).toBe("2026-12-21");
+    await expect(setStageStart(s.op, { slug: "implantacao", stageIdx: 0, startDate: "2026-12-14", clientId: c.id, recalc: false })).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});

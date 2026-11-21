@@ -558,6 +558,7 @@ export default async function ClientPage({
 
       {aba === "jornada" && journeyData && (
         <div className="max-w-5xl">
+          {sp.inicio && <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">Data de início da etapa atualizada{Number(sp.inicio) > 0 ? `; ${sp.inicio} prazo(s) refeito(s)` : ""}.</p>}
           {sp.gerou && <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{sp.gerou} tarefa(s) criada(s). Veja em Tarefas.</p>}
           {sp.erro && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{sp.erro}</p>}
           <JourneyPanel

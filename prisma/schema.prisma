@@ -1366,3 +1366,17 @@ model LeadScript {
   updatedAt      DateTime @updatedAt
   lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 }
+
+/// Data de início escolhida para cada etapa da jornada de um cliente ou lead: os prazos contam a partir dela.
+model JourneyStageStart {
+  id             String   @id @default(cuid())
+  organizationId String
+  /// Id do cliente, ou "lead:<id>" para a jornada de um lead.
+  scope          String
+  slug           String
+  stageIdx       Int
+  startDate      DateTime @db.Date
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, scope, slug, stageIdx])
+}
