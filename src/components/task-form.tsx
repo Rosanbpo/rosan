@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ActionState } from "@/lib/action-state";
 import { CATEGORY_LABEL, PRIORITY_LABEL, PRIORITIES, ROLE_LABEL, TASK_CATEGORIES, type Role } from "@/domain/enums";
 import { ActionForm, Field, SubmitButton } from "./ui/action-form";
@@ -52,6 +53,7 @@ export function TaskForm({
   canPlan,
   selfId,
   cancelHref,
+  modal = false,
 }: {
   action: (state: ActionState, fd: FormData) => Promise<ActionState>;
   clients: Array<{ id: string; tradeName: string }>;
@@ -63,7 +65,9 @@ export function TaskForm({
   canPlan: boolean;
   selfId: string;
   cancelHref: string;
+  modal?: boolean;
 }) {
+  const router = useRouter();
   const [clientId, setClientId] = useState(values.clientId ?? "");
   const eligible = people.filter((p) => !clientId || clientId === "interna" || p.clientIds === null || p.clientIds.includes(clientId));
   const lockPlanning = !canPlan;
@@ -71,7 +75,7 @@ export function TaskForm({
   const pick = (id: string) => setFill((f) => ({ n: f.n + 1, p: prefills.find((t) => t.id === id) ?? null }));
 
   return (
-    <ActionForm action={action} className="space-y-6">
+    <ActionForm action={action} className={modal ? "space-y-4 [&_.card]:rounded-xl [&_.card]:border-slate-100 [&_.card]:shadow-none" : "space-y-6"}>
       <div className="card grid gap-4 p-5 md:grid-cols-2" key={fill.n}>
         {mode === "create" && prefills.length > 0 && (
           <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-3 md:col-span-2">
@@ -203,10 +207,16 @@ export function TaskForm({
       </div>
 
 
-      <div className="flex justify-end gap-2">
-        <a href={cancelHref} className="btn-secondary">
-          Cancelar
-        </a>
+      <div className={modal ? "sticky bottom-0 -mx-6 -mb-6 flex justify-end gap-2 border-t border-slate-100 bg-white px-6 py-4" : "flex justify-end gap-2"}>
+        {modal ? (
+          <button type="button" className="btn-secondary" onClick={() => router.back()}>
+            Cancelar
+          </button>
+        ) : (
+          <a href={cancelHref} className="btn-secondary">
+            Cancelar
+          </a>
+        )}
         <SubmitButton>{mode === "create" ? "Criar tarefa" : "Salvar alterações"}</SubmitButton>
       </div>
     </ActionForm>

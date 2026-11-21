@@ -81,11 +81,16 @@ export default async function InicioPage() {
         <Tile label="Horas hoje" emoji="⏱️" value={`${d.hoursToday}h`} hint="apontadas" cls="border-teal-200 bg-teal-50 text-teal-800" />
       </div>
 
-      <section className="card mb-4">
-        <div className="flex items-center justify-between border-b border-hair px-5 py-3">
+      <details className="card group mb-4">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 [&::-webkit-details-marker]:hidden">
           <h2 className="text-[15px] font-semibold text-brand-900">🧭 Jornada dos clientes</h2>
-          <Link href="/esteiras" className="text-sm text-brand-700 hover:underline">Ver esteiras →</Link>
-        </div>
+          <span className="flex items-center gap-3 text-sm text-slate-500">
+            <span>{JOURNEY_STAGES.reduce((n, st) => n + (d.journey[st]?.length ?? 0), 0)} clientes</span>
+            <span className="text-brand-700 group-open:hidden">Mostrar ▾</span>
+            <span className="hidden text-brand-700 group-open:inline">Esconder ▴</span>
+          </span>
+        </summary>
+        <div className="border-t border-hair px-5 pt-2 text-right"><Link href="/esteiras" className="text-sm text-brand-700 hover:underline">Ver esteiras →</Link></div>
         <div className="grid grid-cols-2 gap-2 p-3 md:grid-cols-4 xl:grid-cols-8">
           {JOURNEY_STAGES.map((st) => {
             const list = d.journey[st] ?? [];
@@ -101,7 +106,7 @@ export default async function InicioPage() {
             );
           })}
         </div>
-      </section>
+      </details>
 
       <section className="card mb-4">
         <div className="flex items-center justify-between border-b border-hair px-5 py-3">
