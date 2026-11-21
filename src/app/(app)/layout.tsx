@@ -28,6 +28,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
     { href: "/avulsas", label: "Avulsas", icon: "avulsas" },
     ...(dash ? [{ href: "/agenda", label: "Agenda", icon: "agenda" as const }] : []),
     { href: "/minha-operacao", label: "Meu painel", icon: "operacao", badge: myOverdue },
+    ...(can(actor, "crm.manage") ? [{ group: "Comercial", href: "/comercial", label: "Painel comercial", icon: "comercial" as const }] : []),
     ...(can(actor, "crm.manage") ? [{ group: "Comercial", href: "/crm", label: "CRM", icon: "crm" as const }] : []),
     ...(can(actor, "pricing.manage") ? [{ group: "Comercial", href: "/precificacao", label: "Precificação", icon: "precificacao" as const }] : []),
     ...(can(actor, "crm.manage") ? [{ group: "Comercial", href: "/propostas", label: "Propostas", icon: "propostas" as const }] : []),
