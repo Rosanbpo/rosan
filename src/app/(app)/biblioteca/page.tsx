@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui/layout";
+import { JourneyMap, PhaseHeader, StageTitle, StandardsBox, TaskCard, toneOf } from "@/components/journey-ui";
 import { CopyButton } from "@/components/copy-button";
 import {
   deleteMaterialAction, deleteSharedMessageAction, moveTrainingItemAction, removeTrainingItemAction, resetSystemMessageAction,
@@ -132,91 +133,77 @@ function AssetCard({ a, options, admin }: { a: AssetRow; options: TaskOpt; admin
 
 async function Journey({ actor, admin }: { actor: Actor; admin: boolean }) {
   const [stages, loose, assets, options] = await Promise.all([journeyOverview(actor), templatesWithoutStage(actor), listAssets(actor), admin ? journeyTaskOptions(actor.organizationId) : Promise.resolve([] as TaskOpt)]);
-  const canSee = can(actor, "projects.manage");
+  const phases = stages.flatMap((st) => st.esteiras.map((e) => ({ st, e })));
+  const taskCount = (e: (typeof phases)[number]["e"]) => e.stages.reduce((n, s) => n + s.tasks.length, 0);
+  let number = 0;
   return (
     <div className="space-y-5">
+      <JourneyMap items={phases.map(({ st, e }) => ({ slug: e.slug, name: e.name, stage: st.stage as JourneyStage, days: e.totalDays, tasks: taskCount(e) }))} />
       <p className="rounded-xl border border-brand-100 bg-brand-50/60 p-3 text-sm text-brand-900">
-        🧭 A jornada vai da venda ao encerramento. Em cada etapa você vê as <b>esteiras</b> (passo a passo com prazo em dias a partir da data de início) e os <b>modelos de rotina</b> (com a regra de prazo de cada um). Em caso de dúvida, consulte aqui. Abaixo de cada tarefa ficam a <b>mensagem, o e-mail e o documento padrão</b> dela. Variáveis: {ASSET_VARS.join("  ")}.
+        🧭 A jornada vai da venda ao encerramento. Cada <b>fase</b> tem etapas, cada etapa tem tarefas com <b>prazo em dias a partir da data de início</b>, e cada tarefa traz o <b>checklist</b> e a <b>mensagem, o e-mail e o documento padrão</b>. O que você mudar aqui vale para o cliente, o lead, as tarefas e o CRM. Variáveis dos textos: {ASSET_VARS.join("  ")}.
       </p>
       {admin && <details className="card p-4"><summary className="cursor-pointer text-sm font-medium text-brand-900">➕ Novo item padrão (mensagem, e-mail ou documento)</summary>{assetForm(undefined, options)}</details>}
-      {stages.map((st, i) => {
-        const tone = TONE[STAGE_TONE[st.stage as JourneyStage] as keyof typeof TONE];
+      {stages.map((st) => {
+        const tone = toneOf(st.stage as JourneyStage);
+        const slugs = st.esteiras.map((e) => e.slug);
+        const free = assets.filter((a) => a.stage === st.stage && !a.taskRefs.some((r) => slugs.includes(r.split("|")[0])));
         return (
-          <section key={st.stage} className={cx("rounded-2xl border bg-white", tone.border)}>
-            <header className={cx("flex items-center gap-3 rounded-t-2xl px-4 py-2.5", tone.soft)}>
-              <span className={cx("flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold text-white", tone.solid)}>{i + 1}</span>
-              <h2 className={cx("text-base font-semibold", tone.text)}>{STAGE_LABEL[st.stage as JourneyStage]}</h2>
-            </header>
-            <div className="space-y-3 p-4">
-              {st.esteiras.length === 0 && st.templates.length === 0 && <p className="text-sm text-slate-400">Nada cadastrado nesta etapa ainda.</p>}
-              {st.esteiras.map((e) => (
-                <article key={e.slug} className="rounded-xl border border-hair p-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-brand-900">🛤️ {e.name}</h3>
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">⏱️ prazo total: {e.totalDays} dias</span>
-                    {e.custom && <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs text-violet-800">personalizada</span>}
-                    <span className="ml-auto flex gap-3 text-xs">
-                      {canSee && <Link href={`/esteiras/${e.slug}`} className="text-brand-700 hover:underline">Abrir</Link>}
-                      {admin && <Link href={`/esteiras/${e.slug}/editar`} className="text-brand-700 hover:underline">✏️ Editar</Link>}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500">{e.summary}</p>
-                  <ol className="mt-2 space-y-1.5">
+          <div key={st.stage} className="space-y-5">
+            {st.esteiras.length === 0 && st.templates.length === 0 && free.length === 0 ? null : (
+              <h2 className={cx("flex items-center gap-2 border-b-2 pb-1 text-sm font-semibold", tone.border, tone.text)}>{STAGE_LABEL[st.stage as JourneyStage]}</h2>
+            )}
+            {st.esteiras.map((e) => {
+              number += 1;
+              return (
+                <section key={e.slug} id={e.slug} className={cx("scroll-mt-4 rounded-2xl border bg-white shadow-sm", tone.border)}>
+                  <PhaseHeader
+                    stage={st.stage as JourneyStage} number={number} name={e.name} summary={e.summary} icon={e.icon} days={e.totalDays} tasks={taskCount(e)}
+                    extra={e.custom ? <span className="rounded-full bg-white px-2.5 py-1 text-violet-700">personalizada</span> : null}
+                  >
+                    {admin && <div className="mt-3"><Link href={`/esteiras/${e.slug}/editar`} className="inline-block rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-brand-800 hover:bg-white/90">✏️ Editar etapas, tarefas, prazos e checklists</Link></div>}
+                  </PhaseHeader>
+                  <div className="space-y-6 p-5">
                     {e.stages.map((s, k) => (
-                      <li key={k}>
-                        <details className="rounded-lg bg-slate-50 px-3 py-1.5">
-                          <summary className="cursor-pointer text-sm font-medium text-slate-800">
-                            {s.name} <span className="ml-1 rounded bg-white px-1.5 py-0.5 text-xs text-slate-600">{s.from === s.to ? `dia ${s.from}` : `dia ${s.from} a ${s.to}`}</span> <span className="text-xs text-slate-400">· {s.tasks.length} tarefas</span>
-                          </summary>
-                          <ul className="mt-1.5 space-y-1 pb-1 text-sm">
-                            {s.tasks.map((t, n) => (
-                              <li key={n}>
-                                <div className="flex items-baseline gap-2">
-                                  <span className="w-14 shrink-0 text-xs font-semibold text-amber-800">dia {t.day}</span>
-                                  <span className="flex-1 font-medium text-slate-800">{t.title}</span>
-                                  <span className="shrink-0 text-xs text-slate-400">{t.minutes} min · {t.items} itens</span>
-                                </div>
-                                {t.description && <p className="ml-16 text-xs text-slate-500">{t.description}</p>}
-                                <div className="ml-16 mt-1 flex flex-col gap-1">
-                                  {assets.filter((a) => a.taskRefs.includes(`${e.slug}|${t.title}`)).map((a) => <AssetCard key={a.id} a={a} options={options} admin={admin} />)}
-                                  {admin && <details><summary className="cursor-pointer text-xs text-slate-400 hover:text-brand-700">➕ adicionar padrão a esta tarefa</summary>{assetForm(undefined, options, st.stage, `${e.slug}|${t.title}`)}</details>}
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        </details>
-                      </li>
+                      <div key={k}>
+                        <StageTitle index={k + 1} name={s.name} from={s.from} to={s.to} tone={tone} right={<span className="text-xs text-slate-500">{s.tasks.length} tarefas</span>} />
+                        <ol className="mt-4">
+                          {s.tasks.map((t) => (
+                            <TaskCard key={t.title} day={t.day} title={t.title} category={t.category} minutes={t.minutes} priority={t.priority} description={t.description} checklist={t.checklist} tone={tone}>
+                              <StandardsBox count={assets.filter((a) => a.taskRefs.includes(`${e.slug}|${t.title}`)).length}>
+                                {assets.filter((a) => a.taskRefs.includes(`${e.slug}|${t.title}`)).map((a) => <AssetCard key={a.id} a={a} options={options} admin={admin} />)}
+                                {admin && <details><summary className="cursor-pointer text-xs font-medium text-brand-700 hover:underline">➕ adicionar mensagem, e-mail ou documento a esta tarefa</summary>{assetForm(undefined, options, st.stage, `${e.slug}|${t.title}`)}</details>}
+                              </StandardsBox>
+                            </TaskCard>
+                          ))}
+                        </ol>
+                      </div>
                     ))}
-                  </ol>
-                </article>
-              ))}
-              {(() => {
-                const slugs = st.esteiras.map((e) => e.slug);
-                const free = assets.filter((a) => a.stage === st.stage && !a.taskRefs.some((r) => slugs.includes(r.split("|")[0])));
-                return free.length > 0 ? (
-                  <div>
-                    <h3 className="mb-1.5 text-sm font-semibold text-slate-700">🗂️ Padrões desta etapa (não ligados a uma tarefa)</h3>
-                    <div className="flex flex-col gap-1">{free.map((a) => <AssetCard key={a.id} a={a} options={options} admin={admin} />)}</div>
                   </div>
-                ) : null;
-              })()}
-              {st.templates.length > 0 && (
-                <div>
-                  <h3 className="mb-1.5 text-sm font-semibold text-slate-700">🔁 Modelos de rotina desta etapa</h3>
-                  <ul className="grid gap-2 md:grid-cols-2">
-                    {st.templates.map((t) => (
-                      <li key={t.id} className="rounded-lg border border-hair p-2.5 text-sm">
-                        <p className="font-medium text-brand-900">{t.name}</p>
-                        <p className="text-xs text-amber-800">⏱️ {t.rule}</p>
-                        <p className="text-xs text-slate-500">{t.items} itens de checklist{t.minutes ? ` · ${t.minutes} min` : ""}</p>
-                        {admin && <Link href={`/rotinas/modelos/${t.id}`} className="text-xs text-brand-700 hover:underline">✏️ Editar modelo</Link>}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </section>
+                </section>
+              );
+            })}
+            {free.length > 0 && (
+              <section className="rounded-2xl border border-hair bg-white p-4">
+                <h3 className="mb-1.5 text-sm font-semibold text-slate-700">🗂️ Padrões desta etapa, sem tarefa ligada</h3>
+                <div className="flex flex-col gap-1.5">{free.map((a) => <AssetCard key={a.id} a={a} options={options} admin={admin} />)}</div>
+              </section>
+            )}
+            {st.templates.length > 0 && (
+              <section className="rounded-2xl border border-hair bg-white p-4">
+                <h3 className="mb-2 text-sm font-semibold text-slate-700">🔁 Rotinas fixas desta etapa (geradas sozinhas, com a regra de prazo)</h3>
+                <ul className="grid gap-2 md:grid-cols-2">
+                  {st.templates.map((t) => (
+                    <li key={t.id} className="rounded-lg border border-hair p-2.5 text-sm">
+                      <p className="font-medium text-brand-900">{t.name}</p>
+                      <p className="text-xs text-amber-800">⏱️ {t.rule}</p>
+                      <p className="text-xs text-slate-500">{t.items} itens de checklist{t.minutes ? ` · ${t.minutes} min` : ""}</p>
+                      {admin && <Link href={`/rotinas/modelos/${t.id}`} className="text-xs text-brand-700 hover:underline">✏️ Editar rotina</Link>}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
         );
       })}
       {loose.length > 0 && (

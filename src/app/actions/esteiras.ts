@@ -26,7 +26,7 @@ export async function saveEsteiraAction(slug: string, _: ActionState, fd: FormDa
   });
   if (res?.ok) {
     revalidatePath("/", "layout");
-    redirect(`/esteiras/${slug}?salva=1`);
+    redirect(`/biblioteca?secao=jornada&salva=1#${slug}`);
   }
   return res;
 }
@@ -36,5 +36,5 @@ export async function resetEsteiraAction(slug: string) {
     await esteiras.resetEsteira(actor, slug);
   });
   revalidatePath("/esteiras");
-  redirect(`/esteiras/${slug}`);
+  redirect(`/biblioteca?secao=jornada#${slug}`);
 }

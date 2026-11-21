@@ -606,7 +606,7 @@ export default async function ClientPage({
             <section className="rounded-xl border border-hair bg-slate-50 p-4 text-sm">
               <h3 className="font-semibold text-brand-900">Checklist de onboarding ({obSteps.length} etapas)</h3>
               <p className="mt-1 text-slate-600">{obSteps.map((s) => s.title).join(" · ")}</p>
-              <p className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">💡 Quer um passo a passo pronto de cada etapa? Em Esteiras, aplique a esteira de Onboarding a este cliente (abaixo).</p>
+              <p className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">💡 Quer um passo a passo pronto de cada etapa? Na aba Jornada, gere as tarefas de Pré-onboarding, Onboarding e Implantação para este cliente.</p>
             </section>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -627,48 +627,17 @@ export default async function ClientPage({
             <button type="submit" className="btn-secondary">➕ Criar as {obSteps.length} tarefas de onboarding</button>
           </form>
 
-          <div className="space-y-4 border-t border-hair pt-5">
+          <div className="space-y-3 border-t border-hair pt-5">
             <p className="text-sm text-slate-600">
               Etapa atual: <strong>{client.journeyStage ? STAGE_LABEL[client.journeyStage] : "não definida"}</strong>
               {manage && (<>{" "}· <Link href={`/clientes/${id}/editar`} className="font-medium text-brand-700 hover:underline">alterar</Link></>)}
             </p>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {ESTEIRAS.filter((e) => e.slug === "pre-onboarding" || e.slug === "onboarding" || e.slug === "implantacao").map((e) => {
-              const tone = TONE[e.tone];
-              const c = esteiraCounts(e);
-              const prog = (journey as Record<string, { clients: Array<{ total: number; done: number }> }>)[e.slug]?.clients[0];
-              const pct = prog && prog.total ? Math.round((prog.done / prog.total) * 100) : 0;
-              return (
-                <div key={e.slug} className={`overflow-hidden rounded-xl border bg-white shadow-sm ${tone.border}`}>
-                  <div className={`flex items-center gap-2 bg-gradient-to-r px-4 py-2.5 text-white ${tone.band}`}>
-                    <EsteiraIcon icon={e.icon} className="h-5 w-5" />
-                    <span className="text-sm font-semibold">{e.name}</span>
-                  </div>
-                  <div className="space-y-2 p-4 text-sm">
-                    {prog ? (
-                      <>
-                        <div className="flex justify-between text-xs text-slate-600">
-                          <span>{prog.done} de {prog.total} tarefas concluídas</span>
-                          <span className="font-semibold">{pct}%</span>
-                        </div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                          <div className={`h-full rounded-full ${tone.solid}`} style={{ width: `${pct}%` }} />
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-xs text-slate-500">Ainda não aplicada ({c.tasks} tarefas disponíveis).</p>
-                    )}
-                    {can(actor, "projects.manage") && (
-                      <Link href={`/esteiras/${e.slug}?cliente=${id}`} className={`inline-block text-xs font-medium hover:underline ${tone.text}`}>
-                        {prog ? "Aplicar mais tarefas" : "Ver e aplicar"} →
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            <Link href={`/clientes/${id}?aba=jornada#onboarding`} className="card flex flex-wrap items-center gap-3 p-4 hover:border-brand-300">
+              <span className="text-2xl">🧭</span>
+              <span className="flex-1"><span className="block font-semibold text-brand-900">Jornada do cliente</span><span className="block text-sm text-slate-500">Pré-onboarding, onboarding e implantação com tarefas, prazos, checklists e mensagens padrão.</span></span>
+              <span className="btn-secondary btn-sm">Abrir jornada</span>
+            </Link>
           </div>
-        </div>
         </div>
       )}
 
