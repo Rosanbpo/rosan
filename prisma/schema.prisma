@@ -79,6 +79,7 @@ model User {
 
   memberships        Membership[]
   clientMemberships  ClientMember[]
+  libraryAccess      LibraryAccess?
   responsibleClients Client[]           @relation("ClientResponsible")
   managedClients     Client[]           @relation("ClientManager")
   assignedTasks      Task[]             @relation("TaskAssignee")
@@ -669,6 +670,8 @@ model MessageTemplate {
   title          String
   stage          String?
   body           String
+  /// Mensagem da empresa (criada pela administradora), vista por toda a equipe comercial.
+  shared         Boolean  @default(false)
   createdAt      DateTime @default(now())
 
   @@index([organizationId, authorId])
@@ -1232,6 +1235,8 @@ model TrainingItem {
   description    String?
   url            String?
   position       Int     @default(0)
+  /// Fase da trilha: "Dia 1", "Semana 1", "Mês 1"…
+  phase          String?
 
   progress TrainingProgress[]
 
@@ -1288,4 +1293,27 @@ model ContractSignLink {
   createdAt      DateTime  @default(now())
 
   @@index([contractId])
+}
+
+/// Quais áreas da Biblioteca cada pessoa vê (a administradora escolhe).
+model LibraryAccess {
+  userId         String   @id
+  organizationId String
+  sections       String[]
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Ajuste da administradora sobre uma mensagem pronta do sistema (texto novo ou escondida).
+model SystemMessageOverride {
+  id             String   @id @default(cuid())
+  organizationId String
+  key            String
+  title          String
+  body           String
+  hidden         Boolean  @default(false)
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, key])
 }

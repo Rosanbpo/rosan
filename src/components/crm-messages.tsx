@@ -65,7 +65,7 @@ function Overlay({ title, onClose, children }: { title: string; onClose: () => v
 }
 
 /** Janela única da página: escolhe a mensagem, preenche as variáveis do lead, copia ou abre o WhatsApp. */
-export function MessageDialog({ me, org, mine }: Ctx) {
+export function MessageDialog({ me, org, mine, system = SYSTEM_MESSAGES }: Ctx & { system?: MessageTemplate[] }) {
   const [lead, setLead] = useState<MsgLead | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const [text, setText] = useState("");
@@ -85,7 +85,7 @@ export function MessageDialog({ me, org, mine }: Ctx) {
   const vars = { nome: lead.name, empresa: lead.company, segmento: "seu segmento", valor: lead.value, minhaNome: me, minhaEmpresa: org };
   const all: Array<MessageTemplate | (Mine & { group: string; stages: LeadStage[] })> = [
     ...mine.map((m) => ({ ...m, group: "Meus templates", stages: m.stage ? [m.stage as LeadStage] : [] })),
-    ...SYSTEM_MESSAGES,
+    ...system,
   ];
   const mostRelevant = all.filter((m) => m.stages.length === 0 || m.stages.includes(lead.stage));
   const rest = all.filter((m) => !mostRelevant.includes(m));
@@ -151,9 +151,9 @@ export function MessageDialog({ me, org, mine }: Ctx) {
 }
 
 /** Botão "Meus templates": cria e remove mensagens próprias e mostra as prontas do sistema. */
-export function TemplatesButton({ mine }: { mine: Mine[] }) {
+export function TemplatesButton({ mine, system = SYSTEM_MESSAGES }: { mine: Mine[]; system?: MessageTemplate[] }) {
   const [open, setOpen] = useState(false);
-  const groups = Array.from(new Set(SYSTEM_MESSAGES.map((m) => m.group)));
+  const groups = Array.from(new Set(system.map((m) => m.group)));
   return (
     <>
       <button type="button" className="btn-secondary" onClick={() => setOpen(true)}>
@@ -201,12 +201,12 @@ export function TemplatesButton({ mine }: { mine: Mine[] }) {
           )}
           <details>
             <summary className="cursor-pointer text-sm font-semibold">📍 Modelos prontos do sistema — ver lista</summary>
-            <p className="mt-2 text-xs text-slate-500">Já vêm prontos, não podem ser editados aqui, e aparecem junto com os seus no botão “Mensagem” de cada lead.</p>
+            <p className="mt-2 text-xs text-slate-500">Já vêm prontos (a Rosan edita o texto na Biblioteca) e aparecem junto com os seus no botão “Mensagem” de cada lead.</p>
             {groups.map((g) => (
               <div key={g} className="mt-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{g}</p>
                 <ul className="mt-1 space-y-0.5 text-sm">
-                  {SYSTEM_MESSAGES.filter((m) => m.group === g).map((m) => (
+                  {system.filter((m) => m.group === g).map((m) => (
                     <li key={m.id}>{m.title}</li>
                   ))}
                 </ul>

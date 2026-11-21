@@ -3,6 +3,7 @@ import { Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/layout";
 import { can } from "@/domain/permissions";
 import { requireActor } from "@/server/context";
+import { requireSection } from "@/server/services/library";
 import { getCulture } from "@/server/services/culture";
 
 export const metadata = { title: "Missão, visão e valores" };
@@ -11,6 +12,7 @@ const CARD_TONES = ["bg-sky-50 border-sky-200", "bg-violet-50 border-violet-200"
 
 export default async function CulturaPage() {
   const actor = await requireActor();
+  await requireSection(actor, "cultura");
   const c = await getCulture(actor);
   const canEdit = can(actor, "org.settings");
   const empty = !c.mission && !c.vision && c.values.length === 0;

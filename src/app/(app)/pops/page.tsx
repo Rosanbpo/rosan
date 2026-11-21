@@ -12,6 +12,7 @@ import { importPopLibraryAction } from "@/app/actions/procedures";
 import { ConfirmAction } from "@/components/confirm-action";
 import { POP_LIBRARY } from "@/domain/pop-library";
 import { requireActor } from "@/server/context";
+import { requireSection } from "@/server/services/library";
 import { oneOf, str } from "@/server/page-utils";
 import { listProcedures } from "@/server/services/procedures";
 
@@ -27,6 +28,7 @@ const STATUS_STYLE: Record<ProcedureStatus, string> = {
 
 export default async function ProceduresPage({ searchParams }: { searchParams: Promise<SP> }) {
   const actor = await requireActor();
+  await requireSection(actor, "pops");
   const sp = await searchParams;
   const manage = can(actor, "procedures.manage");
   const category = oneOf(str(sp, "area"), TASK_CATEGORIES);

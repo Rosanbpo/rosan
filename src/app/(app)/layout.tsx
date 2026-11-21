@@ -5,6 +5,7 @@ import { ROLE_LABEL } from "@/domain/enums";
 import { can } from "@/domain/permissions";
 import { APP_NAME } from "@/lib/app-config";
 import { requireActor } from "@/server/context";
+import { allowedSections } from "@/server/services/library";
 import { prisma } from "@/server/db";
 import { buildTaskWhere } from "@/server/services/tasks";
 import { getRunningTimer } from "@/server/services/timer";
@@ -18,6 +19,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
     getRunningTimer(actor),
   ]);
 
+  const lib = await allowedSections(actor);
   const dash = can(actor, "dashboard.view");
   const fin = can(actor, "finance.view");
   const items: NavItem[] = [
@@ -45,8 +47,8 @@ export default async function AppLayout({ children, modal }: { children: React.R
     ...(dash ? [{ group: "Análise", href: "/churn", label: "Saídas", icon: "churn" as const }] : []),
     ...(dash ? [{ group: "Análise", href: "/relatorios", label: "Relatórios", icon: "relatorios" as const }] : []),
     { group: "Ferramentas", href: "/biblioteca", label: "Biblioteca", icon: "biblioteca" },
-    { group: "Ferramentas", href: "/pops", label: "Processos e POPs", icon: "pops" },
-    { group: "Ferramentas", href: "/cultura", label: "Missão e valores", icon: "cultura" },
+    ...(lib.includes("pops") ? [{ group: "Ferramentas", href: "/pops", label: "Processos e POPs", icon: "pops" as const }] : []),
+    ...(lib.includes("cultura") ? [{ group: "Ferramentas", href: "/cultura", label: "Missão e valores", icon: "cultura" as const }] : []),
     { group: "Ferramentas", href: "/projetos", label: "Projetos", icon: "projetos" },
     ...(can(actor, "org.settings") ? [{ group: "Ferramentas", href: "/configuracoes", label: "Configuração", icon: "config" as const }] : []),
     { group: "Ferramentas", href: "/conta", label: "Minha conta", icon: "conta" },
