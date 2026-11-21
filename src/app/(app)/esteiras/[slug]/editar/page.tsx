@@ -34,6 +34,7 @@ export default async function EditEsteiraPage({ params }: { params: Promise<{ sl
             <p className="mt-1"><code>&gt; descrição (opcional)</code></p>
             <p className="mt-1"><code>- item do checklist</code></p>
             <p className="mt-3">O dia conta a partir da data de início ao aplicar. A prioridade é opcional (Baixa, Normal, Alta, Crítica).</p>
+            <p className="mt-2">Ao salvar, o que foi mudado aparece em todo o sistema (jornada do cliente e do lead, tarefas, textos padrão). Renomeou uma tarefa? Os textos padrão e as tarefas já geradas continuam ligados. Faça uma mudança de cada vez: renomear <b>ou</b> reordenar, para o sistema reconhecer a tarefa.</p>
             <p className="mt-3 text-xs text-slate-500">Categorias: {Object.values(CATEGORY_LABEL).join(", ")}.</p>
           </div>
           {e.custom && (

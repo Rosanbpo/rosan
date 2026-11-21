@@ -133,3 +133,34 @@ describe("Roteiro da reunião de diagnóstico", () => {
     await expect(leadScript(s.op, lead.id)).rejects.toBeInstanceOf(ForbiddenError);
   });
 });
+
+import { getEsteiraFor, saveEsteiraText } from "@/server/services/esteiras";
+import { stagesToText, textToStages } from "@/domain/esteiras";
+
+describe("Editar a esteira atualiza tudo que depende dela", () => {
+  it("renomear e reordenar tarefas mantém os textos padrão e as tarefas já geradas ligadas", async () => {
+    const s = await setupOrg();
+    const c = await createClient(s.admin, { legalName: "Prop Ltda", tradeName: "Prop", status: "ATIVO", services: [], memberIds: [] });
+    await applyJourneyStage(s.admin, { slug: "pre-onboarding", stageIdx: 0, startDate: "2026-12-01", clientId: c.id });
+    await listAssets(s.admin);
+    const e = (await getEsteiraFor(s.admin.organizationId, "pre-onboarding"))!;
+    // renomeia a 2ª tarefa da 1ª etapa e depois troca a ordem das duas
+    const stages = structuredClone(e.stages);
+    stages[0].tasks[1].title = "Boas-vindas, cronograma e checklist";
+    await saveEsteiraText(s.admin, "pre-onboarding", stagesToText(stages));
+    stages[0].tasks.reverse();
+    await saveEsteiraText(s.admin, "pre-onboarding", stagesToText(stages));
+    expect(textToStages(stagesToText(stages))[0].tasks[0].title).toBe("Boas-vindas, cronograma e checklist");
+    // tarefa gerada acompanha a posição nova
+    const t = await prisma.task.findFirstOrThrow({ where: { clientId: c.id, title: { startsWith: "Apresentar o responsável" } } });
+    expect(t.journeyKey).toBe("pre-onboarding:0:0");
+    // texto padrão segue a tarefa renomeada
+    const view = await journeyForClient(s.admin, c.id, "2026-12-01");
+    const first = view.find((v) => v.esteira.slug === "pre-onboarding")!.stages[0].tasks[0];
+    expect(first.title).toBe("Boas-vindas, cronograma e checklist");
+    expect(first.generated?.id).toBe(t.id);
+    expect(first.assets.length).toBeGreaterThan(0);
+    // permissão
+    await expect(saveEsteiraText(s.op, "pre-onboarding", stagesToText(stages))).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});

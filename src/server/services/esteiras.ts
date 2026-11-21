@@ -153,14 +153,68 @@ export async function saveEsteiraText(actor: Actor, slug: string, text: string) 
   } catch (e) {
     throw new ValidationError((e as Error).message, { text: (e as Error).message });
   }
-  await prisma.esteiraCustom.upsert({
-    where: { organizationId_slug: { organizationId: actor.organizationId, slug } },
-    create: { organizationId: actor.organizationId, slug, stages: stages as unknown as object },
-    update: { stages: stages as unknown as object },
+  const before = (await getEsteiraFor(actor.organizationId, slug))!.stages;
+  await prisma.$transaction(async (tx) => {
+    await tx.esteiraCustom.upsert({
+      where: { organizationId_slug: { organizationId: actor.organizationId, slug } },
+      create: { organizationId: actor.organizationId, slug, stages: stages as unknown as object },
+      update: { stages: stages as unknown as object },
+    });
+    await carryLinks(tx, actor.organizationId, slug, before, stages);
   });
+}
+
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/**
+ * Depois de editar uma esteira, mantém ligado o que dependia da posição ou do título das tarefas:
+ * os textos padrão (mensagem, e-mail, documento) e as tarefas já geradas para clientes e leads.
+ * Tarefa renomeada na mesma posição segue ligada; tarefa que sumiu perde o vínculo (a tarefa gerada continua existindo).
+ */
+export async function carryLinks(tx: Tx, organizationId: string, slug: string, before: EsteiraStage[], after: EsteiraStage[]) {
+  const flat = (st: EsteiraStage[]) => st.flatMap((s, si) => s.tasks.map((t, ti) => ({ si, ti, title: t.title })));
+  const oldT = flat(before);
+  const newT = flat(after);
+  const oldTitles = new Set(oldT.map((t) => t.title));
+  const map = new Map<string, { key: string; title: string } | null>(); // chave antiga -> nova
+  oldT.forEach((o, i) => {
+    const sameTitle = newT.find((n) => n.title === o.title);
+    const renamed = newT[i] && !oldTitles.has(newT[i].title) ? newT[i] : undefined;
+    const to = sameTitle ?? renamed;
+    map.set(taskKey(slug, o.si, o.ti), to ? { key: taskKey(slug, to.si, to.ti), title: to.title } : null);
+  });
+
+  // textos padrão: "slug|título"
+  const assets = await tx.journeyAsset.findMany({ where: { organizationId, taskRefs: { hasSome: oldT.map((o) => `${slug}|${o.title}`) } } });
+  for (const a of assets) {
+    const refs = a.taskRefs.flatMap((r) => {
+      if (!r.startsWith(`${slug}|`)) return [r];
+      const old = oldT.find((o) => `${slug}|${o.title}` === r);
+      const to = old ? map.get(taskKey(slug, old.si, old.ti)) : undefined;
+      return to ? [`${slug}|${to.title}`] : old ? [] : [r];
+    });
+    if (refs.join("\n") !== a.taskRefs.join("\n")) await tx.journeyAsset.update({ where: { id: a.id }, data: { taskRefs: [...new Set(refs)] } });
+  }
+
+  // tarefas já geradas: journeyKey "slug:etapa:tarefa" (com "@leadId" nos leads). Duas fases para não colidir.
+  const tasks = await tx.task.findMany({ where: { organizationId, journeyKey: { startsWith: `${slug}:` } }, select: { id: true, journeyKey: true } });
+  const moves = tasks.flatMap((t) => {
+    const [base, ...suffix] = t.journeyKey!.split("@");
+    if (!map.has(base)) return [];
+    const to = map.get(base);
+    return [{ id: t.id, next: to ? [to.key, ...suffix].join("@") : null, tmp: `tmp:${t.id}` }];
+  });
+  const changed = moves.filter((m) => m.next !== tasks.find((t) => t.id === m.id)!.journeyKey);
+  for (const m of changed) await tx.task.update({ where: { id: m.id }, data: { journeyKey: m.tmp } });
+  for (const m of changed) await tx.task.update({ where: { id: m.id }, data: { journeyKey: m.next } });
 }
 
 export async function resetEsteira(actor: Actor, slug: string) {
   assertCan(actor, "templates.manage");
-  await prisma.esteiraCustom.deleteMany({ where: { organizationId: actor.organizationId, slug } });
+  const before = (await getEsteiraFor(actor.organizationId, slug))?.stages ?? [];
+  const def = getDefaultEsteira(slug);
+  await prisma.$transaction(async (tx) => {
+    await tx.esteiraCustom.deleteMany({ where: { organizationId: actor.organizationId, slug } });
+    if (def) await carryLinks(tx, actor.organizationId, slug, before, def.stages);
+  });
 }

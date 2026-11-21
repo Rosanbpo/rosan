@@ -25,7 +25,7 @@ export async function saveEsteiraAction(slug: string, _: ActionState, fd: FormDa
     await esteiras.saveEsteiraText(actor, slug, String(fd.get("text") ?? ""));
   });
   if (res?.ok) {
-    revalidatePath("/esteiras");
+    revalidatePath("/", "layout");
     redirect(`/esteiras/${slug}?salva=1`);
   }
   return res;
