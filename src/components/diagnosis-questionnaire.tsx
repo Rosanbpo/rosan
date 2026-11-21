@@ -1,3 +1,4 @@
+import { DiagnosisWizard } from "./diagnosis-wizard";
 import { DIAGNOSIS_SECTIONS, type Answers, type Question } from "@/domain/diagnosis-form";
 
 const lbl = "text-sm font-medium text-slate-800";
@@ -45,10 +46,8 @@ function Control({ q, v, other, required }: { q: Question; v: string | string[] 
 }
 
 /** Questionário do diagnóstico. `required` = link público (tudo obrigatório); sem ele, lançamento manual. */
-export function DiagnosisQuestionnaire({ answers, required }: { answers: Answers; required: boolean }) {
-  return (
-    <div className="space-y-5">
-      {DIAGNOSIS_SECTIONS.map((s, i) => (
+export function DiagnosisQuestionnaire({ answers, required, paged = false }: { answers: Answers; required: boolean; paged?: boolean }) {
+  const sections = DIAGNOSIS_SECTIONS.map((s, i) => (
         <section key={s.id} className="rounded-2xl border border-hair bg-white p-5 shadow-sm">
           <header className="mb-4 flex items-start gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-900 text-sm font-semibold text-white" aria-hidden>{i + 1}</span>
@@ -82,7 +81,13 @@ export function DiagnosisQuestionnaire({ answers, required }: { answers: Answers
             })}
           </div>
         </section>
-      ))}
-    </div>
-  );
+  ));
+  if (!paged) return <div className="space-y-5">{sections}</div>;
+  const pages: React.ReactNode[] = [];
+  const titles: string[] = [];
+  for (let i = 0; i < sections.length; i += 2) {
+    pages.push(<div className="space-y-5">{sections.slice(i, i + 2)}</div>);
+    titles.push(DIAGNOSIS_SECTIONS.slice(i, i + 2).map((s) => s.title).join(" e "));
+  }
+  return <DiagnosisWizard pages={pages} titles={titles} />;
 }

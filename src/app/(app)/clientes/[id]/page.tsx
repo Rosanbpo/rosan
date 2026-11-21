@@ -69,7 +69,7 @@ import { CopyButton } from "@/components/copy-button";
 import { saveOnboardingAction, createOnboardingTasksAction } from "@/app/actions/onboarding";
 import { getOnboarding } from "@/server/services/onboarding";
 import { onboardingSteps } from "@/server/services/checklists";
-import { getDiagnosis } from "@/server/services/diagnosis";
+import { getDiagnosis, markDiagnosisSeen } from "@/server/services/diagnosis";
 import { headers } from "next/headers";
 import { prisma } from "@/server/db";
 import { CHURN_REASONS } from "@/domain/renewal";
@@ -246,6 +246,7 @@ export default async function ClientPage({
   const onb = aba === "onboarding" ? await getOnboarding(actor, id) : null;
   const obSteps = aba === "onboarding" ? await onboardingSteps(actor.organizationId) : [];
   const onbDiag = aba === "onboarding" ? await getDiagnosis(actor, id) : null;
+  if (aba === "dados") await markDiagnosisSeen(actor, id);
   const hdr = aba === "onboarding" ? await headers() : null;
   const origin = hdr ? `${hdr.get("x-forwarded-proto") ?? "https"}://${hdr.get("x-forwarded-host") ?? hdr.get("host")}` : "";
   const npsData = aba === "resumo" ? await clientNps(actor, id) : null;

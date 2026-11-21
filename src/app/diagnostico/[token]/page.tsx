@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { DiagnosisQuestionnaire } from "@/components/diagnosis-questionnaire";
 import { submitPublicDiagnosisAction } from "@/app/actions/diagnosis";
-import { ALL_QUESTIONS, DIAGNOSIS_SECTIONS, type Answers } from "@/domain/diagnosis-form";
+import { type Answers } from "@/domain/diagnosis-form";
 import { diagnosisByToken } from "@/server/services/diagnosis";
 
 export const metadata = { title: "Diagnóstico financeiro", robots: { index: false, follow: false } };
@@ -13,11 +13,11 @@ export default async function PublicDiagnosisPage({ params, searchParams }: { pa
   const answers = ((row?.answers ?? {}) as Answers) ?? {};
   return (
     <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white">
-      <header className="bg-brand-900 py-6">
-        <div className="mx-auto flex max-w-3xl items-center gap-4 px-4">
-          <Image src="/logo.png" alt="Rosan Finanças" width={620} height={530} priority className="h-auto w-20" />
+      <header className="bg-brand-900 py-7">
+        <div className="mx-auto flex max-w-3xl items-center gap-5 px-4">
+          <Image src="/logo.png" alt="Rosan Finanças" width={620} height={530} priority className="h-auto w-36 sm:w-44" />
           <div className="text-white">
-            <h1 className="text-xl font-semibold">Diagnóstico financeiro</h1>
+            <h1 className="text-2xl font-semibold">Diagnóstico financeiro</h1>
             <p className="text-sm text-white/75">Rosan Finanças · BPO financeiro</p>
           </div>
         </div>
@@ -26,22 +26,25 @@ export default async function PublicDiagnosisPage({ params, searchParams }: { pa
         {!row ? (
           <p className="rounded-xl border border-hair bg-white p-5 text-sm text-slate-600">Este link é inválido ou expirou. Peça um novo link para a Rosan Finanças.</p>
         ) : sp.ok ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-900">
-            <h2 className="text-lg font-semibold">✅ Recebemos o seu diagnóstico!</h2>
-            <p className="mt-1 text-sm">Obrigada, {row.client.tradeName}. Vamos analisar as informações e entrar em contato com a proposta. Você já pode fechar esta página.</p>
+          <div className="mx-auto max-w-xl rounded-3xl border border-emerald-200 bg-white p-10 text-center shadow-sm">
+            <div className="text-6xl" aria-hidden>🎉</div>
+            <h2 className="mt-4 text-2xl font-bold text-brand-900">Recebemos o seu diagnóstico!</h2>
+            <p className="mt-2 text-slate-700">Muito obrigada, <strong>{row.client.tradeName}</strong>. Suas respostas já estão com a nossa equipe.</p>
+            <ul className="mx-auto mt-6 max-w-sm space-y-2 text-left text-sm text-slate-700">
+              <li className="flex gap-2"><span aria-hidden>🔎</span> Vamos analisar a sua operação com carinho.</li>
+              <li className="flex gap-2"><span aria-hidden>📄</span> Em seguida montamos a proposta sob medida para o seu negócio.</li>
+              <li className="flex gap-2"><span aria-hidden>💬</span> Entraremos em contato em breve para conversar.</li>
+            </ul>
+            <p className="mt-6 text-sm text-slate-500">Você já pode fechar esta página. Até logo! 💙</p>
           </div>
         ) : (
           <>
             <p className="text-sm leading-relaxed text-slate-700">
-              Olá, <strong>{row.client.tradeName}</strong>! Este diagnóstico nos ajuda a entender a sua operação e montar a proposta certa para o seu negócio. São {ALL_QUESTIONS.length} perguntas em {DIAGNOSIS_SECTIONS.length} etapas e leva cerca de 10 minutos. <strong>Todas as perguntas são obrigatórias</strong>; use estimativas quando não souber o número exato e escreva “Nenhum” ou digite 0 quando não se aplicar.
+              Olá, <strong>{row.client.tradeName}</strong>! Este diagnóstico nos ajuda a entender a sua operação e montar a proposta certa para o seu negócio. Leva cerca de 10 minutos. Use estimativas quando não souber o número exato e escreva “Nenhum” ou digite 0 quando não se aplicar.
             </p>
             {sp.erro && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{sp.erro}</p>}
             <form action={submitPublicDiagnosisAction.bind(null, token)} className="mt-5 space-y-5">
-              <DiagnosisQuestionnaire answers={answers} required />
-              <div className="flex flex-wrap items-center gap-4">
-                <button type="submit" className="btn-primary px-6 py-2.5 text-base">Enviar diagnóstico</button>
-                <p className="text-xs text-slate-500">🔒 Não pedimos senhas, logins nem dados de cartão.</p>
-              </div>
+              <DiagnosisQuestionnaire answers={answers} required paged />
             </form>
           </>
         )}
