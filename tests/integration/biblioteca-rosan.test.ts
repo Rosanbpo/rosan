@@ -164,3 +164,29 @@ describe("Editar a esteira atualiza tudo que depende dela", () => {
     await expect(saveEsteiraText(s.op, "pre-onboarding", stagesToText(stages))).rejects.toBeInstanceOf(ForbiddenError);
   });
 });
+
+describe("Roteiro na tarefa Reunião de diagnóstico financeiro", () => {
+  it("o roteiro fica ligado só a essa tarefa e aparece na jornada do lead", async () => {
+    const s = await setupOrg();
+    const lead = await createLead(s.admin, { companyName: "Lead Jornada", servicesInterest: [] });
+    await leadScript(s.admin, lead.id);
+    const view = await journeyForLead(s.admin, lead.id, "2026-12-01");
+    const tasks = view.find((v) => v.esteira.slug === "jornada-comercial")!.stages.flatMap((st) => st.tasks);
+    const com = tasks.filter((t) => t.assets.some((a) => a.title === "Roteiro da reunião de diagnóstico"));
+    expect(com.map((t) => t.title)).toEqual(["Reunião de diagnóstico financeiro"]);
+  });
+});
+
+describe("Roteiro antigo", () => {
+  it("troca o rascunho antigo pelo roteiro novo, sem duplicar", async () => {
+    const s = await setupOrg();
+    await listAssets(s.admin);
+    await prisma.journeyAsset.deleteMany({ where: { organizationId: s.admin.organizationId, title: "Roteiro da reunião de diagnóstico" } });
+    await prisma.journeyAsset.create({ data: { organizationId: s.admin.organizationId, kind: "DOCUMENTO", title: "Roteiro do diagnóstico financeiro", body: "rascunho", stage: "COMERCIAL", taskRefs: ["jornada-comercial|Reunião de diagnóstico financeiro", "jornada-comercial|Levantar informações para a proposta"], position: 0 } });
+    const all = await listAssets(s.admin);
+    const roteiros = all.filter((a) => a.title.includes("diagnóstico") && a.title.startsWith("Roteiro"));
+    expect(roteiros.map((a) => a.title)).toEqual(["Roteiro da reunião de diagnóstico"]);
+    expect(roteiros[0].taskRefs).toEqual(["jornada-comercial|Reunião de diagnóstico financeiro"]);
+    expect(roteiros[0].body).toContain("## 1. Abertura");
+  });
+});

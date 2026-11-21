@@ -5,21 +5,8 @@ import { listAssets } from "./journey";
 
 /** O roteiro é o documento padrão da jornada; aqui garantimos que ele exista no formato novo. */
 async function scriptBody(actor: Actor) {
-  const assets = await listAssets(actor);
-  const found = assets.find((a) => a.title === SCRIPT_TITLE);
-  if (found && (found.body ?? "").includes("\n## ")) return { id: found.id, body: found.body! };
-  if (found) {
-    // versão antiga (rascunho sem partes): troca pelo roteiro novo
-    await prisma.journeyAsset.update({ where: { id: found.id }, data: { body: DEFAULT_SCRIPT_BODY } });
-    return { id: found.id, body: DEFAULT_SCRIPT_BODY };
-  }
-  const created = await prisma.journeyAsset.create({
-    data: {
-      organizationId: actor.organizationId, kind: "DOCUMENTO", title: SCRIPT_TITLE, body: DEFAULT_SCRIPT_BODY, stage: "COMERCIAL",
-      taskRefs: ["jornada-comercial|Reunião de diagnóstico financeiro", "jornada-comercial|Levantar informações para a proposta"], position: assets.length,
-    },
-  });
-  return { id: created.id, body: DEFAULT_SCRIPT_BODY };
+  const found = (await listAssets(actor)).find((a) => a.title === SCRIPT_TITLE);
+  return { id: found!.id, body: found!.body ?? DEFAULT_SCRIPT_BODY };
 }
 
 async function ownLead(actor: Actor, leadId: string) {

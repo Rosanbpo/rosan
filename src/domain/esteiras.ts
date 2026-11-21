@@ -55,7 +55,7 @@ export const ESTEIRAS: Esteira[] = [
         name: "Prospecção e diagnóstico",
         tasks: [
           t("Primeiro contato com o lead", "RELACIONAMENTO", 0, 30, ["Registrar o lead no CRM", "Entender o porte e o segmento da empresa", "Agendar a reunião de diagnóstico"]),
-          t("Reunião de diagnóstico financeiro", "REUNIAO_CLIENTE", 3, 60, ["Mapear como o financeiro funciona hoje", "Identificar as principais dores", "Levantar o volume mensal de lançamentos", "Saber quais sistemas a empresa usa"]),
+          t("Reunião de diagnóstico financeiro", "REUNIAO_CLIENTE", 3, 45, ["Abertura e conexão (3 min)", "Situação: conhecer a empresa (7 min)", "Problemas: identificar dificuldades (7 min)", "Implicações: consequências (6 min)", "Necessidade de solução (5 min)", "Apresentação do dashboard (8 min)", "Apresentação da solução e fechamento (9 min)", "Registrar as anotações finais no lead"], { description: "Reunião SPIN de até 45 minutos. Abra o roteiro com checklist e anotações no lead (CRM)." }),
           t("Levantar informações para a proposta", "DOCUMENTACAO", 4, 45, ["Quantidade de contas bancárias", "Volume de notas e boletos por mês", "Escopo desejado (pagar, receber, conciliar, relatórios)", "Quem aprova os pagamentos"]),
           t("Calcular o preço do serviço", "ESTRATEGICO", 5, 30, ["Rodar a precificação com o volume levantado", "Conferir a margem mínima", "Definir descontos possíveis"]),
         ],
@@ -391,7 +391,7 @@ const CONTROLE: Record<string, [string, string]> = {
 };
 for (const e of ESTEIRAS) for (const st of e.stages) for (const k of st.tasks) {
   const c = CONTROLE[k.title];
-  if (c && !k.description) k.description = `Responsável: ${c[0]}. Prazo no controle de implantação: ${c[1]}.`;
+  if (c) { const info = `Responsável: ${c[0]}. Prazo no controle de implantação: ${c[1]}.`; k.description = k.description ? `${k.description} ${info}` : info; }
 }
 
 export function taskKey(slug: string, stageIdx: number, taskIdx: number) {

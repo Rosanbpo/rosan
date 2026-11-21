@@ -29,7 +29,7 @@ export const DEFAULT_ASSETS: DefaultAsset[] = [
     body: `${hi} Aqui é {minhaNome}, da {minhaEmpresa}. Cuidamos da rotina financeira de empresas como a {empresa}, para o dono ter clareza dos números sem perder tempo com planilha.\n\nPosso te contar em 10 minutos como funciona?` },
   { kind: "MENSAGEM", stage: "COMERCIAL", title: "Confirmar reunião de diagnóstico", refs: ["jornada-comercial|Reunião de diagnóstico financeiro"],
     body: `${hi} Passando para confirmar nossa conversa de diagnóstico em {data}. Se puder, deixe à mão os bancos que a {empresa} usa e como as contas a pagar e a receber são controladas hoje. Qualquer imprevisto, é só me avisar por aqui.` },
-  { kind: "DOCUMENTO", stage: "COMERCIAL", title: SCRIPT_TITLE, refs: ["jornada-comercial|Reunião de diagnóstico financeiro", "jornada-comercial|Levantar informações para a proposta"],
+  { kind: "DOCUMENTO", stage: "COMERCIAL", title: SCRIPT_TITLE, refs: ["jornada-comercial|Reunião de diagnóstico financeiro"],
     body: DEFAULT_SCRIPT_BODY },
   { kind: "EMAIL", stage: "COMERCIAL", title: "Envio da proposta", subject: "Proposta de BPO financeiro para {empresa}", refs: ["jornada-comercial|Enviar a proposta comercial"],
     body: `Olá, {nome}!\n\nConforme conversamos, segue em anexo a proposta de BPO financeiro para a {empresa}, com o escopo dos serviços e a mensalidade de {valor}.\n\nFico à disposição para tirar qualquer dúvida e, se fizer sentido, já combinamos os próximos passos.${sign}` },

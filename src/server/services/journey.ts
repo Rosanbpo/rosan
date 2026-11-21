@@ -1,5 +1,6 @@
 import { addDays, localDateTimeToInstant, localDateToDbDate, weekday } from "@/domain/dates";
 import { JOURNEY_STAGES, type JourneyStage } from "@/domain/enums";
+import { DEFAULT_SCRIPT_BODY, SCRIPT_TITLE } from "@/domain/diagnosis-script";
 import { taskKey, type Esteira } from "@/domain/esteiras";
 import { ASSET_KINDS, DEFAULT_ASSETS, type AssetKind } from "@/domain/journey-assets";
 import { assertCan, NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
@@ -16,9 +17,34 @@ const LEAD_SEP = "@";
 
 // ---- Biblioteca de padrões --------------------------------------------------
 
-/** Cria os textos iniciais na primeira vez que a empresa abre a jornada. */
+const SCRIPT_REF = "jornada-comercial|Reunião de diagnóstico financeiro";
+
+/** O roteiro da reunião de diagnóstico é um só, no formato novo e ligado só à tarefa da reunião (troca o rascunho antigo). */
+async function upgradeScript(organizationId: string) {
+  const rows = await prisma.journeyAsset.findMany({ where: { organizationId, title: { in: [SCRIPT_TITLE, "Roteiro do diagnóstico financeiro"] } } });
+  const current = rows.find((r) => r.title === SCRIPT_TITLE);
+  const old = rows.find((r) => r.title !== SCRIPT_TITLE);
+  if (!current) {
+    if (old) await prisma.journeyAsset.update({ where: { id: old.id }, data: { title: SCRIPT_TITLE, body: DEFAULT_SCRIPT_BODY, taskRefs: [SCRIPT_REF] } });
+    else await prisma.journeyAsset.create({ data: { organizationId, kind: "DOCUMENTO", title: SCRIPT_TITLE, body: DEFAULT_SCRIPT_BODY, stage: "COMERCIAL", taskRefs: [SCRIPT_REF], position: 0 } });
+    return;
+  }
+  if (old) await prisma.journeyAsset.delete({ where: { id: old.id } });
+  const data: { body?: string; taskRefs?: string[] } = {};
+  if (!(current.body ?? "").includes("\n## ")) data.body = DEFAULT_SCRIPT_BODY;
+  if (current.taskRefs.join() !== SCRIPT_REF) data.taskRefs = [SCRIPT_REF];
+  if (data.body || data.taskRefs) await prisma.journeyAsset.update({ where: { id: current.id }, data });
+}
+
 async function ensureAssets(organizationId: string) {
-  if ((await prisma.journeyAsset.count({ where: { organizationId } })) > 0) return;
+  if ((await prisma.journeyAsset.count({ where: { organizationId } })) === 0) {
+    await seedAssets(organizationId);
+  }
+  await upgradeScript(organizationId);
+}
+
+/** Cria os textos iniciais na primeira vez que a empresa abre a jornada. */
+async function seedAssets(organizationId: string) {
   await prisma.journeyAsset.createMany({
     data: DEFAULT_ASSETS.map((a, position) => ({
       organizationId, kind: a.kind, title: a.title, subject: a.subject ?? null, body: a.body, stage: a.stage, taskRefs: a.refs, position,
