@@ -43,6 +43,8 @@ export async function structureOverview(actor: Actor): Promise<StructureArea[]> 
       items: [
         ...ESTEIRAS.map((e) => item(`esteira:${e.slug}`, `Esteira: ${e.name}${customSlugs.has(e.slug) ? " (editada)" : ""}`, "/biblioteca?secao=jornada")),
         ...templates.map((t) => item(`rotina:${t.id}`, `Rotina: ${t.name}`, `/rotinas/modelos/${t.id}`)),
+        item("checklist:onboarding", "Checklist de onboarding da aba Onboarding do cliente", "/configuracoes/checklists"),
+        item("checklist:closing", "Checklist de fechamento mensal", "/configuracoes/checklists"),
       ],
     },
     {
