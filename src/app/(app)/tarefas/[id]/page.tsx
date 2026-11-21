@@ -22,6 +22,8 @@ import { fmtCompetence, fmtDateTime, fmtLocalDate, fmtMinutes, waitingTime } fro
 import { APP_TIMEZONE } from "@/server/config";
 import { requireActor } from "@/server/context";
 import { getTaskDetail } from "@/server/services/tasks";
+import { assetsForJourneyKey } from "@/server/services/journey";
+import { JourneyAssets } from "@/components/journey-assets";
 import { publishedByCategory } from "@/server/services/procedures";
 import { listTaskTime } from "@/server/services/time";
 import { getRunningTimer, taskTrackedSeconds } from "@/server/services/timer";
@@ -40,6 +42,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
     getRunningTimer(actor),
     taskTrackedSeconds(id),
   ]);
+  const stdAssets = await assetsForJourneyKey(actor, task.journeyKey);
   const linkedPop = task.recurrence?.template.procedure && task.recurrence.template.procedure.status !== "ARQUIVADO" ? task.recurrence.template.procedure : null;
   const today = instantToLocalDate(new Date(), APP_TIMEZONE);
   const trackedMinutes = timeEntries.reduce((acc, e) => acc + e.minutes, 0);
@@ -185,6 +188,12 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
           {task.description && (
             <Card title="Descrição">
               <p className="text-sm whitespace-pre-wrap text-slate-700">{task.description}</p>
+            </Card>
+          )}
+
+          {stdAssets.length > 0 && (
+            <Card title="Mensagem, e-mail e documento padrão" description="Prontos para copiar. Os dados do cliente já vêm preenchidos.">
+              <JourneyAssets assets={stdAssets} vars={{ nome: (task.client?.tradeName ?? "").split(" ")[0] || "{nome}", empresa: task.client?.tradeName ?? "{empresa}", minhaNome: actor.name, minhaEmpresa: "Rosan Finanças", valor: "{valor}", data: "{data}" }} />
             </Card>
           )}
 

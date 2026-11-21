@@ -17,6 +17,10 @@ import {
   accessMatrix, allowedSections, journeyOverview, listMaterials, listSharedMessages, MATERIAL_CATEGORIES, systemMessagesFor, templatesWithoutStage,
 } from "@/server/services/library";
 import { listProcedures } from "@/server/services/procedures";
+import { journeyTaskOptions, listAssets } from "@/server/services/journey";
+import { deleteAssetAction, saveAssetAction } from "@/app/actions/journey";
+import { ASSET_EMOJI, ASSET_KINDS, ASSET_LABEL, ASSET_VARS, type AssetKind } from "@/domain/journey-assets";
+import { JOURNEY_STAGES } from "@/domain/enums";
 import { trainingItems, trainingTeam } from "@/server/services/training";
 import { getCulture } from "@/server/services/culture";
 
@@ -57,6 +61,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
       {sp.erro && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{sp.erro}</p>}
 
       {current.key === "jornada" && <Journey actor={actor} admin={admin} />}
+      {current.key === "padroes" && <Patterns actor={actor} admin={admin} />}
       {current.key === "mensagens" && <Messages actor={actor} admin={admin} />}
       {current.key === "materiais" && <Materials actor={actor} admin={admin} q={sp.q} />}
       {current.key === "pops" && <Pops actor={actor} />}
@@ -424,6 +429,71 @@ async function Access({ actor }: { actor: Actor }) {
             </>
           )}
         </form>
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ Padrões da jornada */
+async function Patterns({ actor, admin }: { actor: Actor; admin: boolean }) {
+  const [assets, options] = await Promise.all([listAssets(actor), admin ? journeyTaskOptions(actor.organizationId) : Promise.resolve([])]);
+  const form = (a?: (typeof assets)[number]) => (
+    <form action={saveAssetAction.bind(null, a?.id ?? null)} className="mt-3 grid gap-3 md:grid-cols-2">
+      <label className="text-sm"><span className={label}>Tipo</span><select name="kind" defaultValue={a?.kind ?? "MENSAGEM"} className="input mt-1">{ASSET_KINDS.map((k) => <option key={k} value={k}>{ASSET_LABEL[k]}</option>)}</select></label>
+      <label className="text-sm"><span className={label}>Etapa da jornada</span><select name="stage" defaultValue={a?.stage ?? "COMERCIAL"} className="input mt-1">{JOURNEY_STAGES.map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}</select></label>
+      <label className="text-sm md:col-span-2"><span className={label}>Título</span><input name="title" required defaultValue={a?.title} className="input mt-1" /></label>
+      <label className="text-sm md:col-span-2"><span className={label}>Assunto (só para e-mail)</span><input name="subject" defaultValue={a?.subject ?? ""} className="input mt-1" /></label>
+      <label className="text-sm md:col-span-2"><span className={label}>Texto</span><textarea name="body" rows={8} defaultValue={a?.body ?? ""} className="input mt-1" /></label>
+      <label className="text-sm md:col-span-2"><span className={label}>Link (Drive, Canva, vídeo…)</span><input name="url" defaultValue={a?.url ?? ""} placeholder="https://" className="input mt-1" /></label>
+      <div className="md:col-span-2">
+        <p className={label}>Aparece nas tarefas:</p>
+        <div className="mt-1 max-h-56 space-y-1 overflow-auto rounded-lg border border-hair p-2">
+          {options.map((o) => (
+            <details key={o.slug} open={!!a?.taskRefs.some((r) => r.startsWith(o.slug + "|"))}>
+              <summary className="cursor-pointer text-xs font-semibold text-slate-700">{o.name}</summary>
+              <div className="ml-3 mt-1 grid gap-0.5">
+                {o.tasks.map((t) => (
+                  <label key={t} className="flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" name="taskRefs" value={`${o.slug}|${t}`} defaultChecked={a?.taskRefs.includes(`${o.slug}|${t}`)} /> {t}</label>
+                ))}
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+      <div><button type="submit" className="btn-primary">Salvar</button></div>
+    </form>
+  );
+  return (
+    <div className="space-y-5">
+      <p className="rounded-xl border border-brand-100 bg-brand-50/60 p-3 text-sm text-brand-900">
+        🗂️ Aqui ficam as mensagens, e-mails e documentos padrão. Cada um é ligado às tarefas da jornada onde deve aparecer, então quem abre a tarefa (ou a aba Jornada do cliente e do lead) já encontra o texto certo, sem procurar em outra janela. Variáveis: {ASSET_VARS.join("  ")}.
+      </p>
+      {admin && (
+        <details className="card p-4">
+          <summary className="cursor-pointer text-sm font-medium text-brand-900">➕ Novo item padrão</summary>
+          {form()}
+        </details>
+      )}
+      {JOURNEY_STAGES.filter((st) => assets.some((a) => a.stage === st)).map((st) => (
+        <section key={st}>
+          <h2 className="mb-2 text-sm font-semibold text-brand-900">{STAGE_LABEL[st]}</h2>
+          <div className="grid gap-3 md:grid-cols-2">
+            {assets.filter((a) => a.stage === st).map((a) => (
+              <article key={a.id} className="card p-4">
+                <h3 className="font-medium text-brand-900">{ASSET_EMOJI[a.kind as AssetKind]} {a.title} <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-600">{ASSET_LABEL[a.kind as AssetKind]}</span></h3>
+                {a.subject && <p className="mt-1 text-xs text-slate-500">Assunto: {a.subject}</p>}
+                {a.body && <pre className="mt-2 max-h-36 overflow-auto whitespace-pre-wrap font-sans text-sm text-slate-600">{a.body}</pre>}
+                <p className="mt-2 text-xs text-slate-500">Usado em {a.taskRefs.length} tarefa(s): {a.taskRefs.map((r) => r.split("|")[1]).slice(0, 3).join(", ")}{a.taskRefs.length > 3 ? "…" : ""}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {a.body && <CopyButton text={a.body} label="Copiar" />}
+                  {a.url && <a href={a.url} target="_blank" rel="noopener noreferrer" className="btn-secondary btn-sm">Abrir link ↗</a>}
+                  {admin && <form action={deleteAssetAction.bind(null, a.id)} className="ml-auto"><button type="submit" className="text-xs text-slate-400 hover:text-red-600">remover</button></form>}
+                </div>
+                {admin && <details className="mt-2"><summary className="cursor-pointer text-xs text-brand-700">✏️ Editar</summary>{form(a)}</details>}
+              </article>
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   );

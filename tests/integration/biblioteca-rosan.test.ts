@@ -35,3 +35,55 @@ describe("Biblioteca Rosan", () => {
     expect(com.esteiras[0].totalDays).toBeGreaterThan(0);
   });
 });
+
+import { DEFAULT_ASSETS } from "@/domain/journey-assets";
+import { ESTEIRAS } from "@/domain/esteiras";
+import { createClient } from "@/server/services/clients";
+import { createLead } from "@/server/services/leads";
+import { applyJourneyStage, assetsForJourneyKey, journeyForClient, journeyForLead, listAssets, saveAsset } from "@/server/services/journey";
+import { prisma } from "@/server/db";
+
+describe("Jornada com textos padrão", () => {
+  it("todo texto padrão aponta para uma tarefa que existe nas esteiras", () => {
+    for (const a of DEFAULT_ASSETS) {
+      for (const ref of a.refs) {
+        const [slug, title] = ref.split("|");
+        const found = ESTEIRAS.find((e) => e.slug === slug)?.stages.some((s) => s.tasks.some((t) => t.title === title));
+        expect(found, `${a.title} → ${ref}`).toBe(true);
+      }
+    }
+  });
+
+  it("gera as tarefas de uma etapa para o cliente, sem duplicar, e a tarefa traz os textos padrão", async () => {
+    const s = await setupOrg();
+    const c = await createClient(s.admin, { legalName: "Cliente Ltda", tradeName: "Cliente", status: "ATIVO", services: [], memberIds: [] });
+    const r = await applyJourneyStage(s.admin, { slug: "pre-onboarding", stageIdx: 0, startDate: "2026-12-01", clientId: c.id });
+    expect(r.created).toBe(2);
+    await expect(applyJourneyStage(s.admin, { slug: "pre-onboarding", stageIdx: 0, startDate: "2026-12-01", clientId: c.id })).rejects.toThrow();
+    const task = await prisma.task.findFirstOrThrow({ where: { clientId: c.id, title: { startsWith: "Apresentar o responsável" } } });
+    expect(task.dueAt.toISOString().slice(0, 10)).toBe("2026-12-02");
+    const assets = await assetsForJourneyKey(s.admin, task.journeyKey);
+    expect(assets.length).toBeGreaterThan(0);
+    const view = await journeyForClient(s.admin, c.id, "2026-12-01");
+    expect(view.find((v) => v.esteira.slug === "pre-onboarding")!.stages[0].generatedCount).toBe(2);
+  });
+
+  it("gera as tarefas da jornada comercial para um lead", async () => {
+    const s = await setupOrg();
+    const lead = await createLead(s.admin, { companyName: "Lead Ltda", servicesInterest: [] });
+    const r = await applyJourneyStage(s.admin, { slug: "jornada-comercial", stageIdx: 0, startDate: "2026-12-01", leadId: lead.id });
+    expect(r.created).toBe(4);
+    const view = await journeyForLead(s.admin, lead.id, "2026-12-01");
+    expect(view).toHaveLength(1);
+    expect(view[0].stages[0].generatedCount).toBe(4);
+    await expect(applyJourneyStage(s.op, { slug: "jornada-comercial", stageIdx: 1, startDate: "2026-12-01", leadId: lead.id })).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("só a administradora edita os padrões", async () => {
+    const s = await setupOrg();
+    const first = (await listAssets(s.admin))[0];
+    await saveAsset(s.admin, first.id, { kind: "MENSAGEM", stage: "COMERCIAL", title: "Novo", body: "Texto", taskRefs: ["jornada-comercial|Primeiro contato com o lead"] });
+    expect((await listAssets(s.admin)).find((a) => a.id === first.id)!.title).toBe("Novo");
+    await expect(saveAsset(s.op, first.id, { kind: "MENSAGEM", stage: "COMERCIAL", title: "x" })).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});

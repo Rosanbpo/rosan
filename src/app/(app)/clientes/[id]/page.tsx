@@ -21,6 +21,7 @@ import {
   StickyNote,
   NotebookPen,
   LayoutDashboard,
+  Route,
 } from "lucide-react";
 import { dbDateToLocalDate } from "@/domain/dates";
 import {
@@ -71,6 +72,8 @@ import { getOnboarding } from "@/server/services/onboarding";
 import { onboardingSteps } from "@/server/services/checklists";
 import { getDiagnosis, markDiagnosisSeen } from "@/server/services/diagnosis";
 import { headers } from "next/headers";
+import { journeyForClient } from "@/server/services/journey";
+import { JourneyPanel } from "@/components/journey-panel";
 import { prisma } from "@/server/db";
 import { CHURN_REASONS } from "@/domain/renewal";
 import { closeClientAction } from "@/app/actions/gestao";
@@ -120,6 +123,7 @@ const TABS: Array<{
   { key: "resumo", label: "Resumo", icon: LayoutDashboard, show: () => true },
   { key: "dados", label: "Dados", icon: UserRound, show: () => true },
   { key: "cofre", label: "Cofre", icon: KeyRound, show: () => true },
+  { key: "jornada", label: "Jornada", icon: Route, show: () => true },
   { key: "onboarding", label: "Onboarding", icon: Workflow, show: () => true },
   { key: "rotinas", label: "Rotina", icon: Repeat, show: () => true },
   { key: "pops", label: "Observações e POPs", icon: BookOpenCheck, show: () => true },
@@ -135,6 +139,7 @@ const TAB_TONE: Record<string, string> = {
   financeiro: "text-emerald-500",
   bancos: "text-indigo-500",
   cofre: "text-amber-500",
+  jornada: "text-indigo-500",
   onboarding: "text-rose-400",
   rotinas: "text-blue-500",
   pops: "text-violet-500",
@@ -149,7 +154,6 @@ const LEGACY_TABS: Record<string, string> = {
   financeiro: "dados",
   bancos: "dados",
   projetos: "fechamentos",
-  jornada: "onboarding",
   documentos: "pendencias",
   particularidades: "pops",
 };
@@ -243,6 +247,8 @@ export default async function ClientPage({
   const closingData = aba === "fechamentos" ? await getClosing(actor, id, closingMonth) : null;
   const closingHist = aba === "fechamentos" ? await closingHistory(actor, id) : [];
   const vol = aba === "dados" ? await volumeOverview(actor, id) : null;
+  const journeyData = aba === "jornada" ? await journeyForClient(actor, id, instantToLocalDate(new Date(), APP_TIMEZONE)) : null;
+  const journeyPeople = aba === "jornada" ? await assignableUsers(actor, id) : [];
   const onb = aba === "onboarding" ? await getOnboarding(actor, id) : null;
   const obSteps = aba === "onboarding" ? await onboardingSteps(actor.organizationId) : [];
   const onbDiag = aba === "onboarding" ? await getDiagnosis(actor, id) : null;
@@ -559,6 +565,22 @@ export default async function ClientPage({
 
       {aba === "resumo" && npsData && (
         <div className="mt-6"><NpsCard clientId={id} rows={npsData.rows} nps={npsData.nps} manage={manage} flash={{ ok: sp.nps === "ok" ? "ok" : undefined, erro: sp.npserro }} link={npsLinkUrl} /></div>
+      )}
+
+      {aba === "jornada" && journeyData && (
+        <div className="max-w-5xl">
+          {sp.gerou && <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{sp.gerou} tarefa(s) criada(s). Veja em Tarefas.</p>}
+          {sp.erro && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{sp.erro}</p>}
+          <JourneyPanel
+            view={journeyData}
+            target={{ clientId: id }}
+            back={`/clientes/${id}?aba=jornada`}
+            today={instantToLocalDate(new Date(), APP_TIMEZONE)}
+            people={journeyPeople.map((p) => ({ id: p.id, name: p.name }))}
+            vars={{ nome: (client.contactName ?? client.tradeName).split(" ")[0], empresa: client.tradeName, minhaNome: actor.name, minhaEmpresa: "Rosan Finanças", valor: finance && finance.monthlyFee !== null ? fmtMoney(finance.monthlyFee) : "{valor}", data: "{data}" }}
+            canGenerate={can(actor, "projects.manage")}
+          />
+        </div>
       )}
 
       {aba === "onboarding" && (
