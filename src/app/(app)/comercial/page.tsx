@@ -93,7 +93,7 @@ export default async function ComercialPage() {
             <ul className="divide-y divide-white rounded-xl bg-white text-sm">
               {dx.waiting.slice(0, 6).map((w) => (
                 <li key={w.clientId}>
-                  <Link href={`/clientes/${w.clientId}?aba=onboarding`} className="flex items-center justify-between gap-2 px-3 py-2 hover:bg-brand-50">
+                  <Link href={`/clientes/${w.clientId}?aba=jornada`} className="flex items-center justify-between gap-2 px-3 py-2 hover:bg-brand-50">
                     <span className="truncate font-medium text-brand-900">{w.name}</span>
                     <span className="shrink-0 text-xs text-slate-500">{w.since ? `enviado em ${w.since.toLocaleDateString("pt-BR")}` : "enviado"}</span>
                   </Link>

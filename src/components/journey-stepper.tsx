@@ -10,7 +10,7 @@ export function JourneyStepper({ current, clientId }: { current: JourneyStage | 
     <section className="mb-6 rounded-xl border border-hair bg-white p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-brand-900">🧭 Jornada do cliente</h2>
-        <Link href={`/clientes/${clientId}?aba=onboarding`} className="text-xs text-brand-700 hover:underline">Ver onboarding e esteiras →</Link>
+        <Link href={`/clientes/${clientId}?aba=jornada`} className="text-xs text-brand-700 hover:underline">Ver a jornada →</Link>
       </div>
       {idx < 0 ? (
         <p className="text-sm text-slate-500">Etapa ainda não definida. <Link href={`/clientes/${clientId}/editar`} className="text-brand-700 hover:underline">Definir etapa</Link></p>

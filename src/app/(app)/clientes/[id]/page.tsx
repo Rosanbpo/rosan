@@ -39,11 +39,8 @@ import { highlightedNotes } from "@/server/services/client-notes";
 import { ClientProceduresPanel } from "@/components/client-procedures-panel";
 import { BankAccountsPanel } from "@/components/bank-accounts-panel";
 import { EsteiraIcon } from "@/components/esteira-icon";
-import { esteiraCounts } from "@/domain/esteiras";
 import { STAGE_LABEL } from "@/domain/enums";
-import { TONE } from "@/lib/ui";
 import { listBankAccounts } from "@/server/services/bank-accounts";
-import { esteiraProgress, listEsteirasFor } from "@/server/services/esteiras";
 import { PROPOSAL_STATUS_LABEL, type ProposalStatus } from "@/domain/proposal";
 import { can } from "@/domain/permissions";
 import { Card, EmptyState, Stat } from "@/components/ui/layout";
@@ -67,9 +64,8 @@ import { JourneyStepper } from "@/components/journey-stepper";
 import { DiagnosisPanel } from "@/components/diagnosis-panel";
 import { volumeOverview } from "@/server/services/diagnosis";
 import { CopyButton } from "@/components/copy-button";
-import { saveOnboardingAction, createOnboardingTasksAction } from "@/app/actions/onboarding";
+import { saveOnboardingAction } from "@/app/actions/onboarding";
 import { getOnboarding } from "@/server/services/onboarding";
-import { onboardingSteps } from "@/server/services/checklists";
 import { getDiagnosis, markDiagnosisSeen } from "@/server/services/diagnosis";
 import { headers } from "next/headers";
 import { journeyForClient } from "@/server/services/journey";
@@ -124,7 +120,6 @@ const TABS: Array<{
   { key: "dados", label: "Dados", icon: UserRound, show: () => true },
   { key: "cofre", label: "Cofre", icon: KeyRound, show: () => true },
   { key: "jornada", label: "Jornada", icon: Route, show: () => true },
-  { key: "onboarding", label: "Onboarding", icon: Workflow, show: () => true },
   { key: "rotinas", label: "Rotina", icon: Repeat, show: () => true },
   { key: "pops", label: "Observações e POPs", icon: BookOpenCheck, show: () => true },
   { key: "pendencias", label: "Pendências", icon: Hourglass, show: () => true },
@@ -191,8 +186,6 @@ export default async function ClientPage({
     clientPops,
     standardPops,
     clientNotes,
-    journey,
-    ESTEIRAS,
     highlights,
   ] = await Promise.all([
     getRunningTimer(actor),
@@ -214,8 +207,6 @@ export default async function ClientPage({
     aba === "pops" ? listClientProcedures(actor, id) : Promise.resolve([]),
     aba === "pops" && can(actor, "procedures.manage") ? procedureOptions(actor) : Promise.resolve([]),
     aba === "pops" || aba === "atas" ? listClientNotes(actor, id, aba === "atas" ? "ATA" : "PARTICULARIDADE") : Promise.resolve([]),
-    aba === "onboarding" ? esteiraProgress(actor, { clientId: id }) : Promise.resolve({}),
-    aba === "onboarding" ? listEsteirasFor(actor.organizationId) : Promise.resolve([]),
     aba === "resumo" ? highlightedNotes(actor, id) : Promise.resolve([]),
   ]);
   const routineForm =
@@ -249,9 +240,7 @@ export default async function ClientPage({
   const vol = aba === "dados" ? await volumeOverview(actor, id) : null;
   const journeyData = aba === "jornada" ? await journeyForClient(actor, id, instantToLocalDate(new Date(), APP_TIMEZONE)) : null;
   const journeyPeople = aba === "jornada" ? await assignableUsers(actor, id) : [];
-  const onb = aba === "onboarding" ? await getOnboarding(actor, id) : null;
-  const obSteps = aba === "onboarding" ? await onboardingSteps(actor.organizationId) : [];
-  const onbDiag = aba === "onboarding" ? await getDiagnosis(actor, id) : null;
+  const onb = aba === "dados" ? await getOnboarding(actor, id) : null;
   if (aba === "dados") await markDiagnosisSeen(actor, id);
   const hdr = aba === "onboarding" ? await headers() : null;
   const origin = hdr ? `${hdr.get("x-forwarded-proto") ?? "https"}://${hdr.get("x-forwarded-host") ?? hdr.get("host")}` : "";
@@ -583,64 +572,6 @@ export default async function ClientPage({
         </div>
       )}
 
-      {aba === "onboarding" && (
-        <div className="max-w-4xl space-y-5">
-          {sp.ob && <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{sp.ob === "tarefas" ? "Tarefas de onboarding criadas." : "Onboarding salvo."}</p>}
-          {sp.oberro && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{sp.oberro}</p>}
-          <form action={saveOnboardingAction.bind(null, id)} className="space-y-5">
-            <label className="block text-sm"><span className="font-medium text-slate-700">Objetivos da parceria (um por linha)</span>
-              <textarea name="goals" rows={4} defaultValue={onb?.goals ?? ""} className="input mt-1" placeholder="Ex.: Organização completa dos processos financeiros" /></label>
-
-            <section className="rounded-xl border border-hair bg-slate-50 p-4 text-sm">
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="font-semibold text-brand-900">Diagnóstico financeiro do cliente</h3>
-                <span className="text-xs text-slate-500">{onbDiag?.submittedAt ? "✅ Respondido pelo cliente" : onbDiag ? "Lançado manualmente" : "Aguardando o cliente preencher"}</span>
-              </div>
-              <p className="mt-1 text-slate-600">Mande esse link para o cliente novo preencher sozinho (regime tributário, faturamento, bancos, plataformas), sem precisar de conta no sistema.</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {onbDiag?.token ? <CopyButton text={`${origin}/diagnostico/${onbDiag.token}`} label="Copiar link do diagnóstico" /> : <span className="text-xs text-slate-500">Gere o link em Dados, no bloco Diagnóstico.</span>}
-                <Link href={`/clientes/${id}?aba=dados`} className="btn-secondary btn-sm">Ver diagnóstico em Dados</Link>
-              </div>
-            </section>
-
-            <section className="rounded-xl border border-hair bg-slate-50 p-4 text-sm">
-              <h3 className="font-semibold text-brand-900">Checklist de onboarding ({obSteps.length} etapas)</h3>
-              <p className="mt-1 text-slate-600">{obSteps.map((s) => s.title).join(" · ")}</p>
-              <p className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">💡 Quer um passo a passo pronto de cada etapa? Na aba Jornada, gere as tarefas de Pré-onboarding, Onboarding e Implantação para este cliente.</p>
-            </section>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="block text-sm"><span className="font-medium text-slate-700">Nossas responsabilidades (uma por linha)</span>
-                <textarea name="ourResponsibilities" rows={5} defaultValue={onb?.ourResponsibilities ?? ""} className="input mt-1" /></label>
-              <label className="block text-sm"><span className="font-medium text-slate-700">Responsabilidades do cliente (uma por linha)</span>
-                <textarea name="clientResponsibilities" rows={5} defaultValue={onb?.clientResponsibilities ?? ""} className="input mt-1" /></label>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              <label className="block text-sm"><span className="font-medium text-slate-700">Canal oficial</span><input name="officialChannel" defaultValue={onb?.officialChannel ?? ""} className="input mt-1" placeholder="Ex.: grupo de WhatsApp" /></label>
-              <label className="block text-sm"><span className="font-medium text-slate-700">ERP / sistema usado</span><input name="erp" defaultValue={onb?.erp ?? client.software ?? ""} className="input mt-1" /></label>
-              <label className="block text-sm"><span className="font-medium text-slate-700">E-mail padrão de atendimento</span><input name="defaultEmail" type="email" defaultValue={onb?.defaultEmail ?? ""} className="input mt-1" /></label>
-            </div>
-            <button type="submit" className="btn-primary">Salvar onboarding</button>
-          </form>
-
-          <form action={createOnboardingTasksAction.bind(null, id)}>
-            <button type="submit" className="btn-secondary">➕ Criar as {obSteps.length} tarefas de onboarding</button>
-          </form>
-
-          <div className="space-y-3 border-t border-hair pt-5">
-            <p className="text-sm text-slate-600">
-              Etapa atual: <strong>{client.journeyStage ? STAGE_LABEL[client.journeyStage] : "não definida"}</strong>
-              {manage && (<>{" "}· <Link href={`/clientes/${id}/editar`} className="font-medium text-brand-700 hover:underline">alterar</Link></>)}
-            </p>
-            <Link href={`/clientes/${id}?aba=jornada#onboarding`} className="card flex flex-wrap items-center gap-3 p-4 hover:border-brand-300">
-              <span className="text-2xl">🧭</span>
-              <span className="flex-1"><span className="block font-semibold text-brand-900">Jornada do cliente</span><span className="block text-sm text-slate-500">Pré-onboarding, onboarding e implantação com tarefas, prazos, checklists e mensagens padrão.</span></span>
-              <span className="btn-secondary btn-sm">Abrir jornada</span>
-            </Link>
-          </div>
-        </div>
-      )}
-
       {aba === "fechamentos" && closingData && (
         <ClosingPanel clientId={id} month={closingMonth} closing={closingData.closing} tasks={closingData.tasks} history={closingHist} manage={manage} />
       )}
@@ -930,6 +861,32 @@ export default async function ClientPage({
       )}
 
       {aba === "dados" && vol && <DiagnosisPanel clientId={id} diagnosis={vol.diagnosis} rows={vol.rows} manage={manage} flash={{ dx: sp.dx, erro: sp.dxerro }} />}
+
+      {aba === "dados" && (
+        <section className="card mt-6 max-w-4xl p-5">
+          <h2 className="text-base font-semibold text-brand-900">🤝 Combinados do onboarding</h2>
+          <p className="mb-3 text-xs text-slate-500">Objetivos, responsabilidades e canais combinados com este cliente. As tarefas do onboarding ficam na aba Jornada.</p>
+          {sp.ob && <p className="mb-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">Combinados salvos.</p>}
+          {sp.oberro && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{sp.oberro}</p>}
+          <form action={saveOnboardingAction.bind(null, id)} className="space-y-4">
+            <label className="block text-sm"><span className="font-medium text-slate-700">Objetivos da parceria (um por linha)</span>
+              <textarea name="goals" rows={4} defaultValue={onb?.goals ?? ""} className="input mt-1" placeholder="Ex.: Organização completa dos processos financeiros" /></label>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block text-sm"><span className="font-medium text-slate-700">Nossas responsabilidades (uma por linha)</span>
+                <textarea name="ourResponsibilities" rows={5} defaultValue={onb?.ourResponsibilities ?? ""} className="input mt-1" /></label>
+              <label className="block text-sm"><span className="font-medium text-slate-700">Responsabilidades do cliente (uma por linha)</span>
+                <textarea name="clientResponsibilities" rows={5} defaultValue={onb?.clientResponsibilities ?? ""} className="input mt-1" /></label>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="block text-sm"><span className="font-medium text-slate-700">Canal oficial</span><input name="officialChannel" defaultValue={onb?.officialChannel ?? ""} className="input mt-1" placeholder="Ex.: grupo de WhatsApp" /></label>
+              <label className="block text-sm"><span className="font-medium text-slate-700">ERP / sistema usado</span><input name="erp" defaultValue={onb?.erp ?? client.software ?? ""} className="input mt-1" /></label>
+              <label className="block text-sm"><span className="font-medium text-slate-700">E-mail padrão de atendimento</span><input name="defaultEmail" type="email" defaultValue={onb?.defaultEmail ?? ""} className="input mt-1" /></label>
+            </div>
+            <button type="submit" className="btn-primary">Salvar combinados</button>
+          </form>
+        </section>
+      )}
 
       {aba === "dados" && (
         <div className="mt-6">

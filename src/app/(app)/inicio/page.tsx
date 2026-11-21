@@ -83,7 +83,7 @@ export default async function InicioPage() {
           <ul className="divide-y divide-hair border-t border-hair">
             {dx.waiting.map((w) => (
               <li key={w.clientId} className="flex items-center justify-between gap-3 px-5 py-2 text-sm">
-                <Link href={`/clientes/${w.clientId}?aba=onboarding`} className="font-medium text-brand-700 hover:underline">{w.name}</Link>
+                <Link href={`/clientes/${w.clientId}?aba=jornada`} className="font-medium text-brand-700 hover:underline">{w.name}</Link>
                 <span className="text-xs text-slate-500">link enviado {w.since ? `em ${fmtDateTime(w.since)}` : ""}</span>
               </li>
             ))}
