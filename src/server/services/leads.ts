@@ -220,7 +220,7 @@ export const STAGES_FOR_BOARD = LEAD_STAGES;
 export async function listMyMessageTemplates(actor: Actor) {
   assertCan(actor, "crm.manage");
   return prisma.messageTemplate.findMany({
-    where: { organizationId: actor.organizationId, authorId: actor.userId },
+    where: { organizationId: actor.organizationId, OR: [{ authorId: actor.userId }, { shared: true }] },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -239,5 +239,5 @@ export async function createMessageTemplate(actor: Actor, raw: Record<string, un
 
 export async function deleteMessageTemplate(actor: Actor, id: string) {
   assertCan(actor, "crm.manage");
-  await prisma.messageTemplate.deleteMany({ where: { id, organizationId: actor.organizationId, authorId: actor.userId } });
+  await prisma.messageTemplate.deleteMany({ where: { id, organizationId: actor.organizationId, authorId: actor.userId, shared: false } });
 }

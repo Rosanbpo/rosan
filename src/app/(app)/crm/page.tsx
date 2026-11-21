@@ -9,6 +9,7 @@ import { APP_TIMEZONE } from "@/server/config";
 import { requirePermission } from "@/server/context";
 import { str } from "@/server/page-utils";
 import { listLeads, listMyMessageTemplates } from "@/server/services/leads";
+import { systemMessagesFor } from "@/server/services/library";
 import { MessageButton, MessageDialog, TemplatesButton } from "@/components/crm-messages";
 import { DAILY_LEAD_GOAL } from "@/domain/crm-messages";
 import { addDays } from "@/domain/dates";
@@ -38,7 +39,7 @@ export default async function CrmPage({ searchParams }: { searchParams: Promise<
   const actor = await requirePermission("crm.manage");
   const sp = await searchParams;
   const q = str(sp, "q");
-  const [{ leads, forecast, conversion, won, lost }, mine] = await Promise.all([listLeads(actor, { q }), listMyMessageTemplates(actor)]);
+  const [{ leads, forecast, conversion, won, lost }, mine, system] = await Promise.all([listLeads(actor, { q }), listMyMessageTemplates(actor), systemMessagesFor(actor.organizationId)]);
   const lista = str(sp, "vista") === "lista";
   const today = instantToLocalDate(new Date(), APP_TIMEZONE);
   const showClosed = str(sp, "encerrados") === "1";
@@ -98,12 +99,12 @@ export default async function CrmPage({ searchParams }: { searchParams: Promise<
           {lista && <input type="hidden" name="vista" value="lista" />}
           <input name="q" defaultValue={q} placeholder="Buscar por nome, contato…" className="input" aria-label="Buscar lead" />
         </form>
-        <TemplatesButton mine={mine.map((m) => ({ id: m.id, title: m.title, stage: m.stage, body: m.body }))} />
+        <TemplatesButton system={system} mine={mine.map((m) => ({ id: m.id, title: m.title, stage: m.stage, body: m.body }))} />
         <Link href="/crm/novo" className="btn-primary">
           <Plus aria-hidden className="h-4 w-4" /> Novo lead
         </Link>
       </div>
-      <MessageDialog me={actor.name} org="Rosan Finanças" mine={mine.map((m) => ({ id: m.id, title: m.title, stage: m.stage, body: m.body }))} />
+      <MessageDialog system={system} me={actor.name} org="Rosan Finanças" mine={mine.map((m) => ({ id: m.id, title: m.title, stage: m.stage, body: m.body }))} />
 
       {due.length > 0 && (
         <section className="card mb-6">

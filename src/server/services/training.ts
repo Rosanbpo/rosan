@@ -24,12 +24,12 @@ export async function setTrainingDone(actor: Actor, itemId: string, done: boolea
   else await prisma.trainingProgress.deleteMany({ where: { itemId, userId: actor.userId } });
 }
 
-export async function addTrainingItem(actor: Actor, title: string, description: string) {
+export async function addTrainingItem(actor: Actor, title: string, description: string, extra: { phase?: string; url?: string } = {}) {
   assertCan(actor, "users.manage");
   const t = title.trim();
   if (t.length < 3 || t.length > 150) throw new ValidationError("Informe o título (3 a 150 letras).");
   const last = await prisma.trainingItem.aggregate({ where: { organizationId: actor.organizationId }, _max: { position: true } });
-  await prisma.trainingItem.create({ data: { organizationId: actor.organizationId, title: t, description: description.trim().slice(0, 500) || null, position: (last._max.position ?? -1) + 1 } });
+  await prisma.trainingItem.create({ data: { organizationId: actor.organizationId, title: t, description: description.trim().slice(0, 500) || null, phase: extra.phase?.trim().slice(0, 40) || null, url: extra.url?.trim().slice(0, 500) || null, position: (last._max.position ?? -1) + 1 } });
 }
 
 export async function removeTrainingItem(actor: Actor, itemId: string) {
@@ -41,4 +41,28 @@ export async function trainingTeam(actor: Actor) {
   assertCan(actor, "users.manage");
   const members = await prisma.membership.findMany({ where: { organizationId: actor.organizationId, active: true }, include: { user: { select: { id: true, name: true } } } });
   return members.map((m) => m.user);
+}
+
+export async function updateTrainingItem(actor: Actor, itemId: string, raw: { title?: unknown; description?: unknown; phase?: unknown; url?: unknown }) {
+  assertCan(actor, "users.manage");
+  const title = String(raw.title ?? "").trim();
+  if (title.length < 3 || title.length > 150) throw new ValidationError("Informe o título (3 a 150 letras).");
+  const url = String(raw.url ?? "").trim();
+  if (url && !/^(https?:\/\/|\/)/i.test(url)) throw new ValidationError("O link deve começar com https:// ou /.");
+  await prisma.trainingItem.updateMany({
+    where: { id: itemId, organizationId: actor.organizationId },
+    data: { title, description: String(raw.description ?? "").trim().slice(0, 500) || null, phase: String(raw.phase ?? "").trim().slice(0, 40) || null, url: url || null },
+  });
+}
+
+/** Sobe (-1) ou desce (+1) o item na trilha. */
+export async function moveTrainingItem(actor: Actor, itemId: string, dir: -1 | 1) {
+  assertCan(actor, "users.manage");
+  const all = await prisma.trainingItem.findMany({ where: { organizationId: actor.organizationId }, orderBy: { position: "asc" }, select: { id: true } });
+  const i = all.findIndex((x) => x.id === itemId);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= all.length) return;
+  const ids = all.map((x) => x.id);
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  await prisma.$transaction(ids.map((id, position) => prisma.trainingItem.update({ where: { id }, data: { position } })));
 }
