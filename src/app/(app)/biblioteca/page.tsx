@@ -39,13 +39,14 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
   const admin = can(actor, "templates.manage");
   const tabs: Array<{ key: string; label: string; emoji: string }> = [
     ...(admin ? [{ key: "visao", label: "Visão geral", emoji: "✅" }] : []),
-    ...LIBRARY_SECTIONS.filter((s) => allowed.includes(s.key)),
+    ...LIBRARY_SECTIONS.filter((s) => s.key !== "padroes" && (allowed.includes(s.key) || (s.key === "jornada" && allowed.includes("padroes")))),
     ...(can(actor, "users.manage") ? [{ key: "acessos", label: "Quem vê o quê", emoji: "🔐" }] : []),
   ];
   if (tabs.length === 0) {
     return (<><PageHeader title="Estrutura Rosan" /><p className="card p-5 text-sm text-slate-600">Ainda não há nada liberado para você. Peça à administradora para liberar as áreas da biblioteca.</p></>);
   }
-  const current = tabs.find((t) => t.key === sp.secao) ?? tabs[0];
+  const wanted = sp.secao === "padroes" ? "jornada" : sp.secao;
+  const current = tabs.find((t) => t.key === wanted) ?? tabs[0];
   if (sp.secao && sp.secao !== current.key) redirect(`/biblioteca?secao=${current.key}`);
   const section = LIBRARY_SECTIONS.find((s) => s.key === current.key);
 
@@ -65,7 +66,6 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
 
       {current.key === "visao" && <Overview actor={actor} filtro={sp.filtro} />}
       {current.key === "jornada" && <Journey actor={actor} admin={admin} />}
-      {current.key === "padroes" && <Patterns actor={actor} admin={admin} />}
       {current.key === "mensagens" && <Messages actor={actor} admin={admin} />}
       {current.key === "materiais" && <Materials actor={actor} admin={admin} q={sp.q} />}
       {current.key === "pops" && <Pops actor={actor} />}
@@ -79,14 +79,66 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
 type Actor = Awaited<ReturnType<typeof requireActor>>;
 
 /* ------------------------------------------------------------------ Jornada */
+type AssetRow = Awaited<ReturnType<typeof listAssets>>[number];
+type TaskOpt = Awaited<ReturnType<typeof journeyTaskOptions>>;
+
+function assetForm(a: AssetRow | undefined, options: TaskOpt, presetStage?: string, presetRef?: string) {
+  return (
+    <form action={saveAssetAction.bind(null, a?.id ?? null)} className="mt-3 grid gap-3 md:grid-cols-2">
+      <label className="text-sm"><span className={label}>Tipo</span><select name="kind" defaultValue={a?.kind ?? "MENSAGEM"} className="input mt-1">{ASSET_KINDS.map((k) => <option key={k} value={k}>{ASSET_LABEL[k]}</option>)}</select></label>
+      <label className="text-sm"><span className={label}>Etapa da jornada</span><select name="stage" defaultValue={a?.stage ?? presetStage ?? "COMERCIAL"} className="input mt-1">{JOURNEY_STAGES.map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}</select></label>
+      <label className="text-sm md:col-span-2"><span className={label}>Título</span><input name="title" required defaultValue={a?.title} className="input mt-1" /></label>
+      <label className="text-sm md:col-span-2"><span className={label}>Assunto (só para e-mail)</span><input name="subject" defaultValue={a?.subject ?? ""} className="input mt-1" /></label>
+      <label className="text-sm md:col-span-2"><span className={label}>Texto</span><textarea name="body" rows={8} defaultValue={a?.body ?? ""} className="input mt-1" /></label>
+      <label className="text-sm md:col-span-2"><span className={label}>Link (Drive, Canva, vídeo…)</span><input name="url" defaultValue={a?.url ?? ""} placeholder="https://" className="input mt-1" /></label>
+      <div className="md:col-span-2">
+        <p className={label}>Aparece nas tarefas:</p>
+        <div className="mt-1 max-h-56 space-y-1 overflow-auto rounded-lg border border-hair p-2">
+          {options.map((o) => (
+            <details key={o.slug} open={a ? a.taskRefs.some((r) => r.startsWith(o.slug + "|")) : !!presetRef?.startsWith(o.slug + "|")}>
+              <summary className="cursor-pointer text-xs font-semibold text-slate-700">{o.name}</summary>
+              <div className="ml-3 mt-1 grid gap-0.5">
+                {o.tasks.map((t) => (
+                  <label key={t} className="flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" name="taskRefs" value={`${o.slug}|${t}`} defaultChecked={a ? a.taskRefs.includes(`${o.slug}|${t}`) : presetRef === `${o.slug}|${t}`} /> {t}</label>
+                ))}
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+      <div><button type="submit" className="btn-primary">Salvar</button></div>
+    </form>
+  );
+}
+
+function AssetCard({ a, options, admin }: { a: AssetRow; options: TaskOpt; admin: boolean }) {
+  return (
+    <details className="rounded-lg border border-hair bg-white">
+      <summary className="cursor-pointer px-2.5 py-1 text-xs font-medium text-brand-800">{ASSET_EMOJI[a.kind as AssetKind]} {ASSET_LABEL[a.kind as AssetKind]}: {a.title}</summary>
+      <div className="space-y-2 border-t border-hair p-2.5">
+        {a.subject && <p className="text-xs text-slate-500">Assunto: <b className="text-slate-700">{a.subject}</b></p>}
+        {a.body && <pre className="max-h-56 overflow-auto whitespace-pre-wrap font-sans text-sm text-slate-700">{a.body}</pre>}
+        <p className="text-xs text-slate-400">Aparece em {a.taskRefs.length} tarefa(s).</p>
+        <div className="flex flex-wrap items-center gap-2">
+          {a.body && <CopyButton text={a.body} label="Copiar" />}
+          {a.url && <a href={a.url} target="_blank" rel="noopener noreferrer" className="btn-secondary btn-sm">Abrir link ↗</a>}
+          {admin && <form action={deleteAssetAction.bind(null, a.id)} className="ml-auto"><button type="submit" className="text-xs text-slate-400 hover:text-red-600">remover</button></form>}
+        </div>
+        {admin && <details><summary className="cursor-pointer text-xs text-brand-700">✏️ Editar</summary>{assetForm(a, options)}</details>}
+      </div>
+    </details>
+  );
+}
+
 async function Journey({ actor, admin }: { actor: Actor; admin: boolean }) {
-  const [stages, loose] = await Promise.all([journeyOverview(actor), templatesWithoutStage(actor)]);
+  const [stages, loose, assets, options] = await Promise.all([journeyOverview(actor), templatesWithoutStage(actor), listAssets(actor), admin ? journeyTaskOptions(actor.organizationId) : Promise.resolve([] as TaskOpt)]);
   const canSee = can(actor, "projects.manage");
   return (
     <div className="space-y-5">
       <p className="rounded-xl border border-brand-100 bg-brand-50/60 p-3 text-sm text-brand-900">
-        🧭 A jornada vai da venda ao encerramento. Em cada etapa você vê as <b>esteiras</b> (passo a passo com prazo em dias a partir da data de início) e os <b>modelos de rotina</b> (com a regra de prazo de cada um). Em caso de dúvida, consulte aqui.
+        🧭 A jornada vai da venda ao encerramento. Em cada etapa você vê as <b>esteiras</b> (passo a passo com prazo em dias a partir da data de início) e os <b>modelos de rotina</b> (com a regra de prazo de cada um). Em caso de dúvida, consulte aqui. Abaixo de cada tarefa ficam a <b>mensagem, o e-mail e o documento padrão</b> dela. Variáveis: {ASSET_VARS.join("  ")}.
       </p>
+      {admin && <details className="card p-4"><summary className="cursor-pointer text-sm font-medium text-brand-900">➕ Novo item padrão (mensagem, e-mail ou documento)</summary>{assetForm(undefined, options)}</details>}
       {stages.map((st, i) => {
         const tone = TONE[STAGE_TONE[st.stage as JourneyStage] as keyof typeof TONE];
         return (
@@ -118,10 +170,17 @@ async function Journey({ actor, admin }: { actor: Actor; admin: boolean }) {
                           </summary>
                           <ul className="mt-1.5 space-y-1 pb-1 text-sm">
                             {s.tasks.map((t, n) => (
-                              <li key={n} className="flex items-baseline gap-2">
-                                <span className="w-14 shrink-0 text-xs font-semibold text-amber-800">dia {t.day}</span>
-                                <span className="flex-1 text-slate-700">{t.title}</span>
-                                <span className="shrink-0 text-xs text-slate-400">{t.minutes} min · {t.items} itens</span>
+                              <li key={n}>
+                                <div className="flex items-baseline gap-2">
+                                  <span className="w-14 shrink-0 text-xs font-semibold text-amber-800">dia {t.day}</span>
+                                  <span className="flex-1 font-medium text-slate-800">{t.title}</span>
+                                  <span className="shrink-0 text-xs text-slate-400">{t.minutes} min · {t.items} itens</span>
+                                </div>
+                                {t.description && <p className="ml-16 text-xs text-slate-500">{t.description}</p>}
+                                <div className="ml-16 mt-1 flex flex-col gap-1">
+                                  {assets.filter((a) => a.taskRefs.includes(`${e.slug}|${t.title}`)).map((a) => <AssetCard key={a.id} a={a} options={options} admin={admin} />)}
+                                  {admin && <details><summary className="cursor-pointer text-xs text-slate-400 hover:text-brand-700">➕ adicionar padrão a esta tarefa</summary>{assetForm(undefined, options, st.stage, `${e.slug}|${t.title}`)}</details>}
+                                </div>
                               </li>
                             ))}
                           </ul>
@@ -131,6 +190,16 @@ async function Journey({ actor, admin }: { actor: Actor; admin: boolean }) {
                   </ol>
                 </article>
               ))}
+              {(() => {
+                const slugs = st.esteiras.map((e) => e.slug);
+                const free = assets.filter((a) => a.stage === st.stage && !a.taskRefs.some((r) => slugs.includes(r.split("|")[0])));
+                return free.length > 0 ? (
+                  <div>
+                    <h3 className="mb-1.5 text-sm font-semibold text-slate-700">🗂️ Padrões desta etapa (não ligados a uma tarefa)</h3>
+                    <div className="flex flex-col gap-1">{free.map((a) => <AssetCard key={a.id} a={a} options={options} admin={admin} />)}</div>
+                  </div>
+                ) : null;
+              })()}
               {st.templates.length > 0 && (
                 <div>
                   <h3 className="mb-1.5 text-sm font-semibold text-slate-700">🔁 Modelos de rotina desta etapa</h3>
@@ -439,70 +508,6 @@ async function Access({ actor }: { actor: Actor }) {
 }
 
 /* ------------------------------------------------------------ Padrões da jornada */
-async function Patterns({ actor, admin }: { actor: Actor; admin: boolean }) {
-  const [assets, options] = await Promise.all([listAssets(actor), admin ? journeyTaskOptions(actor.organizationId) : Promise.resolve([])]);
-  const form = (a?: (typeof assets)[number]) => (
-    <form action={saveAssetAction.bind(null, a?.id ?? null)} className="mt-3 grid gap-3 md:grid-cols-2">
-      <label className="text-sm"><span className={label}>Tipo</span><select name="kind" defaultValue={a?.kind ?? "MENSAGEM"} className="input mt-1">{ASSET_KINDS.map((k) => <option key={k} value={k}>{ASSET_LABEL[k]}</option>)}</select></label>
-      <label className="text-sm"><span className={label}>Etapa da jornada</span><select name="stage" defaultValue={a?.stage ?? "COMERCIAL"} className="input mt-1">{JOURNEY_STAGES.map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}</select></label>
-      <label className="text-sm md:col-span-2"><span className={label}>Título</span><input name="title" required defaultValue={a?.title} className="input mt-1" /></label>
-      <label className="text-sm md:col-span-2"><span className={label}>Assunto (só para e-mail)</span><input name="subject" defaultValue={a?.subject ?? ""} className="input mt-1" /></label>
-      <label className="text-sm md:col-span-2"><span className={label}>Texto</span><textarea name="body" rows={8} defaultValue={a?.body ?? ""} className="input mt-1" /></label>
-      <label className="text-sm md:col-span-2"><span className={label}>Link (Drive, Canva, vídeo…)</span><input name="url" defaultValue={a?.url ?? ""} placeholder="https://" className="input mt-1" /></label>
-      <div className="md:col-span-2">
-        <p className={label}>Aparece nas tarefas:</p>
-        <div className="mt-1 max-h-56 space-y-1 overflow-auto rounded-lg border border-hair p-2">
-          {options.map((o) => (
-            <details key={o.slug} open={!!a?.taskRefs.some((r) => r.startsWith(o.slug + "|"))}>
-              <summary className="cursor-pointer text-xs font-semibold text-slate-700">{o.name}</summary>
-              <div className="ml-3 mt-1 grid gap-0.5">
-                {o.tasks.map((t) => (
-                  <label key={t} className="flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" name="taskRefs" value={`${o.slug}|${t}`} defaultChecked={a?.taskRefs.includes(`${o.slug}|${t}`)} /> {t}</label>
-                ))}
-              </div>
-            </details>
-          ))}
-        </div>
-      </div>
-      <div><button type="submit" className="btn-primary">Salvar</button></div>
-    </form>
-  );
-  return (
-    <div className="space-y-5">
-      <p className="rounded-xl border border-brand-100 bg-brand-50/60 p-3 text-sm text-brand-900">
-        🗂️ Aqui ficam as mensagens, e-mails e documentos padrão. Cada um é ligado às tarefas da jornada onde deve aparecer, então quem abre a tarefa (ou a aba Jornada do cliente e do lead) já encontra o texto certo, sem procurar em outra janela. Variáveis: {ASSET_VARS.join("  ")}.
-      </p>
-      {admin && (
-        <details className="card p-4">
-          <summary className="cursor-pointer text-sm font-medium text-brand-900">➕ Novo item padrão</summary>
-          {form()}
-        </details>
-      )}
-      {JOURNEY_STAGES.filter((st) => assets.some((a) => a.stage === st)).map((st) => (
-        <section key={st}>
-          <h2 className="mb-2 text-sm font-semibold text-brand-900">{STAGE_LABEL[st]}</h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            {assets.filter((a) => a.stage === st).map((a) => (
-              <article key={a.id} className="card p-4">
-                <h3 className="font-medium text-brand-900">{ASSET_EMOJI[a.kind as AssetKind]} {a.title} <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-600">{ASSET_LABEL[a.kind as AssetKind]}</span></h3>
-                {a.subject && <p className="mt-1 text-xs text-slate-500">Assunto: {a.subject}</p>}
-                {a.body && <pre className="mt-2 max-h-36 overflow-auto whitespace-pre-wrap font-sans text-sm text-slate-600">{a.body}</pre>}
-                <p className="mt-2 text-xs text-slate-500">Usado em {a.taskRefs.length} tarefa(s): {a.taskRefs.map((r) => r.split("|")[1]).slice(0, 3).join(", ")}{a.taskRefs.length > 3 ? "…" : ""}</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {a.body && <CopyButton text={a.body} label="Copiar" />}
-                  {a.url && <a href={a.url} target="_blank" rel="noopener noreferrer" className="btn-secondary btn-sm">Abrir link ↗</a>}
-                  {admin && <form action={deleteAssetAction.bind(null, a.id)} className="ml-auto"><button type="submit" className="text-xs text-slate-400 hover:text-red-600">remover</button></form>}
-                </div>
-                {admin && <details className="mt-2"><summary className="cursor-pointer text-xs text-brand-700">✏️ Editar</summary>{form(a)}</details>}
-              </article>
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-}
-
 /* --------------------------------------------------------------- Visão geral */
 async function Overview({ actor, filtro }: { actor: Actor; filtro?: string }) {
   const areas = await structureOverview(actor);

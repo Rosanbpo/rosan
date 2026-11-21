@@ -51,7 +51,7 @@ export async function saveAssetAction(id: string | null, fd: FormData): Promise<
     if (!m) throw e;
     q = `erro=${encodeURIComponent(m)}`;
   }
-  redirect(`/biblioteca?secao=padroes&${q}`);
+  redirect(`/biblioteca?secao=jornada&${q}`);
 }
 
 export async function deleteAssetAction(id: string): Promise<void> {

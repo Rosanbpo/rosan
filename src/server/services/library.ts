@@ -153,7 +153,7 @@ export async function journeyOverview(actor: Actor) {
             name: s.name,
             from: s.tasks.length ? Math.min(...s.tasks.map((t) => t.day)) : 0,
             to: s.tasks.length ? Math.max(...s.tasks.map((t) => t.day)) : 0,
-            tasks: s.tasks.map((t) => ({ title: t.title, day: t.day, minutes: t.minutes, items: t.items.length })),
+            tasks: s.tasks.map((t) => ({ title: t.title, day: t.day, minutes: t.minutes, items: t.items.length, description: t.description ?? null })),
           })),
         };
       }),

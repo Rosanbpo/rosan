@@ -1,6 +1,6 @@
 /** Áreas da Biblioteca Rosan. A administradora escolhe quais cada pessoa vê. */
 export const LIBRARY_SECTIONS = [
-  { key: "jornada", label: "Jornada do cliente", emoji: "🧭", desc: "Esteiras e modelos de rotina por etapa, com prazos." },
+  { key: "jornada", label: "Jornada e padrões", emoji: "🧭", desc: "Cada etapa da jornada com as tarefas, os prazos e, embaixo de cada tarefa, a mensagem, o e-mail e o documento padrão." },
   { key: "padroes", label: "Padrões da jornada", emoji: "🗂️", desc: "Mensagens, e-mails e documentos padrão, ligados às tarefas de cada etapa. Quem gera a tarefa já vê o texto certo." },
   { key: "mensagens", label: "Mensagens do CRM", emoji: "💬", desc: "Textos prontos do botão Mensagem de cada lead." },
   { key: "materiais", label: "Materiais e documentos", emoji: "📚", desc: "Contratos, roteiros, planilhas, políticas e links." },

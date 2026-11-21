@@ -42,6 +42,7 @@ export function JourneyPanel({
                   <summary className="flex cursor-pointer flex-wrap items-center gap-2 px-3 py-2">
                     <span className="font-medium text-brand-900">{s.name}</span>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{s.generatedCount} de {s.tasks.length} tarefas geradas</span>
+                    {s.generatedCount > 0 && (() => { const done = s.tasks.filter((t) => t.generated?.status === "CONCLUIDA").length; return <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium", done === s.tasks.length ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-800")}>✅ {done} de {s.tasks.length} concluídas</span>; })()}
                   </summary>
                   <div className="space-y-3 border-t border-hair p-3">
                     {canGenerate && s.generatedCount < s.tasks.length && (
@@ -63,10 +64,10 @@ export function JourneyPanel({
                         <li key={t.key} className="text-sm">
                           <div className="flex flex-wrap items-baseline gap-2">
                             <span className="w-20 shrink-0 text-xs font-semibold text-amber-800">⏱️ dia {t.day} · {fmt(t.dueDate)}</span>
-                            <span className="flex-1 font-medium text-slate-800">{t.title}</span>
+                            <span className={cx("flex-1 font-medium", t.generated?.status === "CONCLUIDA" ? "text-slate-400 line-through" : "text-slate-800")}>{t.generated?.status === "CONCLUIDA" ? "✅ " : ""}{t.title}</span>
                             <span className="text-xs text-slate-400">{t.minutes} min · {t.items} itens</span>
                             {t.generated ? (
-                              <Link href={`/tarefas/${t.generated.id}`} className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 hover:underline">
+                              <Link href={`/tarefas/${t.generated.id}`} className={cx("rounded-full px-2 py-0.5 text-xs font-medium hover:underline", t.generated.status === "CONCLUIDA" ? "bg-emerald-600 text-white" : t.generated.status === "CANCELADA" ? "bg-slate-200 text-slate-600" : "bg-sky-100 text-sky-800")}>
                                 {STATUS_LABEL[t.generated.status] ?? t.generated.status} →
                               </Link>
                             ) : (
