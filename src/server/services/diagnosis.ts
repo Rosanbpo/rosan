@@ -6,7 +6,7 @@ import { NotFoundError, ValidationError, type Actor } from "@/domain/permissions
 import { missingQuestions, readAnswers, toColumns, type Answers } from "@/domain/diagnosis-form";
 import { prisma } from "../db";
 import { isValidCnpj } from "../validation";
-import { assertClientAccess } from "./access";
+import { assertClientAccess, clientScope } from "./access";
 import { recordAudit } from "./audit";
 
 const int = z.coerce.number().int().min(0).max(10_000_000).default(0);
@@ -155,4 +155,32 @@ export async function volumeOverview(actor: Actor, clientId: string, months = 6)
     diagnosis: diag,
     rows: rows.map((r) => ({ ...r, check: checkVolume(base, r, a, pricedFee) })),
   };
+}
+
+/** Diagnósticos para o Início: respostas ainda não vistas, últimas respostas e links aguardando resposta. */
+export async function diagnosisInbox(actor: Actor) {
+  const where = { organizationId: actor.organizationId, client: { ...clientScope(actor), archivedAt: null } };
+  const [answered, waiting] = await Promise.all([
+    prisma.clientDiagnosis.findMany({
+      where: { ...where, source: "CLIENTE", submittedAt: { not: null } },
+      orderBy: { submittedAt: "desc" },
+      take: 20,
+      select: { clientId: true, submittedAt: true, viewedAt: true, client: { select: { tradeName: true } } },
+    }),
+    prisma.clientDiagnosis.findMany({
+      where: { ...where, token: { not: null }, submittedAt: null },
+      orderBy: { tokenCreatedAt: "asc" },
+      select: { clientId: true, tokenCreatedAt: true, client: { select: { tradeName: true } } },
+    }),
+  ]);
+  return {
+    unseen: answered.filter((a) => !a.viewedAt).map((a) => ({ clientId: a.clientId, name: a.client.tradeName, at: a.submittedAt! })),
+    waiting: waiting.map((w) => ({ clientId: w.clientId, name: w.client.tradeName, since: w.tokenCreatedAt })),
+  };
+}
+
+/** Marca as respostas como vistas quando a equipe abre o diagnóstico do cliente. */
+export async function markDiagnosisSeen(actor: Actor, clientId: string) {
+  await assertClientAccess(actor, clientId);
+  await prisma.clientDiagnosis.updateMany({ where: { clientId, submittedAt: { not: null }, viewedAt: null }, data: { viewedAt: new Date() } });
 }

@@ -4,6 +4,7 @@ import { STATUS_LABEL } from "@/domain/enums";
 import { fmtDateTime, fmtMoney } from "@/lib/format";
 import { requirePermission } from "@/server/context";
 import { homeOverview } from "@/server/services/home";
+import { diagnosisInbox } from "@/server/services/diagnosis";
 import { managerDashboard } from "@/server/services/dashboard";
 import { TaskTable } from "@/components/task-table";
 import { fmtMinutes } from "@/lib/format";
@@ -45,7 +46,7 @@ function Tile({ label, emoji, value, hint, cls, href }: { label: string; emoji: 
 export default async function InicioPage() {
   const actor = await requirePermission("dashboard.view");
   const now = new Date();
-  const [d, m] = await Promise.all([homeOverview(actor, now), managerDashboard(actor, {}, now)]);
+  const [d, m, dx] = await Promise.all([homeOverview(actor, now), managerDashboard(actor, {}, now), diagnosisInbox(actor)]);
   const maxLoad = Math.max(1, ...m.workload.map((w) => w.open));
   const first = actor.name.split(" ")[0];
   const dateLabel = new Intl.DateTimeFormat("pt-BR", { dateStyle: "full", timeZone: "America/Sao_Paulo" }).format(now);
@@ -57,6 +58,38 @@ export default async function InicioPage() {
         <h1 className="text-xl font-bold text-brand-900">{greeting(now)}, {first}! 👋</h1>
         <p className="mt-1 text-sm text-slate-500">{dateLabel} · {d.dueToday} tarefa{d.dueToday === 1 ? "" : "s"} para hoje</p>
       </header>
+
+      {dx.unseen.length > 0 && (
+        <section className="mb-4 rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4" role="status" aria-label="Diagnósticos respondidos">
+          <h2 className="text-[15px] font-bold text-emerald-900">🎉 {dx.unseen.length === 1 ? "1 cliente respondeu o diagnóstico!" : `${dx.unseen.length} clientes responderam o diagnóstico!`}</h2>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {dx.unseen.map((u) => (
+              <li key={u.clientId}>
+                <Link href={`/clientes/${u.clientId}?aba=dados`} className="inline-flex items-center gap-2 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-sm font-medium text-emerald-800 hover:bg-emerald-100">
+                  {u.name} <span className="text-xs font-normal text-emerald-700">· {fmtDateTime(u.at)}</span> <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white">Ver respostas</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {dx.waiting.length > 0 && (
+        <details className="card group mb-4">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 [&::-webkit-details-marker]:hidden">
+            <h2 className="text-[15px] font-semibold text-brand-900">📝 Diagnósticos aguardando resposta <span className="ml-1 rounded-full bg-amber-100 px-2 text-xs font-semibold text-amber-800">{dx.waiting.length}</span></h2>
+            <span className="text-sm text-brand-700 group-open:hidden">Mostrar ▾</span>
+            <span className="hidden text-sm text-brand-700 group-open:inline">Esconder ▴</span>
+          </summary>
+          <ul className="divide-y divide-hair border-t border-hair">
+            {dx.waiting.map((w) => (
+              <li key={w.clientId} className="flex items-center justify-between gap-3 px-5 py-2 text-sm">
+                <Link href={`/clientes/${w.clientId}?aba=onboarding`} className="font-medium text-brand-700 hover:underline">{w.name}</Link>
+                <span className="text-xs text-slate-500">link enviado {w.since ? `em ${fmtDateTime(w.since)}` : ""}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
 
       <section aria-label="Insights da operação" className="mb-4">
         <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-brand-900">💡 Insights da operação <span className="rounded-full bg-slate-200 px-2 text-xs">{d.insights.length}</span></h2>
@@ -71,11 +104,12 @@ export default async function InicioPage() {
         </div>
       </section>
 
-      <div className="mb-4 grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-7">
+      <div className="mb-4 grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-8">
         <Tile label="MRR" emoji="💰" value={d.mrr === null ? "—" : fmtMoney(d.mrr)} hint={`${d.activeClients} clientes ativos`} cls="border-sky-200 bg-sky-50 text-sky-800" href="/carteira" />
         <Tile label="Para hoje" emoji="☀️" value={String(d.dueToday)} hint="vencem hoje" cls="border-amber-200 bg-amber-50 text-amber-800" href="/tarefas?prazo=hoje" />
         <Tile label="Atrasadas" emoji="🔴" value={String(d.overdue)} hint="precisam de atenção" cls="border-red-200 bg-red-50 text-red-700" href="/tarefas?atrasadas=1" />
         <Tile label="Pendências" emoji="📋" value={String(d.waitingClient)} hint="aguardando cliente" cls="border-orange-200 bg-orange-50 text-orange-800" href="/pendencias" />
+        <Tile label="Diagnósticos" emoji="📝" value={String(dx.waiting.length)} hint="aguardando resposta" cls="border-amber-200 bg-amber-50 text-amber-800" />
         <Tile label="Onboarding" emoji="🚀" value={String(d.onboarding)} hint="em implantação" cls="border-violet-200 bg-violet-50 text-violet-800" href="/esteiras" />
         <Tile label="Abertas" emoji="🗂️" value={String(d.openTotal)} hint="tarefas em aberto" cls="border-slate-200 bg-white text-slate-700" href="/tarefas" />
         <Tile label="Horas hoje" emoji="⏱️" value={`${d.hoursToday}h`} hint="apontadas" cls="border-teal-200 bg-teal-50 text-teal-800" />

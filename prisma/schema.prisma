@@ -1101,6 +1101,8 @@ model ClientDiagnosis {
   notes                String?
   /// Respostas completas do questionário (chave → resposta).
   answers              Json?
+  /// Quando alguém da equipe abriu as respostas pela primeira vez.
+  viewedAt             DateTime?
   /// Mensalidade e horas usadas na precificação (base para acompanhar reajuste).
   pricedFee            Decimal?  @db.Decimal(12, 2)
   pricedHours          Decimal?  @db.Decimal(8, 2)
