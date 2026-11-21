@@ -10,7 +10,7 @@ import { buildTaskWhere } from "@/server/services/tasks";
 import { getRunningTimer } from "@/server/services/timer";
 import { RunningTimerPill } from "@/components/task-timer";
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
   const actor = await requireActor();
   const [org, myOverdue, running] = await Promise.all([
     prisma.organization.findUniqueOrThrow({ where: { id: actor.organizationId }, select: { name: true } }),
@@ -35,7 +35,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { group: "Clientes", href: "/clientes", label: "Clientes", icon: "clientes" },
     ...(can(actor, "projects.manage") ? [{ group: "Clientes", href: "/esteiras", label: "Esteiras", icon: "esteiras" as const }] : []),
     ...(dash ? [{ group: "Clientes", href: "/central", label: "Central", icon: "central" as const }] : []),
-    { group: "Clientes", href: "/documentos", label: "Documentos", icon: "documentos" },
     { group: "Clientes", href: "/cofre", label: "Cofre", icon: "cofre" },
     ...(dash ? [{ group: "Análise", href: "/executivo", label: "Executivo", icon: "executivo" as const }] : []),
     ...(fin ? [{ group: "Análise", href: "/carteira", label: "Rentabilidade", icon: "carteira" as const }] : []),
@@ -78,6 +77,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <main id="conteudo" className="px-4 py-6 sm:px-6 lg:ml-64 lg:px-8">
         <div className="mx-auto max-w-7xl">{children}</div>
       </main>
+      {modal}
       {running && <RunningTimerPill taskId={running.taskId} taskTitle={running.taskTitle} clientName={running.clientName} startedAt={running.startedAt} />}
     </div>
   );
