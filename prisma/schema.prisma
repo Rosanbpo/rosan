@@ -1338,3 +1338,17 @@ model JourneyAsset {
 
   @@index([organizationId, stage])
 }
+
+/// Acompanhamento da validação da estrutura da Rosan (o que já foi revisado e o que falta).
+model StructureReview {
+  id             String   @id @default(cuid())
+  organizationId String
+  /// "esteira:slug", "rotina:id", "pop:id", "msg:id", "asset:id", "cultura", "extra:nome"
+  key            String
+  /// VALIDADO | AJUSTAR
+  status         String
+  note           String?
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, key])
+}
