@@ -5,6 +5,7 @@ import { PAGE_SIZE } from "../config";
 import { prisma } from "../db";
 import { localDate, parseInput } from "../validation";
 import { assertTaskAccess, taskScope } from "./access";
+import { createTask, transitionTask } from "./tasks";
 import { recordAudit } from "./audit";
 
 export interface PendingFilters {
@@ -77,4 +78,24 @@ export async function updatePendingFollowUp(
       }`,
     });
   });
+}
+
+/** Nova pendência avulsa: cria a tarefa e já a coloca em espera do cliente (a pendência nasce junto). */
+export async function createManualPending(actor: Actor, raw: Record<string, unknown>) {
+  const description = String(raw.description ?? "").trim();
+  const clientId = String(raw.clientId ?? "");
+  if (description.length < 2) throw new ValidationError("Descreva a pendência.", { description: "Descreva a pendência." });
+  if (!clientId) throw new ValidationError("Selecione o cliente.", { clientId: "Selecione o cliente." });
+  const followUpDate = parseInput(localDate, raw.followUpDate);
+  const task = await createTask(actor, {
+    clientId,
+    title: description,
+    description: String(raw.notes ?? "") || undefined,
+    category: "OUTRAS",
+    priority: raw.priority || "NORMAL",
+    dueDate: followUpDate,
+    dueTime: "18:00",
+  });
+  await transitionTask(actor, task.id, "WAIT_CLIENT", { note: description, followUpDate, respondent: String(raw.respondent ?? "") || null });
+  return task;
 }
