@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Layers, ListChecks, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { EsteiraIcon } from "@/components/esteira-icon";
 import { PageHeader } from "@/components/ui/layout";
 import { esteiraCounts } from "@/domain/esteiras";
@@ -16,9 +16,9 @@ export default async function EsteirasPage() {
     <>
       <PageHeader
         title="Esteiras"
-        description="Jornadas prontas do cliente, da venda ao encerramento. Escolha uma esteira, marque as tarefas e aplique ao cliente: as tarefas nascem com prazo, responsável e checklist."
+        description="Selecione uma esteira para ver as tarefas e checklists. Use “Aplicar selecionadas ao cliente” para criar as tarefas automaticamente."
       />
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {ESTEIRAS.map((e) => {
           const tone = TONE[e.tone];
           const c = esteiraCounts(e);
@@ -27,37 +27,24 @@ export default async function EsteirasPage() {
             <Link
               key={e.slug}
               href={`/esteiras/${e.slug}`}
-              className={cx("group overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md", tone.border)}
+              className="group relative block overflow-hidden rounded-xl border border-slate-200 bg-white p-5 pl-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
-              <div className={cx("flex items-center gap-3 bg-gradient-to-r px-5 py-4 text-white", tone.band)}>
-                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20">
-                  <EsteiraIcon icon={e.icon} className="h-6 w-6" />
-                </span>
-                <h2 className="text-lg font-semibold">{e.name}</h2>
-              </div>
-              <div className="space-y-4 p-5">
-                <p className="min-h-10 text-sm text-slate-600">{e.summary}</p>
-                <dl className="grid grid-cols-3 gap-2 text-center">
-                  {[
-                    { icon: Layers, label: "etapas", n: c.stages },
-                    { icon: ListChecks, label: "tarefas", n: c.tasks },
-                    { icon: ListChecks, label: "itens", n: c.items },
-                  ].map((x) => (
-                    <div key={x.label} className={cx("rounded-lg py-2", tone.soft)}>
-                      <dd className={cx("text-xl font-bold tabular-nums", tone.text)}>{x.n}</dd>
-                      <dt className="text-[11px] text-slate-500">{x.label}</dt>
-                    </div>
-                  ))}
-                </dl>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1.5 text-slate-500">
-                    <Users aria-hidden className="h-4 w-4" />
-                    {used === 0 ? "Nenhum cliente ainda" : `${used} cliente${used > 1 ? "s" : ""}`}
+              <span aria-hidden className={cx("absolute inset-y-0 left-0 w-1.5", tone.solid)} />
+              <span className={cx("flex h-9 w-9 items-center justify-center rounded-lg", tone.soft, tone.text)}>
+                <EsteiraIcon icon={e.icon} className="h-5 w-5" />
+              </span>
+              <h2 className="mt-3 text-base font-semibold text-slate-900">{e.name}</h2>
+              <p className="text-xs text-slate-500">{c.stages} etapas</p>
+              <p className="mt-2 text-xs text-slate-500">
+                ✓ {c.tasks} tarefas · 📋 {c.items} itens
+              </p>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <span className={cx("rounded-full px-2.5 py-0.5 text-xs font-medium", tone.chip)}>Clique para ver e aplicar</span>
+                {used > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-slate-500">
+                    <Users aria-hidden className="h-3.5 w-3.5" /> {used}
                   </span>
-                  <span className={cx("flex items-center gap-1 font-medium", tone.text)}>
-                    Ver e aplicar <ArrowRight aria-hidden className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                </div>
+                )}
               </div>
             </Link>
           );
