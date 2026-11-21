@@ -48,7 +48,7 @@ export async function structureOverview(actor: Actor): Promise<StructureArea[]> 
     {
       id: "padroes", emoji: "🗂️", title: "Mensagens, e-mails e documentos", hint: "Os textos padrão que aparecem nas tarefas e no CRM.",
       items: [
-        ...assets.map((a) => item(`asset:${a.id}`, `${a.kind === "EMAIL" ? "E-mail" : a.kind === "DOCUMENTO" ? "Documento" : "Mensagem"}: ${a.title}`, "/biblioteca?secao=padroes")),
+        ...assets.map((a) => item(`asset:${a.id}`, `${a.kind === "EMAIL" ? "E-mail" : a.kind === "DOCUMENTO" ? "Documento" : "Mensagem"}: ${a.title}`, "/biblioteca?secao=jornada")),
         ...SYSTEM_MESSAGES.map((m) => item(`msg:${m.id}`, `CRM: ${m.title.replace(/^\S+\s/, "")}`, "/biblioteca?secao=mensagens")),
       ],
     },

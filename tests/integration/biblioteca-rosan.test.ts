@@ -66,6 +66,11 @@ describe("Jornada com textos padrão", () => {
     expect(assets.length).toBeGreaterThan(0);
     const view = await journeyForClient(s.admin, c.id, "2026-12-01");
     expect(view.find((v) => v.esteira.slug === "pre-onboarding")!.stages[0].generatedCount).toBe(2);
+    // concluir a tarefa (pela tela de tarefas) já aparece como concluída na jornada
+    await prisma.task.update({ where: { id: task.id }, data: { status: "CONCLUIDA" } });
+    const after = await journeyForClient(s.admin, c.id, "2026-12-01");
+    const done = after.find((v) => v.esteira.slug === "pre-onboarding")!.stages[0].tasks.filter((t) => t.generated?.status === "CONCLUIDA");
+    expect(done).toHaveLength(1);
   });
 
   it("gera as tarefas da jornada comercial para um lead", async () => {
