@@ -11,15 +11,23 @@ import { fmtDateTime, fmtLocalDate, fmtMoney } from "@/lib/format";
 import { requirePermission } from "@/server/context";
 import { orNotFound } from "@/server/page-utils";
 import { getLead } from "@/server/services/leads";
+import { JourneyPanel } from "@/components/journey-panel";
+import { instantToLocalDate } from "@/domain/dates";
+import { APP_TIMEZONE } from "@/server/config";
+import { journeyForLead } from "@/server/services/journey";
+import { assignableUsers } from "@/server/services/tasks";
 import { proposalsOfLead } from "@/server/services/proposals";
 import { PROPOSAL_STATUS_LABEL, type ProposalStatus } from "@/domain/proposal";
 
 export const metadata = { title: "Lead" };
 
-export default async function LeadPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function LeadPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requirePermission("crm.manage");
   const { id } = await params;
+  const sp = await searchParams;
   const lead = await orNotFound(getLead(actor, id));
+  const todayStr = instantToLocalDate(new Date(), APP_TIMEZONE);
+  const [journey, people] = await Promise.all([journeyForLead(actor, id, todayStr), assignableUsers(actor)]);
   const proposals = await proposalsOfLead(actor, id);
   const stage = lead.stage as LeadStage;
   const canConvert = can(actor, "clients.manage") && !lead.convertedClientId;
@@ -187,6 +195,21 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
           )}
         </div>
       </div>
+
+      <section className="mt-8">
+        <h2 className="mb-3 text-lg font-semibold text-brand-900">🧭 Jornada comercial deste lead</h2>
+        {sp.gerou && <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{sp.gerou} tarefa(s) criada(s). Veja em Tarefas.</p>}
+        {sp.erro && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{sp.erro}</p>}
+        <JourneyPanel
+          view={journey}
+          target={{ leadId: id }}
+          back={`/crm/${id}`}
+          today={todayStr}
+          people={people.map((p) => ({ id: p.id, name: p.name }))}
+          vars={{ nome: (lead.contactName ?? lead.companyName).split(" ")[0], empresa: lead.companyName, minhaNome: actor.name, minhaEmpresa: "Rosan Finanças", valor: lead.expectedFee ? fmtMoney(Number(lead.expectedFee)) : "{valor}", data: "{data}" }}
+          canGenerate
+        />
+      </section>
     </>
   );
 }

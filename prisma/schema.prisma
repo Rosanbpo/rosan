@@ -1317,3 +1317,24 @@ model SystemMessageOverride {
 
   @@unique([organizationId, key])
 }
+
+/// Mensagem, e-mail ou documento padrão. Aparece nas tarefas da jornada que ele atende.
+model JourneyAsset {
+  id             String   @id @default(cuid())
+  organizationId String
+  /// MENSAGEM | EMAIL | DOCUMENTO
+  kind           String
+  title          String
+  subject        String?
+  body           String?
+  url            String?
+  /// Etapa da jornada (para organizar a biblioteca).
+  stage          String
+  /// Tarefas que usam este item: "slug-da-esteira|título da tarefa".
+  taskRefs       String[]
+  position       Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId, stage])
+}
