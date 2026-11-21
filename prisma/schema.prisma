@@ -651,6 +651,16 @@ model Lead {
   @@index([organizationId, nextActionAt])
 }
 
+/// Missão, visão e valores da empresa (uma linha por organização).
+model CompanyCulture {
+  organizationId String   @id
+  mission        String?
+  vision         String?
+  /// [{ emoji, title, text }]
+  values         Json     @default("[]")
+  updatedAt      DateTime @updatedAt
+}
+
 /// Mensagens padrão do comercial criadas pela equipe.
 model MessageTemplate {
   id             String   @id @default(cuid())
