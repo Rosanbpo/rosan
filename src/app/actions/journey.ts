@@ -6,6 +6,7 @@ import { NotFoundError, ValidationError } from "@/domain/permissions";
 import { formObject } from "@/server/action-utils";
 import { getActor } from "@/server/context";
 import { applyJourneyStage, deleteAsset, saveAsset } from "@/server/services/journey";
+import { saveLeadScript } from "@/server/services/lead-script";
 
 async function actorOrThrow() {
   const a = await getActor();
@@ -57,4 +58,15 @@ export async function saveAssetAction(id: string | null, fd: FormData): Promise<
 export async function deleteAssetAction(id: string): Promise<void> {
   await deleteAsset(await actorOrThrow(), id);
   revalidatePath("/biblioteca");
+}
+
+export async function saveLeadScriptAction(leadId: string, input: { checked: string[]; notes: Record<string, string>; finalNotes: string }): Promise<{ ok: boolean }> {
+  try {
+    await saveLeadScript(await actorOrThrow(), leadId, input);
+    return { ok: true };
+  } catch (e) {
+    unstable_rethrow(e);
+    if (!friendly(e)) throw e;
+    return { ok: false };
+  }
 }

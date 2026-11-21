@@ -113,3 +113,23 @@ describe("Estrutura Rosan: validação", () => {
     await expect(structureOverview(s.gestor)).rejects.toBeInstanceOf(ForbiddenError);
   });
 });
+
+import { parseScript, DEFAULT_SCRIPT_BODY } from "@/domain/diagnosis-script";
+import { leadScript, saveLeadScript } from "@/server/services/lead-script";
+
+describe("Roteiro da reunião de diagnóstico", () => {
+  it("lê o roteiro com 28 itens e guarda marcações e anotações por lead", async () => {
+    expect(parseScript(DEFAULT_SCRIPT_BODY).sections.reduce((n, s) => n + s.items.length, 0)).toBe(28);
+    const s = await setupOrg();
+    const lead = await createLead(s.admin, { companyName: "Lead Roteiro", servicesInterest: [] });
+    const a = await leadScript(s.admin, lead.id);
+    expect(a.script.sections).toHaveLength(7);
+    expect(a.checked).toEqual([]);
+    await saveLeadScript(s.admin, lead.id, { checked: ["s0.0", "s1.2", "lixo"], notes: { s1: "Usa planilha", x: "ignorar" }, finalNotes: "Fechar em 7 dias" });
+    const b = await leadScript(s.admin, lead.id);
+    expect(b.checked).toEqual(["s0.0", "s1.2"]);
+    expect(b.notes).toEqual({ s1: "Usa planilha" });
+    expect(b.finalNotes).toBe("Fechar em 7 dias");
+    await expect(leadScript(s.op, lead.id)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});

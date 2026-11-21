@@ -650,6 +650,7 @@ model Lead {
 
   @@index([organizationId, stage])
   @@index([organizationId, nextActionAt])
+  script LeadScript?
 }
 
 /// Missão, visão e valores da empresa (uma linha por organização).
@@ -1351,4 +1352,17 @@ model StructureReview {
   updatedAt      DateTime @updatedAt
 
   @@unique([organizationId, key])
+}
+
+/// Andamento do roteiro da reunião de diagnóstico de um lead: falas marcadas e anotações.
+model LeadScript {
+  id             String   @id @default(cuid())
+  organizationId String
+  leadId         String   @unique
+  checked        String[]
+  /// Anotações por parte do roteiro: { "s0": "texto" }.
+  notes          Json     @default("{}")
+  finalNotes     String   @default("")
+  updatedAt      DateTime @updatedAt
+  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 }

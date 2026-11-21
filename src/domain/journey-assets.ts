@@ -1,3 +1,4 @@
+import { DEFAULT_SCRIPT_BODY, SCRIPT_TITLE } from "./diagnosis-script";
 import type { JourneyStage } from "./enums";
 
 export type AssetKind = "MENSAGEM" | "EMAIL" | "DOCUMENTO";
@@ -28,8 +29,8 @@ export const DEFAULT_ASSETS: DefaultAsset[] = [
     body: `${hi} Aqui é {minhaNome}, da {minhaEmpresa}. Cuidamos da rotina financeira de empresas como a {empresa}, para o dono ter clareza dos números sem perder tempo com planilha.\n\nPosso te contar em 10 minutos como funciona?` },
   { kind: "MENSAGEM", stage: "COMERCIAL", title: "Confirmar reunião de diagnóstico", refs: ["jornada-comercial|Reunião de diagnóstico financeiro"],
     body: `${hi} Passando para confirmar nossa conversa de diagnóstico em {data}. Se puder, deixe à mão os bancos que a {empresa} usa e como as contas a pagar e a receber são controladas hoje. Qualquer imprevisto, é só me avisar por aqui.` },
-  { kind: "DOCUMENTO", stage: "COMERCIAL", title: "Roteiro do diagnóstico financeiro", refs: ["jornada-comercial|Reunião de diagnóstico financeiro", "jornada-comercial|Levantar informações para a proposta"],
-    body: `ROTEIRO DE DIAGNÓSTICO — {empresa}\n\n1. Quem cuida do financeiro hoje e como funciona o dia a dia?\n2. Bancos, cartões e sistemas utilizados.\n3. Volume mensal: contas a pagar, a receber, notas fiscais.\n4. Existe conciliação e fechamento mensal? Quem recebe os relatórios?\n5. Qual a maior dor hoje no financeiro?\n6. O que o dono gostaria de enxergar todo mês?\n7. Quem aprova os pagamentos?\n8. Prazo ideal para começar.\n\nAnotações:\n` },
+  { kind: "DOCUMENTO", stage: "COMERCIAL", title: SCRIPT_TITLE, refs: ["jornada-comercial|Reunião de diagnóstico financeiro", "jornada-comercial|Levantar informações para a proposta"],
+    body: DEFAULT_SCRIPT_BODY },
   { kind: "EMAIL", stage: "COMERCIAL", title: "Envio da proposta", subject: "Proposta de BPO financeiro para {empresa}", refs: ["jornada-comercial|Enviar a proposta comercial"],
     body: `Olá, {nome}!\n\nConforme conversamos, segue em anexo a proposta de BPO financeiro para a {empresa}, com o escopo dos serviços e a mensalidade de {valor}.\n\nFico à disposição para tirar qualquer dúvida e, se fizer sentido, já combinamos os próximos passos.${sign}` },
   { kind: "MENSAGEM", stage: "COMERCIAL", title: "Aviso de proposta enviada (WhatsApp)", refs: ["jornada-comercial|Enviar a proposta comercial"],
