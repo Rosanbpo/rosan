@@ -355,6 +355,45 @@ export function esteiraCounts(e: Esteira) {
   return { stages: e.stages.length, tasks: tasks.length, items: tasks.reduce((n, x) => n + x.items.length, 0) };
 }
 
+/**
+ * Responsável e janela de prazo originais do Controle de Implantação da Rosan.
+ * O prazo da tarefa usa o fim da janela; aqui fica registrada a janela inteira.
+ */
+const CONTROLE: Record<string, [string, string]> = {
+  "Reunião de diagnóstico financeiro": ["BPO", "Dia 1"],
+  "Assinatura do contrato de prestação de serviços": ["Cliente + BPO", "Dia 1-3"],
+  "Coleta do questionário de onboarding preenchido": ["Cliente", "Dia 3-5"],
+  "Definição do sistema de gestão financeira a usar": ["BPO", "Dia 3-5"],
+  "Criação de acesso ao sistema para o cliente": ["BPO", "Dia 5"],
+  "Alinhamento de regime tributário com o contador": ["BPO + Contador", "Dia 5"],
+  "Cadastro da empresa no sistema de gestão": ["BPO", "Sem. 1"],
+  "Configuração do plano de contas": ["BPO", "Sem. 1"],
+  "Cadastro de categorias de receita e despesa": ["BPO", "Sem. 1"],
+  "Conexão bancária (Open Finance ou extrato manual)": ["BPO + Cliente", "Sem. 1-2"],
+  "Importação do histórico financeiro (mínimo 3 meses)": ["BPO", "Sem. 2"],
+  "Configuração de centro de custos (se aplicável)": ["BPO", "Sem. 2"],
+  "Configuração de contas a pagar recorrentes": ["Cliente + BPO", "Sem. 2"],
+  "Levantamento de todas as dívidas e obrigações": ["BPO", "Sem. 2"],
+  "Organização do fluxo de caixa retroativo": ["BPO", "Sem. 2-3"],
+  "Identificação de despesas fixas e variáveis": ["BPO", "Sem. 3"],
+  "Conciliação bancária do período anterior": ["BPO", "Sem. 3"],
+  "Mapeamento de fontes de receita": ["BPO + Cliente", "Sem. 3"],
+  "Validação do DRE inicial com o cliente": ["BPO + Cliente", "Sem. 3-4"],
+  "Treinamento do cliente no sistema (lançamentos básicos)": ["BPO", "Sem. 3"],
+  "Definição do dia e horário do relatório mensal": ["BPO + Cliente", "Sem. 3"],
+  "Alinhamento do processo de envio de documentos": ["BPO + Cliente", "Sem. 3"],
+  "Primeiro relatório gerencial entregue e apresentado": ["BPO", "Sem. 4"],
+  "Ajustes pós-primeiro relatório": ["BPO", "Sem. 4-5"],
+  "Checagem final: todos os sistemas funcionando": ["BPO", "Sem. 5"],
+  "Aprovação formal do cliente (e-mail ou assinatura)": ["Cliente", "Sem. 5"],
+  "Briefing da rotina mensal acordada": ["BPO + Cliente", "Sem. 5"],
+  "Implantação encerrada: operação regular iniciada": ["BPO", "Sem. 5"],
+};
+for (const e of ESTEIRAS) for (const st of e.stages) for (const k of st.tasks) {
+  const c = CONTROLE[k.title];
+  if (c && !k.description) k.description = `Responsável: ${c[0]}. Prazo no controle de implantação: ${c[1]}.`;
+}
+
 export function taskKey(slug: string, stageIdx: number, taskIdx: number) {
   return `${slug}:${stageIdx}:${taskIdx}`;
 }
