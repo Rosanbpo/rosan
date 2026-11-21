@@ -110,7 +110,7 @@ export default async function InicioPage() {
         <Tile label="Atrasadas" emoji="🔴" value={String(d.overdue)} hint="precisam de atenção" cls="border-red-200 bg-red-50 text-red-700" href="/tarefas?atrasadas=1" />
         <Tile label="Pendências" emoji="📋" value={String(d.waitingClient)} hint="aguardando cliente" cls="border-orange-200 bg-orange-50 text-orange-800" href="/pendencias" />
         <Tile label="Diagnósticos" emoji="📝" value={String(dx.waiting.length)} hint="aguardando resposta" cls="border-amber-200 bg-amber-50 text-amber-800" />
-        <Tile label="Onboarding" emoji="🚀" value={String(d.onboarding)} hint="em implantação" cls="border-violet-200 bg-violet-50 text-violet-800" href="/esteiras" />
+        <Tile label="Onboarding" emoji="🚀" value={String(d.onboarding)} hint="em implantação" cls="border-violet-200 bg-violet-50 text-violet-800" href="/biblioteca?secao=jornada" />
         <Tile label="Abertas" emoji="🗂️" value={String(d.openTotal)} hint="tarefas em aberto" cls="border-slate-200 bg-white text-slate-700" href="/tarefas" />
         <Tile label="Horas hoje" emoji="⏱️" value={`${d.hoursToday}h`} hint="apontadas" cls="border-teal-200 bg-teal-50 text-teal-800" />
       </div>
@@ -124,7 +124,7 @@ export default async function InicioPage() {
             <span className="hidden text-brand-700 group-open:inline">Esconder ▴</span>
           </span>
         </summary>
-        <div className="border-t border-hair px-5 pt-2 text-right"><Link href="/esteiras" className="text-sm text-brand-700 hover:underline">Ver esteiras →</Link></div>
+        <div className="border-t border-hair px-5 pt-2 text-right"><Link href="/biblioteca?secao=jornada" className="text-sm text-brand-700 hover:underline">Ver esteiras →</Link></div>
         <div className="grid grid-cols-2 gap-2 p-3 md:grid-cols-4 xl:grid-cols-8">
           {JOURNEY_STAGES.map((st) => {
             const list = d.journey[st] ?? [];

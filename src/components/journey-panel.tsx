@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { applyJourneyStageAction } from "@/app/actions/journey";
-import { STAGE_LABEL, type JourneyStage } from "@/domain/enums";
-import { cx, STAGE_TONE, TONE } from "@/lib/ui";
+import { type JourneyStage } from "@/domain/enums";
+import { cx } from "@/lib/ui";
 import type { JourneyView } from "@/server/services/journey";
 import { JourneyAssets } from "./journey-assets";
+import { JourneyMap, PhaseHeader, StageTitle, StandardsBox, TaskCard, toneOf } from "./journey-ui";
 
 const STATUS_LABEL: Record<string, string> = {
   A_FAZER: "A fazer", EM_ANDAMENTO: "Em andamento", AGUARDANDO_CLIENTE: "Aguardando cliente", AGUARDANDO_TERCEIRO: "Aguardando terceiro",
@@ -23,30 +23,39 @@ export function JourneyPanel({
   vars: Record<string, string>;
   canGenerate: boolean;
 }) {
+  const doneOf = (j: JourneyView) => j.stages.reduce((n, s) => n + s.tasks.filter((t) => t.generated?.status === "CONCLUIDA").length, 0);
+  const totalOf = (j: JourneyView) => j.stages.reduce((n, s) => n + s.tasks.length, 0);
+  const daysOf = (j: JourneyView) => Math.max(0, ...j.stages.flatMap((s) => s.tasks.map((t) => t.day)));
   return (
     <div className="space-y-5">
+      <JourneyMap showProgress items={view.map((j) => ({ slug: j.esteira.slug, name: j.esteira.name, stage: j.stage as JourneyStage, days: daysOf(j), tasks: totalOf(j), done: doneOf(j) }))} />
       <p className="rounded-xl border border-brand-100 bg-brand-50/60 p-3 text-sm text-brand-900">
-        🧭 Cada etapa mostra as tarefas com o <b>prazo calculado a partir da data de início</b> que você escolher. Abra uma tarefa para ver a mensagem, o e-mail e o documento padrão e copiar sem sair daqui. Use <b>Gerar tarefas desta etapa</b> para criar tudo com checklist e prazo.
+        🧭 Cada fase tem etapas, e cada etapa tem tarefas com <b>prazo calculado a partir da data de início</b> que você escolher. Em cada tarefa estão o checklist e a mensagem, o e-mail e o documento padrão, para copiar sem sair daqui. Clique em <b>Gerar tarefas desta etapa</b> para criar tudo no sistema. Quando uma tarefa é concluída, ela aparece concluída aqui.
       </p>
-      {view.map((j) => {
-        const tone = TONE[STAGE_TONE[j.stage as JourneyStage] as keyof typeof TONE];
+      {view.map((j, n) => {
+        const tone = toneOf(j.stage as JourneyStage);
+        const done = doneOf(j);
+        const total = totalOf(j);
         return (
-          <section key={j.esteira.slug} className={cx("rounded-2xl border bg-white", tone.border)}>
-            <header className={cx("rounded-t-2xl px-4 py-2.5", tone.soft)}>
-              <h2 className={cx("text-base font-semibold", tone.text)}>{STAGE_LABEL[j.stage as JourneyStage]}: {j.esteira.name}</h2>
-              <p className="text-xs text-slate-500">{j.esteira.summary}</p>
-            </header>
-            <div className="space-y-3 p-4">
-              {j.stages.map((s) => (
-                <details key={s.stageIdx} open={s.generatedCount < s.tasks.length} className="rounded-xl border border-hair">
-                  <summary className="flex cursor-pointer flex-wrap items-center gap-2 px-3 py-2">
-                    <span className="font-medium text-brand-900">{s.name}</span>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{s.generatedCount} de {s.tasks.length} tarefas geradas</span>
-                    {s.generatedCount > 0 && (() => { const done = s.tasks.filter((t) => t.generated?.status === "CONCLUIDA").length; return <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium", done === s.tasks.length ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-800")}>✅ {done} de {s.tasks.length} concluídas</span>; })()}
-                  </summary>
-                  <div className="space-y-3 border-t border-hair p-3">
+          <section key={j.esteira.slug} id={j.esteira.slug} className={cx("scroll-mt-4 rounded-2xl border bg-white shadow-sm", tone.border)}>
+            <PhaseHeader
+              stage={j.stage as JourneyStage} number={n + 1} name={j.esteira.name} summary={j.esteira.summary} icon={j.esteira.icon}
+              days={daysOf(j)} tasks={total}
+              extra={done > 0 || j.stages.some((s) => s.generatedCount > 0) ? <span className="rounded-full bg-white px-2.5 py-1 text-emerald-700">✅ {done} de {total} concluídas</span> : null}
+            />
+            <div className="space-y-6 p-5">
+              {j.stages.map((s) => {
+                const from = s.tasks.length ? Math.min(...s.tasks.map((t) => t.day)) : 0;
+                const to = s.tasks.length ? Math.max(...s.tasks.map((t) => t.day)) : 0;
+                const sdone = s.tasks.filter((t) => t.generated?.status === "CONCLUIDA").length;
+                return (
+                  <div key={s.stageIdx}>
+                    <StageTitle
+                      index={s.stageIdx + 1} name={s.name} from={from} to={to} tone={tone}
+                      right={<span className="text-xs text-slate-500">{s.generatedCount} de {s.tasks.length} geradas{s.generatedCount > 0 ? ` · ${sdone} concluídas` : ""}</span>}
+                    />
                     {canGenerate && s.generatedCount < s.tasks.length && (
-                      <form action={applyJourneyStageAction} className="flex flex-wrap items-end gap-2 rounded-lg bg-slate-50 p-2.5">
+                      <form action={applyJourneyStageAction} className="mt-2 flex flex-wrap items-end gap-2 rounded-lg bg-slate-50 p-2.5">
                         <input type="hidden" name="slug" value={s.slug} />
                         <input type="hidden" name="stageIdx" value={s.stageIdx} />
                         <input type="hidden" name="clientId" value={target.clientId ?? ""} />
@@ -59,28 +68,24 @@ export function JourneyPanel({
                         <button type="submit" className="btn-primary btn-sm">⚡ Gerar tarefas desta etapa</button>
                       </form>
                     )}
-                    <ul className="space-y-3">
-                      {s.tasks.map((t) => (
-                        <li key={t.key} className="text-sm">
-                          <div className="flex flex-wrap items-baseline gap-2">
-                            <span className="w-20 shrink-0 text-xs font-semibold text-amber-800">⏱️ dia {t.day} · {fmt(t.dueDate)}</span>
-                            <span className={cx("flex-1 font-medium", t.generated?.status === "CONCLUIDA" ? "text-slate-400 line-through" : "text-slate-800")}>{t.generated?.status === "CONCLUIDA" ? "✅ " : ""}{t.title}</span>
-                            <span className="text-xs text-slate-400">{t.minutes} min · {t.items} itens</span>
-                            {t.generated ? (
-                              <Link href={`/tarefas/${t.generated.id}`} className={cx("rounded-full px-2 py-0.5 text-xs font-medium hover:underline", t.generated.status === "CONCLUIDA" ? "bg-emerald-600 text-white" : t.generated.status === "CANCELADA" ? "bg-slate-200 text-slate-600" : "bg-sky-100 text-sky-800")}>
-                                {STATUS_LABEL[t.generated.status] ?? t.generated.status} →
-                              </Link>
-                            ) : (
-                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">não gerada</span>
-                            )}
-                          </div>
-                          <div className="ml-20 pl-2"><JourneyAssets assets={t.assets} vars={vars} /></div>
-                        </li>
-                      ))}
-                    </ul>
+                    <ol className="mt-4">
+                      {s.tasks.map((t) => {
+                        const g = t.generated;
+                        const isDone = g?.status === "CONCLUIDA";
+                        return (
+                          <TaskCard
+                            key={t.key} day={t.day} dateLabel={fmt(t.dueDate)} title={t.title} category={t.category} minutes={t.minutes}
+                            priority={t.priority} description={t.description} checklist={t.checklist} tone={tone} done={isDone}
+                            status={g ? { label: STATUS_LABEL[g.status] ?? g.status, tone: isDone ? "done" : g.status === "CANCELADA" ? "off" : "doing", href: `/tarefas/${g.id}` } : { label: "não gerada", tone: "none" }}
+                          >
+                            <StandardsBox count={t.assets.length}><JourneyAssets assets={t.assets} vars={vars} /></StandardsBox>
+                          </TaskCard>
+                        );
+                      })}
+                    </ol>
                   </div>
-                </details>
-              ))}
+                );
+              })}
             </div>
           </section>
         );

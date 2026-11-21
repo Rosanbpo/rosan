@@ -8,7 +8,7 @@ export interface AssetLike { id: string; kind: string; title: string; subject: s
 export function JourneyAssets({ assets, vars }: { assets: AssetLike[]; vars: Record<string, string> }) {
   if (assets.length === 0) return null;
   return (
-    <div className="mt-1.5 flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       {assets.map((a) => {
         const kind = a.kind as AssetKind;
         const body = a.body ? fillMessage(a.body, vars) : "";

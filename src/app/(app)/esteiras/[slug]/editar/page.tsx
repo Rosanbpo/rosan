@@ -8,7 +8,7 @@ import { stagesToText } from "@/domain/esteiras";
 import { requirePermission } from "@/server/context";
 import { getEsteiraFor } from "@/server/services/esteiras";
 
-export const metadata = { title: "Editar esteira" };
+export const metadata = { title: "Editar fase da jornada" };
 
 export default async function EditEsteiraPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -17,13 +17,13 @@ export default async function EditEsteiraPage({ params }: { params: Promise<{ sl
   if (!e) notFound();
   return (
     <>
-      <PageHeader title={`Editar esteira: ${e.name}`} description="Mude etapas, tarefas, prazos e checklists. As alterações valem para os próximos clientes; tarefas já criadas não mudam." />
+      <PageHeader title={`Editar fase da jornada: ${e.name}`} description="Mude etapas, tarefas, prazos e checklists. Ao salvar, vale em todo o sistema (jornada do cliente e do lead, CRM, tarefas). Tarefas que já foram criadas para um cliente não mudam." />
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         <ActionForm action={saveEsteiraAction.bind(null, slug)} className="card space-y-3 p-5">
           <textarea name="text" defaultValue={stagesToText(e.stages)} rows={28} spellCheck={false} className="input w-full font-mono text-[13px] leading-relaxed" />
           <div className="flex items-center gap-3">
-            <SubmitButton>Salvar esteira</SubmitButton>
-            <Link href={`/esteiras/${slug}`} className="btn-secondary">Cancelar</Link>
+            <SubmitButton>Salvar fase</SubmitButton>
+            <Link href={`/biblioteca?secao=jornada#${slug}`} className="btn-secondary">Cancelar</Link>
           </div>
         </ActionForm>
         <aside className="space-y-4 text-sm text-slate-600">

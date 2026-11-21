@@ -1,6 +1,6 @@
 import { addDays, localDateTimeToInstant, localDateToDbDate, weekday } from "@/domain/dates";
 import { JOURNEY_STAGES, type JourneyStage } from "@/domain/enums";
-import { taskKey } from "@/domain/esteiras";
+import { taskKey, type Esteira } from "@/domain/esteiras";
 import { ASSET_KINDS, DEFAULT_ASSETS, type AssetKind } from "@/domain/journey-assets";
 import { assertCan, NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
 import { APP_TIMEZONE } from "../config";
@@ -94,6 +94,10 @@ export interface JourneyTaskView {
   dueDate: string;
   minutes: number;
   items: number;
+  checklist: string[];
+  category: string;
+  priority: string | null;
+  description: string | null;
   assets: Asset[];
   generated: { id: string; status: string } | null;
 }
@@ -106,7 +110,7 @@ export interface JourneyStageView {
 }
 export interface JourneyView {
   stage: JourneyStage;
-  esteira: { slug: string; name: string; summary: string };
+  esteira: { slug: string; name: string; summary: string; icon: Esteira["icon"]; tone: Esteira["tone"] };
   stages: JourneyStageView[];
 }
 
@@ -123,13 +127,13 @@ async function build(actor: Actor, only: JourneyStage[] | null, where: { clientI
   return JOURNEY_STAGES.filter((s) => !only || only.includes(s)).flatMap((stage) =>
     esteiras.filter((e) => e.stage === stage).map((e) => ({
       stage,
-      esteira: { slug: e.slug, name: e.name, summary: e.summary },
+      esteira: { slug: e.slug, name: e.name, summary: e.summary, icon: e.icon, tone: e.tone },
       stages: e.stages.map((s, si) => {
         const tasks = s.tasks.map((t, ti) => {
           const key = taskKey(e.slug, si, ti);
           const g = by.get(key + suffix);
           return {
-            key, title: t.title, day: t.day, dueDate: businessDay(addDays(startDate, t.day)), minutes: t.minutes, items: t.items.length,
+            key, title: t.title, day: t.day, dueDate: businessDay(addDays(startDate, t.day)), minutes: t.minutes, items: t.items.length, checklist: t.items, category: t.category as string, priority: (t.priority ?? null) as string | null, description: t.description ?? null,
             assets: assets.filter((a) => a.taskRefs.includes(refOf(e.slug, t.title))),
             generated: g ? { id: g.id, status: g.status } : null,
           };
