@@ -87,3 +87,24 @@ describe("Jornada com textos padrão", () => {
     await expect(saveAsset(s.op, first.id, { kind: "MENSAGEM", stage: "COMERCIAL", title: "x" })).rejects.toBeInstanceOf(ForbiddenError);
   });
 });
+
+import { setReview, structureOverview } from "@/server/services/structure";
+
+describe("Estrutura Rosan: validação", () => {
+  it("acompanha o que está validado e o que falta, só para a administradora", async () => {
+    const s = await setupOrg();
+    const before = await structureOverview(s.admin);
+    const jornada = before.find((a) => a.id === "jornada")!;
+    expect(jornada.items.length).toBeGreaterThanOrEqual(9);
+    expect(jornada.validated).toBe(0);
+    await setReview(s.admin, "esteira:implantacao", "VALIDADO");
+    await setReview(s.admin, "extra:slide-onboarding", "AJUSTAR", "Falta criar");
+    const after = await structureOverview(s.admin);
+    expect(after.find((a) => a.id === "jornada")!.validated).toBe(1);
+    expect(after.find((a) => a.id === "comercial")!.items.find((i) => i.key === "extra:slide-onboarding")!.status).toBe("AJUSTAR");
+    await setReview(s.admin, "esteira:implantacao", "PENDENTE");
+    expect((await structureOverview(s.admin)).find((a) => a.id === "jornada")!.validated).toBe(0);
+    await expect(setReview(s.op, "cultura", "VALIDADO")).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(structureOverview(s.gestor)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});

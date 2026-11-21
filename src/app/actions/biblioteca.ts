@@ -6,6 +6,7 @@ import { NotFoundError, ValidationError } from "@/domain/permissions";
 import { getActor } from "@/server/context";
 import { formObject } from "@/server/action-utils";
 import { deleteMaterial, deleteSharedMessage, resetSystemMessage, saveAccess, saveMaterial, saveSharedMessage, saveSystemMessage } from "@/server/services/library";
+import { setReview } from "@/server/services/structure";
 import { addTrainingItem, moveTrainingItem, removeTrainingItem, setTrainingDone, updateTrainingItem } from "@/server/services/training";
 
 async function actorOrThrow() {
@@ -93,4 +94,19 @@ export async function moveTrainingItemAction(itemId: string, dir: number): Promi
   await moveTrainingItem(await actorOrThrow(), itemId, dir < 0 ? -1 : 1);
   revalidatePath("/biblioteca");
   revalidatePath("/biblioteca");
+}
+
+export async function setReviewAction(fd: FormData): Promise<void> {
+  const area = String(fd.get("area") ?? "");
+  const filtro = String(fd.get("filtro") ?? "");
+  let q = "";
+  try {
+    await setReview(await actorOrThrow(), String(fd.get("key") ?? ""), String(fd.get("status") ?? ""), String(fd.get("note") ?? ""));
+  } catch (e) {
+    unstable_rethrow(e);
+    const m = friendly(e);
+    if (!m) throw e;
+    q = `&erro=${encodeURIComponent(m)}`;
+  }
+  redirect(`/biblioteca?secao=visao${filtro ? `&filtro=${filtro}` : ""}${q}#${area}`);
 }

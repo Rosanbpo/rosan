@@ -13,6 +13,8 @@ import { MESSAGE_VARS } from "@/domain/crm-messages";
 import { STAGE_TONE } from "@/lib/ui";
 import { cx, TONE } from "@/lib/ui";
 import { requireActor } from "@/server/context";
+import { structureOverview } from "@/server/services/structure";
+import { setReviewAction } from "@/app/actions/biblioteca";
 import {
   accessMatrix, allowedSections, journeyOverview, listMaterials, listSharedMessages, MATERIAL_CATEGORIES, systemMessagesFor, templatesWithoutStage,
 } from "@/server/services/library";
@@ -24,7 +26,7 @@ import { JOURNEY_STAGES } from "@/domain/enums";
 import { trainingItems, trainingTeam } from "@/server/services/training";
 import { getCulture } from "@/server/services/culture";
 
-export const metadata = { title: "Biblioteca Rosan" };
+export const metadata = { title: "Estrutura Rosan" };
 
 type SP = Record<string, string | undefined>;
 const EMOJI: Record<string, string> = { "Contratos e propostas": "📑", "E-mails e mensagens": "✉️", "Roteiros de reunião": "🎙️", "Planilhas e modelos": "📊", "Documentos e checklists": "✅", "Políticas e regras": "⚖️", "Links úteis": "🔗", Outros: "📎" };
@@ -36,11 +38,12 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
   const allowed = await allowedSections(actor);
   const admin = can(actor, "templates.manage");
   const tabs: Array<{ key: string; label: string; emoji: string }> = [
+    ...(admin ? [{ key: "visao", label: "Visão geral", emoji: "✅" }] : []),
     ...LIBRARY_SECTIONS.filter((s) => allowed.includes(s.key)),
     ...(can(actor, "users.manage") ? [{ key: "acessos", label: "Quem vê o quê", emoji: "🔐" }] : []),
   ];
   if (tabs.length === 0) {
-    return (<><PageHeader title="Biblioteca Rosan" /><p className="card p-5 text-sm text-slate-600">Ainda não há nada liberado para você. Peça à administradora para liberar as áreas da biblioteca.</p></>);
+    return (<><PageHeader title="Estrutura Rosan" /><p className="card p-5 text-sm text-slate-600">Ainda não há nada liberado para você. Peça à administradora para liberar as áreas da biblioteca.</p></>);
   }
   const current = tabs.find((t) => t.key === sp.secao) ?? tabs[0];
   if (sp.secao && sp.secao !== current.key) redirect(`/biblioteca?secao=${current.key}`);
@@ -48,7 +51,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <PageHeader title="Biblioteca Rosan" description="Toda a estrutura da Rosan num lugar só: jornada do cliente, mensagens, materiais, processos e a trilha de conhecimento." />
+      <PageHeader title="Estrutura Rosan" description="Toda a estrutura da Rosan num lugar só: jornada, mensagens, e-mails, documentos, processos, trilha e o que falta validar." />
       <nav aria-label="Áreas da biblioteca" className="mb-5 flex flex-wrap gap-2">
         {tabs.map((t) => (
           <Link key={t.key} href={`/biblioteca?secao=${t.key}`} className={cx("rounded-full border px-4 py-1.5 text-sm font-medium transition", t.key === current.key ? "border-brand-700 bg-brand-700 text-white" : "border-hair bg-white text-slate-700 hover:border-brand-300")}>
@@ -60,6 +63,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
       {sp.ok && <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">Salvo.</p>}
       {sp.erro && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{sp.erro}</p>}
 
+      {current.key === "visao" && <Overview actor={actor} filtro={sp.filtro} />}
       {current.key === "jornada" && <Journey actor={actor} admin={admin} />}
       {current.key === "padroes" && <Patterns actor={actor} admin={admin} />}
       {current.key === "mensagens" && <Messages actor={actor} admin={admin} />}
@@ -495,6 +499,63 @@ async function Patterns({ actor, admin }: { actor: Actor; admin: boolean }) {
           </div>
         </section>
       ))}
+    </div>
+  );
+}
+
+/* --------------------------------------------------------------- Visão geral */
+async function Overview({ actor, filtro }: { actor: Actor; filtro?: string }) {
+  const areas = await structureOverview(actor);
+  const total = areas.reduce((n, a) => n + a.items.length, 0);
+  const done = areas.reduce((n, a) => n + a.validated, 0);
+  const adjust = areas.reduce((n, a) => n + a.items.filter((i) => i.status === "AJUSTAR").length, 0);
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  const chip = (k: string | undefined, text: string) => (
+    <Link href={k ? `/biblioteca?secao=visao&filtro=${k}` : "/biblioteca?secao=visao"} className={cx("rounded-full border px-3 py-1 text-xs font-medium", (filtro ?? "") === (k ?? "") ? "border-brand-700 bg-brand-700 text-white" : "border-hair bg-white text-slate-700 hover:border-brand-300")}>{text}</Link>
+  );
+  return (
+    <div className="space-y-5">
+      <div className="card p-4">
+        <p className="text-sm font-medium text-brand-900">✅ Estrutura validada: {done} de {total} itens ({pct}%){adjust > 0 ? ` · ${adjust} para ajustar` : ""}</p>
+        <div className="mt-2 h-2.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} /></div>
+        <p className="mt-2 text-xs text-slate-500">Revise cada item (abra, edite se quiser) e marque como <b>Validado</b>. Se algo precisa mudar, marque <b>Ajustar</b> e anote o que falta. Tudo o que está aqui alimenta as tarefas, a jornada do cliente e do lead e o CRM.</p>
+        <div className="mt-3 flex flex-wrap gap-2">{chip(undefined, "Todos")}{chip("falta", "Falta validar")}{chip("ajustar", "Para ajustar")}{chip("ok", "Validados")}</div>
+      </div>
+      {areas.map((a) => {
+        const items = a.items.filter((i) => !filtro || (filtro === "falta" ? i.status !== "VALIDADO" : filtro === "ajustar" ? i.status === "AJUSTAR" : i.status === "VALIDADO"));
+        const p = a.items.length ? Math.round((a.validated / a.items.length) * 100) : 0;
+        return (
+          <section key={a.id} id={a.id} className="card p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-base font-semibold text-brand-900">{a.emoji} {a.title}</h2>
+              <span className="text-xs text-slate-500">{a.validated} de {a.items.length} validados</span>
+              <div className="ml-auto h-2 w-40 rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${p}%` }} /></div>
+            </div>
+            <p className="mb-2 text-xs text-slate-500">{a.hint}</p>
+            {items.length === 0 ? <p className="text-sm text-slate-400">Nada neste filtro.</p> : (
+              <ul className="divide-y divide-hair">
+                {items.map((i) => (
+                  <li key={i.key} className="py-2">
+                    <form action={setReviewAction} className="flex flex-wrap items-center gap-2">
+                      <input type="hidden" name="key" value={i.key} />
+                      <input type="hidden" name="area" value={a.id} />
+                      <input type="hidden" name="filtro" value={filtro ?? ""} />
+                      <span className={cx("w-24 shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-medium", i.status === "VALIDADO" ? "bg-emerald-100 text-emerald-800" : i.status === "AJUSTAR" ? "bg-amber-100 text-amber-900" : "bg-slate-100 text-slate-600")}>
+                        {i.status === "VALIDADO" ? "✅ Validado" : i.status === "AJUSTAR" ? "✏️ Ajustar" : "⏳ Pendente"}
+                      </span>
+                      <span className="min-w-0 flex-1 text-sm">{i.href ? <Link href={i.href} className="text-brand-800 hover:underline">{i.title}</Link> : <span className="text-slate-800">{i.title}</span>}</span>
+                      <input name="note" defaultValue={i.note ?? ""} placeholder="Anotação (o que ajustar)" className="input w-56 text-xs" />
+                      <button name="status" value="VALIDADO" type="submit" className="btn-secondary btn-sm">✅</button>
+                      <button name="status" value="AJUSTAR" type="submit" className="btn-secondary btn-sm">✏️</button>
+                      {i.status !== "PENDENTE" && <button name="status" value="PENDENTE" type="submit" className="text-xs text-slate-400 hover:text-brand-700">limpar</button>}
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }

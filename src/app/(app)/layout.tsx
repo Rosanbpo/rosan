@@ -46,7 +46,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
     ...(dash ? [{ group: "Análise", href: "/simulador", label: "Simulador", icon: "simulador" as const }] : []),
     ...(dash ? [{ group: "Análise", href: "/churn", label: "Saídas", icon: "churn" as const }] : []),
     ...(dash ? [{ group: "Análise", href: "/relatorios", label: "Relatórios", icon: "relatorios" as const }] : []),
-    { group: "Ferramentas", href: "/biblioteca", label: "Biblioteca", icon: "biblioteca" },
+    { group: "Ferramentas", href: "/biblioteca", label: "Estrutura Rosan", icon: "biblioteca" },
     ...(lib.includes("pops") ? [{ group: "Ferramentas", href: "/pops", label: "Processos e POPs", icon: "pops" as const }] : []),
     ...(lib.includes("cultura") ? [{ group: "Ferramentas", href: "/cultura", label: "Missão e valores", icon: "cultura" as const }] : []),
     { group: "Ferramentas", href: "/projetos", label: "Projetos", icon: "projetos" },
