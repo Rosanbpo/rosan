@@ -196,6 +196,15 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
         </div>
       </div>
 
+      <Link href={`/crm/${id}/roteiro`} className="card mt-8 flex flex-wrap items-center gap-3 p-4 hover:border-brand-300">
+        <span className="text-2xl">🎙️</span>
+        <span className="flex-1">
+          <span className="block font-semibold text-brand-900">Roteiro da reunião de diagnóstico</span>
+          <span className="block text-sm text-slate-500">Checklist de falas e perguntas (SPIN), com espaço para anotações em cada parte e no final.</span>
+        </span>
+        <span className="btn-primary btn-sm">Abrir roteiro</span>
+      </Link>
+
       <section className="mt-8">
         <h2 className="mb-3 text-lg font-semibold text-brand-900">🧭 Jornada comercial deste lead</h2>
         {sp.gerou && <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{sp.gerou} tarefa(s) criada(s). Veja em Tarefas.</p>}
