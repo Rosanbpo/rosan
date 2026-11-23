@@ -1429,6 +1429,12 @@ model MarketingIdea {
   format         String    @default("CARROSSEL")
   /// Aprovado pela dona para ser produzido.
   approved       Boolean   @default(false)
+  /// A dona pediu outro tema (com o motivo).
+  swapRequested  Boolean   @default(false)
+  swapReason     String    @default("")
+  /// Horário combinado para postar (HH:MM) e se já foi programado no Instagram.
+  publishTime    String    @default("12:00")
+  scheduled      Boolean   @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

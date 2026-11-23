@@ -117,3 +117,23 @@ export async function approveAllAction(): Promise<ActionState> {
     return n === 0 ? "Tudo já estava aprovado." : `${n} conteúdos aprovados.`;
   }, REVALIDATE);
 }
+
+export async function requestSwapAction(id: string, reason: string): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await marketing.requestSwap(actor, id, reason);
+    return "Pedido de troca enviado. Eu te mando novas sugestões.";
+  }, REVALIDATE);
+}
+
+export async function cancelSwapAction(id: string): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await marketing.cancelSwap(actor, id);
+  }, REVALIDATE);
+}
+
+export async function setScheduleAction(id: string, time: string, state: "none" | "scheduled" | "published"): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await marketing.setSchedule(actor, id, { time, state });
+    return state === "published" ? "Marcado como publicado." : state === "scheduled" ? "Marcado como programado." : "Programação removida.";
+  }, REVALIDATE);
+}
