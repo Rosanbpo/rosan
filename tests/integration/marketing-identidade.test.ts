@@ -47,3 +47,25 @@ describe("calendário do plano de conteúdo", () => {
     expect(await approveAll(a)).toBe(22);
   });
 });
+
+describe("trocar tema e programar", () => {
+  it("pede troca com motivo, aprova limpa o pedido e guarda o horário", async () => {
+    await resetDb();
+    const a = (await setupOrg()).admin;
+    const m = await import("@/server/services/marketing");
+    await m.importCalendar(a);
+    const [first] = await m.listCalendar(a);
+    await expect(m.requestSwap(a, first.id, " ")).rejects.toThrow(/por que/);
+    await m.requestSwap(a, first.id, "já falei disso");
+    let row = (await m.listCalendar(a))[0];
+    expect(row).toMatchObject({ swapRequested: true, swapReason: "já falei disso", approved: false });
+    await m.setApproved(a, first.id, true);
+    row = (await m.listCalendar(a))[0];
+    expect(row).toMatchObject({ swapRequested: false, approved: true });
+    await expect(m.setSchedule(a, first.id, { time: "25:00", state: "scheduled" })).rejects.toThrow(/HH:MM/);
+    await m.setSchedule(a, first.id, { time: "07:30", state: "scheduled" });
+    expect((await m.listCalendar(a))[0]).toMatchObject({ publishTime: "07:30", scheduled: true, status: "IDEIA" });
+    await m.setSchedule(a, first.id, { time: "07:30", state: "published" });
+    expect((await m.listCalendar(a))[0].status).toBe("PUBLICADO");
+  });
+});

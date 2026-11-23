@@ -212,13 +212,36 @@ export async function listCalendar(actor: Actor) {
   return prisma.marketingIdea.findMany({
     where: { organizationId: actor.organizationId, publishOn: { not: null } },
     orderBy: [{ publishOn: "asc" }, { createdAt: "asc" }],
-    select: { id: true, title: true, pillar: true, status: true, format: true, approved: true, publishOn: true, slidesText: true },
+    select: { id: true, title: true, pillar: true, status: true, format: true, approved: true, swapRequested: true, swapReason: true, publishTime: true, scheduled: true, publishOn: true, slidesText: true, caption: true, hashtags: true },
   });
 }
 
 export async function setApproved(actor: Actor, id: string, approved: boolean) {
   await getIdea(actor, id);
-  await prisma.marketingIdea.update({ where: { id }, data: { approved } });
+  await prisma.marketingIdea.update({ where: { id }, data: { approved, ...(approved ? { swapRequested: false, swapReason: "" } : {}) } });
+}
+
+/** A dona pede outro tema: guarda o motivo e tira a aprovação. */
+export async function requestSwap(actor: Actor, id: string, reason: string) {
+  await getIdea(actor, id);
+  const r = reason.trim().slice(0, 500);
+  if (r.length < 3) throw new ValidationError("Conte em poucas palavras por que quer trocar o tema.");
+  await prisma.marketingIdea.update({ where: { id }, data: { swapRequested: true, swapReason: r, approved: false } });
+}
+
+export async function cancelSwap(actor: Actor, id: string) {
+  await getIdea(actor, id);
+  await prisma.marketingIdea.update({ where: { id }, data: { swapRequested: false, swapReason: "" } });
+}
+
+/** Guarda o horário combinado e se o post já foi programado (ou publicado) no Instagram. */
+export async function setSchedule(actor: Actor, id: string, input: { time: string; state: "none" | "scheduled" | "published" }) {
+  await getIdea(actor, id);
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.time)) throw new ValidationError("Use um horário no formato HH:MM.");
+  await prisma.marketingIdea.update({
+    where: { id },
+    data: { publishTime: input.time, scheduled: input.state !== "none", ...(input.state === "published" ? { status: "PUBLICADO" } : {}) },
+  });
 }
 
 export async function approveAll(actor: Actor) {

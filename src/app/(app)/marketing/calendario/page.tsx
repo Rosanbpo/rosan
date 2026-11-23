@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Film, LayoutGrid } from "lucide-react";
-import { ApproveToggle, CalendarButtons } from "@/components/marketing-approve";
+import { CalendarButtons } from "@/components/marketing-approve";
+import { ItemActions } from "@/components/marketing-item-actions";
+import { parseSlides } from "@/domain/marketing";
 import { MarketingHero } from "@/components/marketing-hero";
 import { MarketingTabs } from "@/components/marketing-tabs";
 import { PILLAR_LABEL, POST_STATUS_LABEL, type Pillar, type PostStatus } from "@/domain/marketing";
@@ -78,7 +80,21 @@ export default async function CalendarPage() {
                             {isToday && <span className="font-semibold text-[#8E744F]">Hoje</span>}
                           </p>
                         </div>
-                        <ApproveToggle id={i.id} approved={i.approved} />
+                        <div className="w-full basis-full pl-[88px]">
+                          <ItemActions
+                            id={i.id}
+                            format={i.format}
+                            approved={i.approved}
+                            swapRequested={i.swapRequested}
+                            swapReason={i.swapReason}
+                            publishTime={i.publishTime}
+                            scheduled={i.scheduled}
+                            published={i.status === "PUBLICADO"}
+                            slideCount={parseSlides(i.slidesText).length}
+                            copy={[i.caption, i.hashtags].filter(Boolean).join("\n\n")}
+                            dateLabel={`${iso.slice(8, 10)}/${iso.slice(5, 7)} (${WEEKDAY[new Date(`${iso}T12:00:00Z`).getUTCDay()]})`}
+                          />
+                        </div>
                       </li>
                     );
                   })}
