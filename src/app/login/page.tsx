@@ -20,7 +20,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
           <Image src="/logo.png" alt={APP_NAME} width={620} height={530} priority className="h-auto w-56" />
-          <p className="-mt-2 text-xs tracking-[0.2em] text-brand-200/80 uppercase">Escritório virtual</p>
         </div>
         {configurado && (
           <p role="status" className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
