@@ -3,7 +3,7 @@ import { CATEGORY_LABEL, type Priority, type TaskCategory, type TaskStatus } fro
 import { isOverdue } from "@/domain/task-rules";
 import { fmtCompetence } from "@/lib/format";
 import { cx } from "@/lib/ui";
-import { DueDate, OverdueBadge, PriorityBadge, StatusBadge } from "./ui/badges";
+import { DueDate, PriorityBadge, StatusBadge } from "./ui/badges";
 import type { TaskListRow } from "@/server/services/tasks";
 import { Repeat } from "lucide-react";
 import type { Actor } from "@/domain/permissions";
@@ -102,10 +102,7 @@ export function TaskTable({
                   <DueDate dueAt={t.dueAt} status={t.status as TaskStatus} now={now} />
                 </td>
                 <td>
-                  <div className="flex flex-col items-start gap-1">
-                    <StatusBadge status={t.status as TaskStatus} />
-                    {overdue && <OverdueBadge />}
-                  </div>
+                  <StatusBadge status={t.status as TaskStatus} />
                 </td>
                 {!compact && (
                   <td>
