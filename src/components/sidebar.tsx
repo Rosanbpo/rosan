@@ -31,6 +31,7 @@ import {
   Library,
   Flag,
   SlidersHorizontal,
+  Megaphone,
   Menu,
   Repeat,
   Settings,
@@ -43,6 +44,7 @@ import { cx } from "@/lib/ui";
 const ICONS = {
   painel: BarChart3,
   inicio: Home,
+  marketing: Megaphone,
   avulsas: Inbox,
   equipe: Users,
   cofre: KeyRound,
