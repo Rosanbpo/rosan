@@ -72,6 +72,33 @@ function orderFor(sort: TaskFilters["sort"]): Prisma.TaskOrderByWithRelationInpu
   return [{ dueAt: "asc" }, { priority: "desc" }];
 }
 
+/** Tarefas em aberto até o fim do dia (do dia + atrasadas), agrupadas por cliente. clientId null = avulsas. */
+export async function dayOverview(actor: Actor, dayStart: Date, dayEnd: Date) {
+  const [upto, today] = await Promise.all([
+    prisma.task.groupBy({ by: ["clientId"], where: buildTaskWhere(actor, { open: true, dueTo: dayEnd }), _count: { _all: true } }),
+    prisma.task.groupBy({ by: ["clientId"], where: buildTaskWhere(actor, { open: true, dueFrom: dayStart, dueTo: dayEnd }), _count: { _all: true } }),
+  ]);
+  const todayBy = new Map(today.map((g) => [g.clientId, g._count._all]));
+  const ids = upto.map((g) => g.clientId).filter((v): v is string => !!v);
+  const clients = await prisma.client.findMany({ where: { id: { in: ids } }, select: { id: true, tradeName: true } });
+  const names = new Map(clients.map((c) => [c.id, c.tradeName]));
+  return upto
+    .map((g) => {
+      const total = g._count._all;
+      const t = todayBy.get(g.clientId) ?? 0;
+      return { clientId: g.clientId, name: g.clientId ? names.get(g.clientId) ?? "Cliente" : "Avulsas", today: t, late: total - t, total };
+    })
+    .sort((a, b) => (a.clientId === null ? -1 : b.clientId === null ? 1 : b.late + b.today - (a.late + a.today) || a.name.localeCompare(b.name, "pt-BR")));
+}
+
+/** Checklist completo (com id e rótulo) das tarefas informadas. */
+export async function checklistsOf(taskIds: string[]) {
+  const rows = await prisma.checklistItem.findMany({ where: { taskId: { in: taskIds } }, orderBy: [{ position: "asc" }] });
+  const map = new Map<string, typeof rows>();
+  for (const r of rows) map.set(r.taskId, [...(map.get(r.taskId) ?? []), r]);
+  return map;
+}
+
 export async function countTasks(actor: Actor, filters: TaskFilters = {}) {
   return prisma.task.count({ where: buildTaskWhere(actor, filters) });
 }
