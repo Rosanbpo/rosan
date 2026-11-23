@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Palette, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { ActionForm, Field, SubmitButton } from "@/components/ui/action-form";
+import { MarketingTabs } from "@/components/marketing-tabs";
 import { PageHeader } from "@/components/ui/layout";
 import { createIdeaAction, importLibraryAction } from "@/app/actions/marketing";
 import { parseSlides, PILLARS, PILLAR_LABEL, POST_STATUSES, POST_STATUS_LABEL, type Pillar } from "@/domain/marketing";
@@ -31,9 +32,6 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
         description="Central de conteúdos do Instagram: guarde ideias, produza carrosséis com a identidade da Rosan e baixe os slides prontos para postar."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/marketing/identidade" className="btn-secondary">
-              <Palette aria-hidden className="h-4 w-4" /> Identidade visual
-            </Link>
             <ActionForm action={importLibraryAction} inlineFeedback>
               <SubmitButton className="btn-secondary" pendingText="Importando…">
                 <Sparkles aria-hidden className="h-4 w-4" /> Importar posts prontos
@@ -42,6 +40,8 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
           </div>
         }
       />
+
+      <MarketingTabs active="conteudos" />
 
       <ActionForm action={createIdeaAction} className="card mb-5 p-4" resetOnSuccess>
         <div className="flex flex-wrap items-end gap-3">
