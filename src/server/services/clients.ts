@@ -7,6 +7,7 @@ import { prisma } from "../db";
 import { PAGE_SIZE } from "../config";
 import { clientSchema, parseInput, type ClientInput } from "../validation";
 import { assertClientAccess, clientScope } from "./access";
+import bcrypt from "bcryptjs";
 import { diffFields, recordAudit } from "./audit";
 
 export interface ClientListFilters {
@@ -327,4 +328,25 @@ export async function clientPanelExtras(actor: Actor, clientId: string) {
     hoursByMonth: months,
     hoursByPerson: [...byPerson.entries()].map(([name, minutes]) => ({ name, minutes })).sort((a, b) => b.minutes - a.minutes),
   };
+}
+
+/** Exclusão definitiva: exige a senha de quem está logado. Tarefas, rotinas e dados do cliente são apagados junto. */
+export async function deleteClient(actor: Actor, clientId: string, password: string) {
+  assertCan(actor, "clients.manage");
+  const client = await assertClientAccess(actor, clientId);
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: actor.userId } });
+  if (!password || !(await bcrypt.compare(password, user.passwordHash))) {
+    throw new ValidationError("Senha incorreta.", { password: "Senha incorreta." });
+  }
+  await prisma.$transaction(async (tx) => {
+    await tx.client.delete({ where: { id: clientId } });
+    await recordAudit(tx, {
+      organizationId: actor.organizationId,
+      actorId: actor.userId,
+      entityType: "Client",
+      entityId: clientId,
+      action: "client.deleted",
+      summary: `Cliente "${client.tradeName}" excluído definitivamente`,
+    });
+  });
 }
