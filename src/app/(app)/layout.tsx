@@ -77,7 +77,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
           </form>
         }
       />
-      <main id="conteudo" className="px-4 py-6 sm:px-6 lg:ml-64 lg:px-8">
+      <main id="conteudo" className="px-4 py-6 sm:px-6 lg:ml-56 lg:px-8">
         <div className="mx-auto max-w-7xl">{children}</div>
       </main>
       {modal}
