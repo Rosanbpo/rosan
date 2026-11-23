@@ -63,14 +63,18 @@ export async function homeOverview(actor: Actor, now = new Date()) {
   const per = new Map<string, { id: string | null; name: string; open: number; overdue: number; today: number; next: { id: string; title: string; dueAt: Date | null }[] }>();
   for (const t of openTasks) {
     const key = t.clientId ?? "interna";
-    const row = per.get(key) ?? { id: t.clientId, name: t.client?.tradeName ?? "Internas", open: 0, overdue: 0, today: 0, next: [] };
+    const row = per.get(key) ?? { id: t.clientId, name: t.client?.tradeName ?? "Avulsas", open: 0, overdue: 0, today: 0, next: [] };
     row.open++;
     if (t.dueAt && t.dueAt < now) row.overdue++;
     else if (t.dueAt && t.dueAt < tomorrowStart) row.today++;
     if (row.next.length < 3) row.next.push({ id: t.id, title: t.title, dueAt: t.dueAt });
     per.set(key, row);
   }
-  const byClient = [...per.values()].sort((a, b) => b.overdue - a.overdue || b.open - a.open);
+  const byClientRaw = [...per.values()].sort((a, b) => b.overdue - a.overdue || b.open - a.open);
+  const logoIds = new Set(
+    (await prisma.clientLogo.findMany({ where: { clientId: { in: byClientRaw.map((c) => c.id).filter((v): v is string => !!v) } }, select: { clientId: true } })).map((l) => l.clientId),
+  );
+  const byClient = byClientRaw.map((c) => ({ ...c, hasLogo: !!c.id && logoIds.has(c.id) }));
 
   const nps = await npsOverview(actor);
   const renewals = can(actor, "contracts.manage") ? await renewalsDueCount(actor) : 0;

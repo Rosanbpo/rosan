@@ -148,25 +148,35 @@ export default async function InicioPage() {
           <Link href="/clientes" className="text-sm text-brand-700 hover:underline">Ver clientes →</Link>
         </div>
         {d.byClient.length ? (
-          <div className="grid gap-2.5 p-3 md:grid-cols-2 xl:grid-cols-3">
-            {d.byClient.map((c) => (
-              <div key={c.id ?? "interna"} className="rounded-xl border border-hair p-4">
-                <div className="flex items-start justify-between gap-2">
-                  {c.id ? <Link href={`/clientes/${c.id}`} className="font-semibold text-brand-900 hover:underline">{c.name}</Link> : <span className="font-semibold text-brand-900">{c.name}</span>}
-                  <span className="text-xs text-slate-500">{c.open} aberta{c.open === 1 ? "" : "s"}</span>
-                </div>
-                <p className="mt-1 flex gap-3 text-xs">
-                  <span className={c.overdue ? "font-semibold text-red-700" : "text-slate-400"}>🔴 {c.overdue} atrasada{c.overdue === 1 ? "" : "s"}</span>
-                  <span className={c.today ? "font-semibold text-amber-700" : "text-slate-400"}>☀️ {c.today} hoje</span>
-                </p>
-                <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                  {c.next.map((t) => (
-                    <li key={t.id} className="truncate"><Link href={`/tarefas/${t.id}`} className="hover:underline">• {t.title}</Link></li>
-                  ))}
-                </ul>
-                {c.id && <Link href={`/tarefas?clientId=${c.id}&abertas=1`} className="mt-2 inline-block text-xs text-brand-700 hover:underline">Ver todas →</Link>}
-              </div>
-            ))}
+          <div className="grid gap-2.5 p-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+            {d.byClient.map((c) => {
+              const initials = c.name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
+              return (
+                <Link
+                  key={c.id ?? "interna"}
+                  href={c.id ? `/clientes/${c.id}?aba=hoje` : "/avulsas"}
+                  className="group flex items-center gap-3 rounded-xl border border-hair bg-white p-3 transition-colors hover:border-brand-700 hover:bg-brand-50/40"
+                >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-hair bg-brand-50 text-sm font-semibold text-brand-700">
+                    {c.hasLogo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={`/clientes/${c.id}/logo`} alt="" className="h-full w-full bg-white object-contain" />
+                    ) : (
+                      initials
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold text-brand-900">{c.name}</span>
+                    <span className="mt-0.5 flex flex-wrap gap-x-3 text-xs">
+                      {c.overdue > 0 && <span className="font-semibold text-red-700">{c.overdue} atrasada{c.overdue === 1 ? "" : "s"}</span>}
+                      {c.today > 0 && <span className="font-semibold text-amber-700">{c.today} hoje</span>}
+                      {c.overdue === 0 && c.today === 0 && <span className="text-slate-400">em dia</span>}
+                    </span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-sm font-semibold text-slate-700 tabular-nums" title="tarefas em aberto">{c.open}</span>
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <p className="p-5 text-sm text-slate-500">🎉 Nenhuma tarefa em aberto.</p>
