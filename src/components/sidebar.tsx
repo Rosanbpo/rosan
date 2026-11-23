@@ -32,6 +32,7 @@ import {
   Flag,
   SlidersHorizontal,
   Menu,
+  Sun,
   Repeat,
   Settings,
   Target,
@@ -43,6 +44,7 @@ import { cx } from "@/lib/ui";
 const ICONS = {
   painel: BarChart3,
   inicio: Home,
+  hoje: Sun,
   avulsas: Inbox,
   equipe: Users,
   cofre: KeyRound,

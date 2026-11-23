@@ -22,6 +22,7 @@ import {
   NotebookPen,
   LayoutDashboard,
   Route,
+  Sun,
 } from "lucide-react";
 import { dbDateToLocalDate } from "@/domain/dates";
 import {
@@ -105,6 +106,7 @@ import { listTasks } from "@/server/services/tasks";
 import { listPendings } from "@/server/services/pendings";
 import { clientMonthSummary } from "@/server/services/portfolio";
 import { orNotFound } from "@/server/page-utils";
+import { ClientDayPanel } from "./day-panel";
 
 const TABS: Array<{
   key: string;
@@ -116,6 +118,7 @@ const TABS: Array<{
     finance: unknown,
   ) => boolean;
 }> = [
+  { key: "hoje", label: "Hoje", icon: Sun, show: () => true },
   { key: "resumo", label: "Resumo", icon: LayoutDashboard, show: () => true },
   { key: "dados", label: "Dados", icon: UserRound, show: () => true },
   { key: "cofre", label: "Cofre", icon: KeyRound, show: () => true },
@@ -129,6 +132,7 @@ const TABS: Array<{
 ];
 
 const TAB_TONE: Record<string, string> = {
+  hoje: "text-amber-500",
   resumo: "text-blue-600",
   dados: "text-sky-500",
   financeiro: "text-emerald-500",
@@ -323,6 +327,8 @@ export default async function ClientPage({
           ))}
         </nav>
         <div className="p-5">
+      {aba === "hoje" && <ClientDayPanel clientId={id} />}
+
       {aba === "resumo" && (
         <>
           <ClientDashboardTop

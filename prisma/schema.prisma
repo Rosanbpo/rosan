@@ -55,6 +55,7 @@ model Organization {
 model User {
   vaultItemsCreated  ClientVaultItem[] @relation("VaultItemCreator")
   clientNotes        ClientNote[]      @relation("ClientNoteAuthor")
+  reminders          ClientReminder[]  @relation("ReminderAuthor")
   documentReceipts   DocumentReceipt[] @relation("DocumentReceivedBy")
   runningTimer       RunningTimer?
   contractsCreated   Contract[]
@@ -142,6 +143,7 @@ model Client {
   bankAccounts          ClientBankAccount[]
   procedures            Procedure[]
   clientNotes           ClientNote[]
+  reminders             ClientReminder[]
   logo                  ClientLogo?
   diagnosis             ClientDiagnosis?
   onboarding            ClientOnboarding?
@@ -1379,4 +1381,24 @@ model JourneyStageStart {
   updatedAt      DateTime @updatedAt
 
   @@unique([organizationId, scope, slug, stageIdx])
+}
+
+/// Lembretes rápidos do cliente: algo a pedir ao cliente ou a fazer depois. Podem ser marcados ou virar tarefa.
+model ClientReminder {
+  id             String    @id @default(cuid())
+  organizationId String
+  clientId       String
+  text           String
+  done           Boolean   @default(false)
+  doneAt         DateTime?
+  /// Tarefa criada a partir do lembrete (sem relação rígida: a tarefa pode ser excluída).
+  taskId         String?
+  authorId       String?
+  createdAt      DateTime  @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  author User?  @relation("ReminderAuthor", fields: [authorId], references: [id])
+
+  @@index([clientId, done])
+  @@index([organizationId])
 }

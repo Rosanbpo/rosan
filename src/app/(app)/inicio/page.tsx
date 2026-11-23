@@ -106,7 +106,7 @@ export default async function InicioPage() {
 
       <div className="mb-4 grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-8">
         <Tile label="MRR" emoji="💰" value={d.mrr === null ? "—" : fmtMoney(d.mrr)} hint={`${d.activeClients} clientes ativos`} cls="border-sky-200 bg-sky-50 text-sky-800" href="/carteira" />
-        <Tile label="Para hoje" emoji="☀️" value={String(d.dueToday)} hint="vencem hoje" cls="border-amber-200 bg-amber-50 text-amber-800" href="/tarefas?prazo=hoje" />
+        <Tile label="Para hoje" emoji="☀️" value={String(d.dueToday)} hint="vencem hoje" cls="border-amber-200 bg-amber-50 text-amber-800" href="/hoje" />
         <Tile label="Atrasadas" emoji="🔴" value={String(d.overdue)} hint="precisam de atenção" cls="border-red-200 bg-red-50 text-red-700" href="/tarefas?atrasadas=1" />
         <Tile label="Pendências" emoji="📋" value={String(d.waitingClient)} hint="aguardando cliente" cls="border-orange-200 bg-orange-50 text-orange-800" href="/pendencias" />
         <Tile label="Diagnósticos" emoji="📝" value={String(dx.waiting.length)} hint="aguardando resposta" cls="border-amber-200 bg-amber-50 text-amber-800" />
