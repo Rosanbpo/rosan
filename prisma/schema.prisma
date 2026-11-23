@@ -12,6 +12,7 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model Organization {
+  marketingIdeas  MarketingIdea[]
   runningTimers   RunningTimer[]
   pricingSheet    PricingSheet?
   contracts       Contract[]
@@ -1401,4 +1402,30 @@ model ClientReminder {
 
   @@index([clientId, done])
   @@index([organizationId])
+}
+
+/// Central de conteúdos do Instagram: ideias e posts (carrosséis) com a identidade visual da Rosan.
+model MarketingIdea {
+  id             String    @id @default(cuid())
+  organizationId String
+  title          String
+  /// EDUCATIVO | MITOS | BASTIDORES | AUTORIDADE
+  pillar         String    @default("EDUCATIVO")
+  /// IDEIA | PRODUCAO | PRONTO | PUBLICADO
+  status         String    @default("IDEIA")
+  /// Texto dos slides: blocos separados por "---"; 1ª linha de cada bloco = título, o resto = texto.
+  slidesText     String    @default("")
+  caption        String    @default("")
+  hashtags       String    @default("")
+  notes          String    @default("")
+  /// Chave do post pronto da biblioteca (evita importar duas vezes).
+  libraryKey     String?
+  publishOn      DateTime? @db.Date
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, libraryKey])
+  @@index([organizationId, status])
 }

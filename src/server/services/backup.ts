@@ -9,7 +9,7 @@ import { recordAudit } from "./audit";
 export async function exportOrganizationData(actor: Actor) {
   assertCan(actor, "org.settings");
   const where = { organizationId: actor.organizationId };
-  const [org, users, clients, bankAccounts, tasks, procedures, notes, vault, leads, proposals, contracts, projects, pendings, templates, recurrences, timeEntries, documents, reminders] = await Promise.all([
+  const [org, users, clients, bankAccounts, tasks, procedures, notes, vault, leads, proposals, contracts, projects, pendings, templates, recurrences, timeEntries, documents, reminders, marketing] = await Promise.all([
     prisma.organization.findUniqueOrThrow({ where: { id: actor.organizationId } }),
     prisma.membership.findMany({ where, select: { role: true, active: true, user: { select: { id: true, name: true, email: true } } } }),
     prisma.client.findMany({ where, include: { members: { select: { userId: true } } } }),
@@ -28,6 +28,7 @@ export async function exportOrganizationData(actor: Actor) {
     prisma.timeEntry.findMany({ where }),
     prisma.documentRequirement.findMany({ where, include: { receipts: true } }),
     prisma.clientReminder.findMany({ where }),
+    prisma.marketingIdea.findMany({ where }),
   ]);
   await prisma.$transaction((tx) =>
     recordAudit(tx, { organizationId: actor.organizationId, actorId: actor.userId, entityType: "Organization", entityId: actor.organizationId, action: "backup.exported", summary: "Cópia dos dados exportada" }),
@@ -53,5 +54,6 @@ export async function exportOrganizationData(actor: Actor) {
     horas: timeEntries,
     documentos: documents,
     lembretesDosClientes: reminders,
+    conteudosDeMarketing: marketing,
   };
 }
