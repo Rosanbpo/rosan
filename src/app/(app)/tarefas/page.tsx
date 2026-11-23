@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, Columns3, List, Plus } from "lucide-react";
+import { Building2, CalendarDays, Columns3, List, Plus } from "lucide-react";
 import {
   addDays,
   addMonths,
@@ -30,7 +30,7 @@ export const metadata = { title: "Tarefas" };
 
 type SP = Record<string, string | string[] | undefined>;
 
-const VIEWS = ["lista", "kanban", "calendario"] as const;
+const VIEWS = ["lista", "clientes", "kanban", "calendario"] as const;
 
 function buildFilters(sp: SP, now: Date): TaskFilters {
   const today = instantToLocalDate(now, APP_TIMEZONE);
@@ -194,6 +194,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       <nav aria-label="Visualização" className="mb-4 inline-flex rounded-md border border-slate-200 bg-white p-0.5">
         {[
           { v: "lista", label: "Lista", Icon: List },
+          { v: "clientes", label: "Por cliente", Icon: Building2 },
           { v: "kanban", label: "Kanban", Icon: Columns3 },
           { v: "calendario", label: "Calendário", Icon: CalendarDays },
         ].map(({ v, label, Icon }) => (
@@ -212,6 +213,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       </nav>
 
       {view === "lista" && <ListView actorFilters={filters} sp={sp} />}
+      {view === "clientes" && <ClientsView actorFilters={filters} />}
       {view === "kanban" && <KanbanView actorFilters={filters} />}
       {view === "calendario" && <CalendarView actorFilters={filters} sp={sp} />}
     </>
@@ -241,6 +243,84 @@ async function ListView({ actorFilters, sp }: { actorFilters: TaskFilters; sp: S
         <Pagination total={result.total} page={result.page} pageSize={result.pageSize} searchParams={sp} basePath="/tarefas" />
       </div>
     </div>
+  );
+}
+
+async function ClientsView({ actorFilters }: { actorFilters: TaskFilters }) {
+  const actor = await requireActor();
+  const now = new Date();
+  const result = await listTasks(actor, { ...actorFilters, pageSize: 500, sort: actorFilters.sort ?? "due" });
+  const groups = new Map<string, { id: string | null; name: string; rows: typeof result.rows }>();
+  for (const t of result.rows) {
+    const key = t.client?.id ?? "interna";
+    const g = groups.get(key) ?? { id: t.client?.id ?? null, name: t.client?.tradeName ?? "Avulsas (internas)", rows: [] };
+    g.rows.push(t);
+    groups.set(key, g);
+  }
+  const lateOf = (rows: typeof result.rows) => rows.filter((t) => isOverdue({ status: t.status as TaskStatus, dueAt: t.dueAt }, now)).length;
+  const cards = [...groups.values()].sort((a, b) => {
+    if (!a.id !== !b.id) return a.id ? 1 : -1;
+    return lateOf(b.rows) - lateOf(a.rows) || a.name.localeCompare(b.name, "pt-BR");
+  });
+  if (cards.length === 0) {
+    return <EmptyState title="Nenhuma tarefa encontrada" description="Ajuste os filtros ou crie uma nova tarefa." />;
+  }
+  const SHOW = 5;
+  return (
+    <>
+      {result.total > result.rows.length && <p className="mb-2 text-xs text-amber-700">Exibindo as primeiras {result.rows.length} tarefas. Refine os filtros.</p>}
+      <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        {cards.map((g) => {
+          const late = lateOf(g.rows);
+          const today = instantToLocalDate(now, APP_TIMEZONE);
+          const dueToday = g.rows.filter((t) => instantToLocalDate(t.dueAt, APP_TIMEZONE) === today && t.status !== "CONCLUIDA").length;
+          const href = g.id ? `/tarefas?view=lista&clientId=${g.id}` : "/tarefas?view=lista&clientId=interna";
+          return (
+            <section key={g.id ?? "interna"} className={cx("card overflow-hidden", !g.id && "border-brand-200 bg-brand-50/40")} aria-label={g.name}>
+              <header className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
+                <div className="min-w-0">
+                  <h3 className="truncate text-[15px] font-semibold text-brand-900">{g.name}</h3>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-slate-500">
+                    <span>{g.rows.length} abertas</span>
+                    {late > 0 && <span className="font-semibold text-red-700">{late} atrasadas</span>}
+                    {dueToday > 0 && <span className="font-semibold text-amber-700">{dueToday} hoje</span>}
+                  </p>
+                </div>
+                {g.id ? (
+                  <Link href={`/clientes/${g.id}`} className="shrink-0 text-xs text-brand-700 hover:underline">
+                    Abrir cliente
+                  </Link>
+                ) : (
+                  <Link href="/avulsas" className="shrink-0 text-xs text-brand-700 hover:underline">
+                    Abrir avulsas
+                  </Link>
+                )}
+              </header>
+              <ul className="divide-y divide-slate-100">
+                {g.rows.slice(0, SHOW).map((t) => {
+                  const overdue = isOverdue({ status: t.status as TaskStatus, dueAt: t.dueAt }, now);
+                  return (
+                    <li key={t.id}>
+                      <Link href={`/tarefas/${t.id}`} className="flex items-center gap-3 px-4 py-2 text-[13px] hover:bg-slate-50">
+                        <span aria-hidden className={cx("h-2 w-2 shrink-0 rounded-full", STATUS_DOT[t.status as TaskStatus])} />
+                        <span className="min-w-0 flex-1 truncate text-slate-800">{t.title}</span>
+                        <span className="hidden shrink-0 truncate text-xs text-slate-400 sm:block sm:max-w-[7rem]">{t.assignee?.name.split(" ")[0] ?? ""}</span>
+                        <span className={cx("shrink-0 text-xs tabular-nums", overdue ? "font-semibold text-red-700" : "text-slate-500")}>{fmtDateTime(t.dueAt).slice(0, 5)}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+              {g.rows.length > SHOW && (
+                <Link href={href} className="block border-t border-slate-100 px-4 py-2 text-center text-xs font-medium text-brand-700 hover:bg-slate-50">
+                  Ver as {g.rows.length} tarefas
+                </Link>
+              )}
+            </section>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
