@@ -135,7 +135,6 @@ export function Sidebar({
   const brand = (
     <div className="flex flex-col items-center px-6 pt-3 pb-2">
       <Image src="/logo.png" alt={appName} width={620} height={530} priority className="h-auto w-20" />
-      <p className="mt-0.5 truncate text-[11px] text-brand-200/70">Escritório virtual</p>
     </div>
   );
 
