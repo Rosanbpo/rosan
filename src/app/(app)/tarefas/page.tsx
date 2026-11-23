@@ -23,7 +23,7 @@ import { APP_TIMEZONE } from "@/server/config";
 import { requireActor } from "@/server/context";
 import { getRunningTimer } from "@/server/services/timer";
 import { clientOptions } from "@/server/services/clients";
-import { assignableUsers, listTasks, type TaskFilters } from "@/server/services/tasks";
+import { assignableUsers, countTasks, listTasks, type TaskFilters } from "@/server/services/tasks";
 import { list, oneOf, pageOf, str } from "@/server/page-utils";
 
 export const metadata = { title: "Tarefas" };
@@ -67,6 +67,33 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const view = oneOf(str(sp, "view"), VIEWS) ?? "lista";
   const filters = buildFilters(sp, now);
   const [clients, users] = await Promise.all([clientOptions(actor), assignableUsers(actor)]);
+  const today = instantToLocalDate(now, APP_TIMEZONE);
+  const dayStart = (d: string) => localDateTimeToInstant(d, "00:00", APP_TIMEZONE);
+  const [nOpen, nLate, nToday, nWeek, nMine, nWaiting] = await Promise.all([
+    countTasks(actor, { open: true }),
+    countTasks(actor, { open: true, overdue: true }),
+    countTasks(actor, { open: true, dueFrom: dayStart(today), dueTo: dayStart(addDays(today, 1)) }),
+    countTasks(actor, { open: true, dueFrom: dayStart(addDays(today, 1)), dueTo: dayStart(addDays(today, 8)) }),
+    countTasks(actor, { open: true, assigneeId: actor.userId }),
+    countTasks(actor, { status: ["AGUARDANDO_CLIENTE"] }),
+  ]);
+  const quick = [
+    { key: "todas", label: "Abertas", n: nOpen, qs: "", tone: "" },
+    { key: "atrasadas", label: "Atrasadas", n: nLate, qs: "atrasadas=1&f=1&abertas=1", tone: "red" },
+    { key: "hoje", label: "Vencem hoje", n: nToday, qs: "prazo=hoje", tone: "amber" },
+    { key: "7dias", label: "Próximos 7 dias", n: nWeek, qs: "prazo=7dias", tone: "" },
+    { key: "minhas", label: "Minhas", n: nMine, qs: `assigneeId=${actor.userId}`, tone: "" },
+    { key: "aguardando", label: "Aguardando cliente", n: nWaiting, qs: "status=AGUARDANDO_CLIENTE&f=1", tone: "" },
+  ];
+  const activeQuick =
+    str(sp, "atrasadas") === "1" && !str(sp, "prazo") ? "atrasadas"
+    : str(sp, "prazo") === "hoje" ? "hoje"
+    : str(sp, "prazo") === "7dias" ? "7dias"
+    : str(sp, "assigneeId") === actor.userId ? "minhas"
+    : str(sp, "status") === "AGUARDANDO_CLIENTE" ? "aguardando"
+    : !Object.keys(sp).some((k) => !["view", "page", "mes"].includes(k)) ? "todas"
+    : "";
+  const hasAdvanced = !!(filters.category || filters.priority || filters.origin || filters.sort !== "due" || filters.clientId);
 
   const viewHref = (v: string) => {
     const params = new URLSearchParams();
@@ -90,76 +117,78 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
         }
       />
 
-      <form className="card mb-4 grid grid-cols-2 gap-3 p-4 md:grid-cols-4 xl:grid-cols-8" aria-label="Filtros de tarefas">
+      <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Atalhos">
+        {quick.map((c) => (
+          <Link
+            key={c.key}
+            href={`/tarefas?view=${view}${c.qs ? `&${c.qs}` : ""}`}
+            aria-current={activeQuick === c.key ? "true" : undefined}
+            className={cx(
+              "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors",
+              activeQuick === c.key
+                ? "border-brand-900 bg-brand-900 text-white"
+                : "border-[#d3dae5] bg-white text-slate-700 hover:border-brand-700 hover:text-brand-900",
+            )}
+          >
+            {c.label}
+            <span
+              className={cx(
+                "rounded-full px-1.5 text-xs font-semibold tabular-nums",
+                activeQuick === c.key
+                  ? "bg-white/20 text-white"
+                  : c.tone === "red" && c.n > 0
+                    ? "bg-red-100 text-red-700"
+                    : c.tone === "amber" && c.n > 0
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-slate-100 text-slate-600",
+              )}
+            >
+              {c.n}
+            </span>
+          </Link>
+        ))}
+      </div>
+
+      <form className="card mb-4 p-3" aria-label="Filtros de tarefas">
         <input type="hidden" name="view" value={view} />
-        <div className="col-span-2">
-          <label htmlFor="f-q" className="label text-xs">
-            Pesquisa
-          </label>
-          <input id="f-q" name="q" defaultValue={filters.q} className="input" placeholder="Título, descrição ou cliente" />
-        </div>
-        <Select name="clientId" label="Cliente" value={filters.clientId} options={[{ value: "interna", label: "Tarefas internas" }, ...clients.map((c) => ({ value: c.id, label: c.tradeName }))]} />
-        <Select
-          name="assigneeId"
-          label="Responsável"
-          value={filters.assigneeId}
-          options={[{ value: "none", label: "Sem responsável" }, ...users.map((u) => ({ value: u.id, label: u.name }))]}
-        />
-        <Select
-          name="status"
-          label="Status"
-          value={filters.status?.[0]}
-          options={TASK_STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s] }))}
-        />
-        <Select name="category" label="Categoria" value={filters.category} options={categoryOptions} placeholder="Todas" />
-        <Select name="priority" label="Prioridade" value={filters.priority} options={priorityOptions} placeholder="Todas" />
-        <Select
-          name="sort"
-          label="Ordenar por"
-          value={filters.sort}
-          placeholder="Prazo"
-          options={[
-            { value: "priority", label: "Prioridade" },
-            { value: "created", label: "Mais recentes" },
-          ]}
-        />
-        <Select
-          name="prazo"
-          label="Prazo"
-          value={str(sp, "prazo")}
-          placeholder="Qualquer"
-          options={[
-            { value: "hoje", label: "Vence hoje" },
-            { value: "7dias", label: "Próximos 7 dias" },
-          ]}
-        />
-        <Select
-          name="origin"
-          label="Origem"
-          value={filters.origin}
-          options={[
-            { value: "MANUAL", label: "Manual" },
-            { value: "RECORRENTE", label: "Rotina recorrente" },
-          ]}
-        />
-        <fieldset className="col-span-2 flex items-end gap-4 pb-2 text-sm">
-          <legend className="sr-only">Situação</legend>
-          <label className="flex items-center gap-1.5">
-            <input type="checkbox" name="atrasadas" value="1" defaultChecked={filters.overdue} /> Só atrasadas
-          </label>
-          <label className="flex items-center gap-1.5">
-            <input type="hidden" name="f" value="1" />
+        <input type="hidden" name="f" value="1" />
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-[220px] flex-1">
+            <label htmlFor="f-q" className="label text-xs">
+              Pesquisa
+            </label>
+            <input id="f-q" name="q" defaultValue={filters.q} className="input" placeholder="Título, descrição ou cliente" />
+          </div>
+          <div className="w-44">
+            <Select name="assigneeId" label="Responsável" value={filters.assigneeId} options={[{ value: "none", label: "Sem responsável" }, ...users.map((u) => ({ value: u.id, label: u.name }))]} />
+          </div>
+          <div className="w-44">
+            <Select name="status" label="Status" value={filters.status?.[0]} options={TASK_STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s] }))} />
+          </div>
+          <label className="flex items-center gap-1.5 pb-2 text-sm">
             <input type="checkbox" name="abertas" value="1" defaultChecked={str(sp, "f") === "1" ? str(sp, "abertas") === "1" : true} /> Só abertas
           </label>
-        </fieldset>
-        <div className="col-span-2 flex items-end gap-2 md:col-span-2">
-          <button className="btn-primary flex-1" type="submit">
-            Aplicar filtros
+          <button className="btn-primary" type="submit">
+            Filtrar
           </button>
           <Link href={`/tarefas?view=${view}`} className="btn-secondary">
             Limpar
           </Link>
         </div>
+        <details className="mt-3 border-t border-slate-100 pt-3" open={hasAdvanced}>
+          <summary className="cursor-pointer text-[13px] font-medium text-brand-700 select-none">Mais filtros</summary>
+          <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <Select name="clientId" label="Cliente" value={filters.clientId} options={[{ value: "interna", label: "Tarefas internas" }, ...clients.map((c) => ({ value: c.id, label: c.tradeName }))]} />
+            <Select name="category" label="Categoria" value={filters.category} options={categoryOptions} placeholder="Todas" />
+            <Select name="priority" label="Prioridade" value={filters.priority} options={priorityOptions} placeholder="Todas" />
+            <Select name="prazo" label="Prazo" value={str(sp, "prazo")} placeholder="Qualquer" options={[{ value: "hoje", label: "Vence hoje" }, { value: "7dias", label: "Próximos 7 dias" }]} />
+            <Select name="origin" label="Origem" value={filters.origin} options={[{ value: "MANUAL", label: "Manual" }, { value: "RECORRENTE", label: "Rotina recorrente" }]} />
+            <Select name="sort" label="Ordenar por" value={filters.sort} placeholder="Prazo" options={[{ value: "priority", label: "Prioridade" }, { value: "created", label: "Mais recentes" }]} />
+            <label className="flex items-center gap-1.5 text-sm md:col-span-2">
+              <input type="checkbox" name="atrasadas" value="1" defaultChecked={filters.overdue} /> Só atrasadas
+            </label>
+          </div>
+        </details>
       </form>
 
       <nav aria-label="Visualização" className="mb-4 inline-flex rounded-md border border-slate-200 bg-white p-0.5">

@@ -72,6 +72,10 @@ function orderFor(sort: TaskFilters["sort"]): Prisma.TaskOrderByWithRelationInpu
   return [{ dueAt: "asc" }, { priority: "desc" }];
 }
 
+export async function countTasks(actor: Actor, filters: TaskFilters = {}) {
+  return prisma.task.count({ where: buildTaskWhere(actor, filters) });
+}
+
 export async function listTasks(actor: Actor, filters: TaskFilters = {}) {
   const pageSize = Math.min(filters.pageSize ?? PAGE_SIZE, 500);
   const page = Math.max(1, filters.page ?? 1);
