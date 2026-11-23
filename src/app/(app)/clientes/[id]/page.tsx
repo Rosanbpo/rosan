@@ -313,7 +313,7 @@ export default async function ClientPage({
               key={t.key}
               href={`/clientes/${id}?aba=${t.key}`}
               aria-current={aba === t.key ? "page" : undefined}
-              className={`-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+              className={`-mb-px flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-[13px] font-medium transition-colors ${
                 aba === t.key ? "border-brand-700 text-brand-700" : "border-transparent text-slate-500 hover:text-brand-900"
               }`}
             >
