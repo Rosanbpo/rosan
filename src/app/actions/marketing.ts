@@ -94,3 +94,23 @@ export async function setIdeaPhotoAction(ideaId: string, photoId: string): Promi
     return photoId ? "Foto da capa escolhida." : "Foto da capa removida.";
   }, REVALIDATE);
 }
+
+export async function importCalendarAction(): Promise<ActionState> {
+  return runAction(async (actor) => {
+    const n = await marketing.importCalendar(actor);
+    return `Calendário carregado com ${n} conteúdos.`;
+  }, REVALIDATE);
+}
+
+export async function setApprovedAction(id: string, approved: boolean): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await marketing.setApproved(actor, id, approved);
+  }, REVALIDATE);
+}
+
+export async function approveAllAction(): Promise<ActionState> {
+  return runAction(async (actor) => {
+    const n = await marketing.approveAll(actor);
+    return n === 0 ? "Tudo já estava aprovado." : `${n} conteúdos aprovados.`;
+  }, REVALIDATE);
+}

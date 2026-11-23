@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { LIBRARY_IDEAS, LIBRARY_POSTS } from "@/domain/marketing-library";
+import { CALENDAR, HASHTAGS, REEL_SCRIPTS } from "@/domain/marketing-plan";
 import { BRAND_STYLES, DEFAULT_BRAND, FONT_KEYS, PILLARS, POST_STATUSES, type BrandSettings } from "@/domain/marketing";
 import { assertCan, NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
 import { prisma } from "../db";
@@ -165,4 +166,53 @@ export async function setIdeaPhoto(actor: Actor, ideaId: string, photoId: string
   await getIdea(actor, ideaId);
   if (photoId) await getPhoto(actor, photoId);
   await prisma.marketingIdea.update({ where: { id: ideaId }, data: { photoId: photoId || null } });
+}
+
+// ---------- Calendário do plano de conteúdo ----------
+
+/** Cria (ou atualiza as datas de) os 19 conteúdos do calendário de 30/11 a 24/12. */
+export async function importCalendar(actor: Actor) {
+  assertCan(actor, "crm.manage");
+  await importLibrary(actor);
+  const orgId = actor.organizationId;
+  let touched = 0;
+  for (const item of CALENDAR) {
+    const publishOn = new Date(`${item.date}T12:00:00Z`);
+    const reel = REEL_SCRIPTS[item.key];
+    const existing = await prisma.marketingIdea.findFirst({ where: { organizationId: orgId, libraryKey: item.key } });
+    const reelFields = reel ? { notes: `Gancho: ${reel.hook}\n\nRoteiro:\n${reel.script}`, caption: reel.caption, hashtags: HASHTAGS } : {};
+    if (!existing) {
+      await prisma.marketingIdea.create({
+        data: { organizationId: orgId, libraryKey: item.key, title: item.title.replace(/^Reel: /, ""), pillar: item.pillar, status: "IDEIA", format: item.format, publishOn, ...reelFields },
+      });
+    } else {
+      const keepNotes = existing.notes.startsWith("Gancho:");
+      await prisma.marketingIdea.update({
+        where: { id: existing.id },
+        data: { publishOn, format: item.format, ...(reel && !keepNotes ? reelFields : {}) },
+      });
+    }
+    touched++;
+  }
+  return touched;
+}
+
+export async function listCalendar(actor: Actor) {
+  assertCan(actor, "crm.manage");
+  return prisma.marketingIdea.findMany({
+    where: { organizationId: actor.organizationId, publishOn: { not: null } },
+    orderBy: [{ publishOn: "asc" }, { createdAt: "asc" }],
+    select: { id: true, title: true, pillar: true, status: true, format: true, approved: true, publishOn: true, slidesText: true },
+  });
+}
+
+export async function setApproved(actor: Actor, id: string, approved: boolean) {
+  await getIdea(actor, id);
+  await prisma.marketingIdea.update({ where: { id }, data: { approved } });
+}
+
+export async function approveAll(actor: Actor) {
+  assertCan(actor, "crm.manage");
+  const r = await prisma.marketingIdea.updateMany({ where: { organizationId: actor.organizationId, publishOn: { not: null }, approved: false }, data: { approved: true } });
+  return r.count;
 }

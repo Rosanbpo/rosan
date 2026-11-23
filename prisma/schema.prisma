@@ -1425,6 +1425,10 @@ model MarketingIdea {
   publishOn      DateTime? @db.Date
   /// Foto de fundo da capa (MarketingPhoto), opcional.
   photoId        String?
+  /// CARROSSEL | REEL
+  format         String    @default("CARROSSEL")
+  /// Aprovado pela dona para ser produzido.
+  approved       Boolean   @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

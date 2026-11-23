@@ -1,5 +1,6 @@
 import { BrandForm } from "@/components/marketing-brand-form";
 import { DeletePhoto, PhotoUploader } from "@/components/marketing-identity";
+import { MarketingTabs } from "@/components/marketing-tabs";
 import { PageHeader } from "@/components/ui/layout";
 import { requireActor } from "@/server/context";
 import { getBrand, listPhotos } from "@/server/services/marketing";
@@ -11,7 +12,8 @@ export default async function IdentityPage() {
   const [brand, photos] = await Promise.all([getBrand(actor), listPhotos(actor)]);
   return (
     <>
-      <PageHeader title="Identidade visual" breadcrumb={{ href: "/marketing", label: "Marketing" }} description="Escolha cores, fontes e estilo, e guarde as fotos que podem entrar nos posts. Tudo que você salvar aqui vale para todos os slides." />
+      <PageHeader title="Marketing" description="Escolha cores, fontes e estilo, e guarde as fotos que podem entrar nos posts. Tudo que você salvar aqui vale para todos os slides." />
+      <MarketingTabs active="identidade" />
       <BrandForm initial={brand} photoId={photos[0]?.id} />
       <section className="mt-6" aria-label="Fotos">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">

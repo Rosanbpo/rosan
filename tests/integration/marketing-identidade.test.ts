@@ -31,3 +31,19 @@ describe("identidade visual do marketing", () => {
     expect(await listPhotos(actor)).toHaveLength(0);
   });
 });
+
+describe("calendário do plano de conteúdo", () => {
+  it("carrega 19 conteúdos com data, sem duplicar, e aprova", async () => {
+    await resetDb();
+    const a = (await setupOrg()).admin;
+    const { importCalendar, listCalendar, approveAll, setApproved } = await import("@/server/services/marketing");
+    expect(await importCalendar(a)).toBe(19);
+    await importCalendar(a);
+    const list = await listCalendar(a);
+    expect(list).toHaveLength(19);
+    expect(list.filter((i) => i.format === "REEL")).toHaveLength(8);
+    expect(list[0].publishOn?.toISOString().slice(0, 10)).toBe("2026-11-30");
+    await setApproved(a, list[0].id, true);
+    expect(await approveAll(a)).toBe(18);
+  });
+});
