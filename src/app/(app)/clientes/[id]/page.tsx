@@ -82,7 +82,8 @@ import { getClosing, closingHistory, currentCompetence } from "@/server/services
 import { isCompetenceMonth } from "@/domain/closing";
 import { getClientLogo } from "@/server/services/client-logo";
 import { ConfirmAction } from "@/components/confirm-action";
-import { archiveClientAction } from "@/app/actions/clients";
+import { archiveClientAction, deleteClientAction } from "@/app/actions/clients";
+import { DeleteClient } from "@/components/delete-client";
 import {
   fmtCnpj,
   fmtDateTime,
@@ -307,6 +308,7 @@ export default async function ClientPage({
                 confirm="Arquivar o cliente? O histórico é preservado e as recorrências ativas serão pausadas."
               />
             ))}
+          {manage && <DeleteClient action={deleteClientAction.bind(null, id)} name={client.tradeName} />}
         </div>
       </section>
 

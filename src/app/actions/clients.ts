@@ -45,3 +45,13 @@ export async function importClientsAction(_: ActionState, fd: FormData): Promise
     return `${r.created} cliente(s) importado(s).${errs}`;
   });
 }
+
+export async function deleteClientAction(clientId: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  let ok = false;
+  const res = await runAction(async (actor) => {
+    await clients.deleteClient(actor, clientId, String(fd.get("password") ?? ""));
+    ok = true;
+  });
+  if (ok) redirect("/clientes");
+  return res;
+}
