@@ -1443,9 +1443,13 @@ model MarketingBrand {
   id             String   @id @default(cuid())
   organizationId String   @unique
   navy           String   @default("#0C1633")
-  gold           String   @default("#F0D5AA")
+  gold           String   @default("#C5A364")
   cream          String   @default("#FBF8F3")
-  brown          String   @default("#8E744F")
+  brown          String   @default("#684331")
+  /// Azul-acinzentado, bronze e areia (cores de apoio da identidade).
+  slate          String   @default("#475673")
+  bronze         String   @default("#AE926D")
+  sand           String   @default("#CCB69F")
   /// Chave da fonte dos títulos e do texto (ver domain/marketing.ts).
   titleFont      String   @default("inter")
   bodyFont       String   @default("inter")
@@ -1466,6 +1470,8 @@ model MarketingPhoto {
   mime           String
   size           Int
   data           Bytes
+  /// FOTO (usada nas capas) | REFERENCIA (exemplo de estilo que a dona quer)
+  kind           String   @default("FOTO")
   createdAt      DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)

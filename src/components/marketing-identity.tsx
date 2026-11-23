@@ -20,7 +20,7 @@ async function shrink(file: File): Promise<File> {
   return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
 }
 
-export function PhotoUploader() {
+export function PhotoUploader({ kind = "FOTO" }: { kind?: "FOTO" | "REFERENCIA" }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<{ busy: boolean; msg?: string; err?: boolean }>({ busy: false });
@@ -28,6 +28,7 @@ export function PhotoUploader() {
     if (!files?.length) return;
     setState({ busy: true });
     const fd = new FormData();
+    fd.append("kind", kind);
     for (const f of Array.from(files)) fd.append("photos", await shrink(f));
     const res = await uploadPhotoAction({ ok: false, at: 0 } as never, fd);
     setState({ busy: false, msg: (res?.ok ? res.message : res?.error) ?? "Não foi possível enviar.", err: !res?.ok });
@@ -36,9 +37,9 @@ export function PhotoUploader() {
   }
   return (
     <div>
-      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" id="photo-input" onChange={(e) => onPick(e.target.files)} />
-      <label htmlFor="photo-input" className="btn-primary cursor-pointer">
-        <ImagePlus aria-hidden className="h-4 w-4" /> {state.busy ? "Enviando…" : "Adicionar fotos"}
+      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" id={`photo-input-${kind}`} onChange={(e) => onPick(e.target.files)} />
+      <label htmlFor={`photo-input-${kind}`} className="btn-primary cursor-pointer">
+        <ImagePlus aria-hidden className="h-4 w-4" /> {state.busy ? "Enviando…" : kind === "REFERENCIA" ? "Adicionar exemplos" : "Adicionar fotos"}
       </label>
       {state.msg && (
         <p role="status" className={state.err ? "mt-2 text-sm text-red-700" : "mt-2 text-sm text-emerald-700"}>

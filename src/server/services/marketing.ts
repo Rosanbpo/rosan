@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { LIBRARY_IDEAS, LIBRARY_POSTS } from "@/domain/marketing-library";
-import { CALENDAR, HASHTAGS, REEL_SCRIPTS } from "@/domain/marketing-plan";
+import { CALENDAR, CAROUSEL_EXTRAS, HASHTAGS, REEL_SCRIPTS } from "@/domain/marketing-plan";
 import { BRAND_STYLES, DEFAULT_BRAND, FONT_KEYS, PILLARS, POST_STATUSES, type BrandSettings } from "@/domain/marketing";
 import { assertCan, NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
 import { prisma } from "../db";
@@ -91,6 +91,9 @@ const brandInput = z.object({
   gold: hex,
   cream: hex,
   brown: hex,
+  slate: hex,
+  bronze: hex,
+  sand: hex,
   titleFont: z.enum(FONT_KEYS as [string, ...string[]]),
   bodyFont: z.enum(FONT_KEYS as [string, ...string[]]),
   style: z.enum(BRAND_STYLES),
@@ -106,6 +109,9 @@ export async function getBrand(actor: Actor): Promise<BrandSettings> {
     gold: row.gold,
     cream: row.cream,
     brown: row.brown,
+    slate: row.slate,
+    bronze: row.bronze,
+    sand: row.sand,
     titleFont: (FONT_KEYS.includes(row.titleFont as never) ? row.titleFont : "inter") as BrandSettings["titleFont"],
     bodyFont: (FONT_KEYS.includes(row.bodyFont as never) ? row.bodyFont : "inter") as BrandSettings["bodyFont"],
     style: (BRAND_STYLES.includes(row.style as never) ? row.style : "MINIMALISTA") as BrandSettings["style"],
@@ -117,7 +123,7 @@ export async function saveBrand(actor: Actor, raw: unknown) {
   assertCan(actor, "crm.manage");
   const r = brandInput.safeParse(raw);
   if (!r.success) throw new ValidationError(r.error.issues[0]?.message ?? "Dados inválidos.");
-  const data = { ...r.data, navy: r.data.navy.toUpperCase(), gold: r.data.gold.toUpperCase(), cream: r.data.cream.toUpperCase(), brown: r.data.brown.toUpperCase() };
+  const data = { ...r.data, navy: r.data.navy.toUpperCase(), gold: r.data.gold.toUpperCase(), cream: r.data.cream.toUpperCase(), brown: r.data.brown.toUpperCase(), slate: r.data.slate.toUpperCase(), bronze: r.data.bronze.toUpperCase(), sand: r.data.sand.toUpperCase() };
   await prisma.marketingBrand.upsert({
     where: { organizationId: actor.organizationId },
     create: { ...data, organizationId: actor.organizationId },
@@ -128,24 +134,27 @@ export async function saveBrand(actor: Actor, raw: unknown) {
 export const PHOTO_MAX_BYTES = 3 * 1024 * 1024;
 const PHOTO_MIMES = ["image/jpeg", "image/png", "image/webp"];
 
-export async function listPhotos(actor: Actor) {
+export type PhotoKind = "FOTO" | "REFERENCIA";
+
+export async function listPhotos(actor: Actor, kind: PhotoKind = "FOTO") {
   assertCan(actor, "crm.manage");
   return prisma.marketingPhoto.findMany({
-    where: { organizationId: actor.organizationId },
+    where: { organizationId: actor.organizationId, kind },
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true, size: true, createdAt: true },
   });
 }
 
-export async function addPhoto(actor: Actor, file: { name: string; mime: string; data: Buffer }) {
+export async function addPhoto(actor: Actor, file: { name: string; mime: string; data: Buffer; kind?: PhotoKind }) {
   assertCan(actor, "crm.manage");
   if (!PHOTO_MIMES.includes(file.mime)) throw new ValidationError("Envie uma foto JPG, PNG ou WebP.");
   if (file.data.length === 0) throw new ValidationError("O arquivo está vazio.");
   if (file.data.length > PHOTO_MAX_BYTES) throw new ValidationError("A foto passa de 3 MB. Envie uma menor.");
-  const count = await prisma.marketingPhoto.count({ where: { organizationId: actor.organizationId } });
+  const kind: PhotoKind = file.kind === "REFERENCIA" ? "REFERENCIA" : "FOTO";
+  const count = await prisma.marketingPhoto.count({ where: { organizationId: actor.organizationId, kind } });
   if (count >= 60) throw new ValidationError("Limite de 60 fotos. Apague alguma para enviar outra.");
   return prisma.marketingPhoto.create({
-    data: { organizationId: actor.organizationId, name: file.name.slice(0, 120) || "foto", mime: file.mime, size: file.data.length, data: new Uint8Array(file.data) },
+    data: { organizationId: actor.organizationId, name: file.name.slice(0, 120) || "foto", mime: file.mime, size: file.data.length, data: new Uint8Array(file.data), kind },
   });
 }
 
@@ -180,6 +189,7 @@ export async function importCalendar(actor: Actor) {
     const publishOn = new Date(`${item.date}T12:00:00Z`);
     const reel = REEL_SCRIPTS[item.key];
     const existing = await prisma.marketingIdea.findFirst({ where: { organizationId: orgId, libraryKey: item.key } });
+    const extra = CAROUSEL_EXTRAS[item.key];
     const reelFields = reel ? { notes: `Gancho: ${reel.hook}\n\nRoteiro:\n${reel.script}`, caption: reel.caption, hashtags: HASHTAGS } : {};
     if (!existing) {
       await prisma.marketingIdea.create({
@@ -189,7 +199,7 @@ export async function importCalendar(actor: Actor) {
       const keepNotes = existing.notes.startsWith("Gancho:");
       await prisma.marketingIdea.update({
         where: { id: existing.id },
-        data: { publishOn, format: item.format, ...(reel && !keepNotes ? reelFields : {}) },
+        data: { publishOn, format: item.format, ...(reel && !keepNotes ? reelFields : {}), ...(extra && !existing.slidesText ? { ...extra, status: "PRONTO" } : {}) },
       });
     }
     touched++;

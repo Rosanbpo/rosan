@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { ActionForm, Field, SubmitButton } from "@/components/ui/action-form";
 import { MarketingTabs } from "@/components/marketing-tabs";
-import { PageHeader } from "@/components/ui/layout";
+import { MarketingHero } from "@/components/marketing-hero";
 import { createIdeaAction, importLibraryAction } from "@/app/actions/marketing";
 import { parseSlides, PILLARS, PILLAR_LABEL, POST_STATUSES, POST_STATUS_LABEL, type Pillar } from "@/domain/marketing";
 import { cx } from "@/lib/ui";
@@ -27,21 +27,17 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
 
   return (
     <>
-      <PageHeader
-        title="Marketing"
-        description="Central de conteúdos do Instagram: guarde ideias, produza carrosséis com a identidade da Rosan e baixe os slides prontos para postar."
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <ActionForm action={importLibraryAction} inlineFeedback>
-              <SubmitButton className="btn-secondary" pendingText="Importando…">
-                <Sparkles aria-hidden className="h-4 w-4" /> Importar posts prontos
-              </SubmitButton>
-            </ActionForm>
-          </div>
-        }
-      />
+      <MarketingHero actor={actor} />
 
       <MarketingTabs active="conteudos" />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-slate-700">Guarde ideias, produza carrosséis com a sua identidade e baixe os slides prontos para postar.</p>
+        <ActionForm action={importLibraryAction} inlineFeedback>
+          <SubmitButton className="btn-secondary" pendingText="Importando…">
+            <Sparkles aria-hidden className="h-4 w-4" /> Importar posts prontos
+          </SubmitButton>
+        </ActionForm>
+      </div>
 
       <ActionForm action={createIdeaAction} className="card mb-5 p-4" resetOnSuccess>
         <div className="flex flex-wrap items-end gap-3">
@@ -92,9 +88,12 @@ export default async function MarketingPage({ searchParams }: { searchParams: Pr
           {POST_STATUSES.map((st) => {
             const col = ideas.filter((i) => i.status === st);
             return (
-              <section key={st} aria-label={POST_STATUS_LABEL[st]} className="rounded-xl bg-white/60 p-3">
+              <section key={st} aria-label={POST_STATUS_LABEL[st]} className="rounded-2xl bg-white/70 p-3 ring-1 ring-[#d3dae5]">
                 <h2 className="mb-3 flex items-center justify-between px-1 text-sm font-semibold text-brand-900">
-                  {POST_STATUS_LABEL[st]}
+                  <span className="flex items-center gap-2">
+                    <span aria-hidden className={cx("h-2.5 w-2.5 rounded-full", { IDEIA: "bg-slate-400", PRODUCAO: "bg-amber-400", PRONTO: "bg-emerald-500", PUBLICADO: "bg-brand-900" }[st])} />
+                    {POST_STATUS_LABEL[st]}
+                  </span>
                   <span className="rounded-full bg-slate-100 px-2 text-xs font-semibold text-slate-600">{col.length}</span>
                 </h2>
                 <ul className="space-y-2.5">
