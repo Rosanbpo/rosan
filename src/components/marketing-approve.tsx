@@ -42,7 +42,7 @@ export function CalendarButtons({ empty }: { empty: boolean }) {
           })
         }
       >
-        {empty ? "Carregar calendário de 30/11 a 24/12" : "Atualizar calendário"}
+        {empty ? "Carregar calendário de 24/11 a 24/12" : "Atualizar calendário"}
       </button>
       {!empty && (
         <button

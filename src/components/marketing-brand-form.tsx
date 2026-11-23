@@ -6,17 +6,20 @@ import { saveBrandAction } from "@/app/actions/marketing";
 import { BRAND_STYLE_INFO, BRAND_STYLES, FONTS, FONT_KEYS, type BrandSettings } from "@/domain/marketing";
 
 const COLORS = [
-  { k: "navy", label: "Cor principal (fundo escuro)" },
-  { k: "gold", label: "Destaque (títulos e linhas)" },
+  { k: "navy", label: "Azul-marinho (fundo escuro)" },
+  { k: "gold", label: "Dourado (destaques)" },
+  { k: "brown", label: "Marrom (detalhes)" },
+  { k: "slate", label: "Azul-acinzentado (texto de apoio)" },
+  { k: "bronze", label: "Bronze (linhas)" },
+  { k: "sand", label: "Areia (subtítulos sobre o escuro)" },
   { k: "cream", label: "Fundo claro" },
-  { k: "brown", label: "Detalhes" },
 ] as const;
 
 export function BrandForm({ initial, photoId }: { initial: BrandSettings; photoId?: string }) {
   const [v, setV] = useState(initial);
   const set = (k: keyof BrandSettings, val: string) => setV((p) => ({ ...p, [k]: val }));
   const qs = (n: number) => {
-    const p = new URLSearchParams({ n: String(n), navy: v.navy, gold: v.gold, cream: v.cream, brown: v.brown, titleFont: v.titleFont, bodyFont: v.bodyFont, style: v.style });
+    const p = new URLSearchParams({ n: String(n), navy: v.navy, gold: v.gold, cream: v.cream, brown: v.brown, slate: v.slate, bronze: v.bronze, sand: v.sand, titleFont: v.titleFont, bodyFont: v.bodyFont, style: v.style });
     if (photoId) p.set("foto", photoId);
     return `/marketing/identidade/previa?${p}`;
   };

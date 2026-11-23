@@ -63,6 +63,9 @@ export async function saveBrandAction(_: ActionState, fd: FormData): Promise<Act
       gold: field(fd, "gold"),
       cream: field(fd, "cream"),
       brown: field(fd, "brown"),
+      slate: field(fd, "slate"),
+      bronze: field(fd, "bronze"),
+      sand: field(fd, "sand"),
       titleFont: field(fd, "titleFont"),
       bodyFont: field(fd, "bodyFont"),
       style: field(fd, "style"),
@@ -76,7 +79,7 @@ export async function uploadPhotoAction(_: ActionState, fd: FormData): Promise<A
   return runAction(async (actor) => {
     const files = fd.getAll("photos").filter((f): f is File => f instanceof File && f.size > 0);
     if (files.length === 0) throw new ValidationError("Escolha ao menos uma foto.");
-    for (const f of files) await marketing.addPhoto(actor, { name: f.name, mime: f.type, data: Buffer.from(await f.arrayBuffer()) });
+    for (const f of files) await marketing.addPhoto(actor, { name: f.name, mime: f.type, data: Buffer.from(await f.arrayBuffer()), kind: field(fd, "kind") === "REFERENCIA" ? "REFERENCIA" : "FOTO" });
     return files.length === 1 ? "Foto adicionada." : `${files.length} fotos adicionadas.`;
   }, REVALIDATE);
 }

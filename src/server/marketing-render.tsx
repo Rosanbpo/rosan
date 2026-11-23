@@ -36,11 +36,11 @@ interface Ctx {
 
 function Frame({ b, dark, children }: { b: BrandSettings; dark: boolean; children: React.ReactNode }) {
   const bg = dark ? b.navy : b.cream;
-  const line = dark ? b.gold : b.brown;
+  const line = dark ? b.gold : b.bronze;
   return (
     <div style={{ display: "flex", position: "relative", width: "100%", height: "100%", background: bg, fontFamily: b.bodyFont }}>
       {b.style === "CLASSICO" && <div style={{ display: "flex", position: "absolute", top: 36, left: 36, right: 36, bottom: 36, border: `2px solid ${line}`, opacity: 0.7 }} />}
-      {b.style === "MODERNO" && <div style={{ display: "flex", position: "absolute", top: 0, left: 0, bottom: 0, width: 28, background: dark ? b.gold : b.brown }} />}
+      {b.style === "MODERNO" && <div style={{ display: "flex", position: "absolute", top: 0, left: 0, bottom: 0, width: 28, background: dark ? b.gold : b.bronze }} />}
       {children}
     </div>
   );
@@ -81,8 +81,8 @@ function SlideView({ s, c }: { s: Slide; c: Ctx }) {
           {cover ? logoBox(230, 197) : logoBox(190, 162)}
           <div style={{ display: "flex", flexDirection: "column", alignItems: center ? "center" : "flex-start" }}>
             <div style={{ display: "flex", ...head, fontSize: cover ? titleSize(s.title, true) : titleSize(s.title, false) + 4, color: cover ? "#FFFFFF" : b.gold }}>{s.title}</div>
-            <Rule b={b} color={cover ? b.gold : b.brown} />
-            {s.body && <div style={{ display: "flex", fontSize: 40, fontWeight: cover ? 400 : 400, color: cover ? b.gold : "#FFFFFF", lineHeight: 1.4, whiteSpace: "pre-wrap" }}>{s.body}</div>}
+            <Rule b={b} color={cover ? b.gold : b.bronze} />
+            {s.body && <div style={{ display: "flex", fontSize: 40, fontWeight: cover ? 400 : 400, color: cover ? b.sand : "#FFFFFF", lineHeight: 1.4, whiteSpace: "pre-wrap" }}>{s.body}</div>}
           </div>
           {cover ? (
             <div style={{ display: "flex", alignItems: "center", justifyContent: center ? "center" : "space-between", color: b.gold, fontSize: 28, fontWeight: 600, width: "100%" }}>
@@ -104,9 +104,9 @@ function SlideView({ s, c }: { s: Slide; c: Ctx }) {
           <div style={{ display: "flex", fontSize: 26, fontWeight: 600, color: b.brown }}>{`${i + 1}/${total}`}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: center ? "center" : "flex-start" }}>
-          <Rule b={b} color={b.brown} w={90} h={6} mt={0} mb={48} />
+          <Rule b={b} color={b.gold} w={90} h={6} mt={0} mb={48} />
           <div style={{ display: "flex", ...head, fontSize: titleSize(s.title, false), color: b.navy }}>{s.title}</div>
-          <div style={{ display: "flex", fontSize: 42, fontWeight: 400, color: b.navy, opacity: 0.75, lineHeight: 1.45, marginTop: 44, whiteSpace: "pre-wrap" }}>{s.body}</div>
+          <div style={{ display: "flex", fontSize: 42, fontWeight: 400, color: b.slate, lineHeight: 1.45, marginTop: 44, whiteSpace: "pre-wrap" }}>{s.body}</div>
         </div>
         <div style={{ display: "flex", height: 2, width: "100%", background: b.gold }} />
       </Body>

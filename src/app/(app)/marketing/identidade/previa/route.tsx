@@ -14,10 +14,10 @@ export async function GET(req: Request) {
   const actor = await requireActor();
   const q = new URL(req.url).searchParams;
   const saved = await getBrand(actor);
-  const color = (k: "navy" | "gold" | "cream" | "brown") => (/^#[0-9a-fA-F]{6}$/.test(q.get(k) ?? "") ? (q.get(k) as string) : saved[k]);
+  const color = (k: "navy" | "gold" | "cream" | "brown" | "slate" | "bronze" | "sand") => (/^#[0-9a-fA-F]{6}$/.test(q.get(k) ?? "") ? (q.get(k) as string) : saved[k]);
   const font = (k: "titleFont" | "bodyFont") => (FONT_KEYS.includes(q.get(k) as never) ? (q.get(k) as BrandSettings["titleFont"]) : saved[k]);
   const style = BRAND_STYLES.includes(q.get("style") as never) ? (q.get("style") as BrandSettings["style"]) : saved.style;
-  const brand: BrandSettings = { ...DEFAULT_BRAND, ...saved, navy: color("navy"), gold: color("gold"), cream: color("cream"), brown: color("brown"), titleFont: font("titleFont"), bodyFont: font("bodyFont"), style };
+  const brand: BrandSettings = { ...DEFAULT_BRAND, ...saved, navy: color("navy"), gold: color("gold"), cream: color("cream"), brown: color("brown"), slate: color("slate"), bronze: color("bronze"), sand: color("sand"), titleFont: font("titleFont"), bodyFont: font("bodyFont"), style };
   const n = Math.min(Math.max(Number(q.get("n") ?? 1), 1), SAMPLE.length);
   const photoId = q.get("foto");
   const photo = photoId && n === 1 ? await getPhoto(actor, photoId).catch(() => null) : null;

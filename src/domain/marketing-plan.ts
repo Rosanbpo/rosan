@@ -13,10 +13,14 @@ export interface CalendarItem {
 }
 
 export const CALENDAR: CalendarItem[] = [
+  { date: "2026-11-24", format: "REEL", title: "Reel: Voltei! O que você vai ver por aqui", pillar: "AUTORIDADE", goal: "Retomar o perfil e apresentar a rotina de conteúdo", key: "cal-reel-0" },
+  { date: "2026-11-25", format: "CARROSSEL", title: "O que um BPO financeiro faz por você", pillar: "AUTORIDADE", goal: "Explicar o serviço", key: "o-que-um-bpo-faz" },
+  { date: "2026-11-26", format: "REEL", title: "Reel: 3 perguntas que todo dono de empresa deveria saber responder", pillar: "EDUCATIVO", goal: "Alcance", key: "cal-reel-2" },
+  { date: "2026-11-27", format: "CARROSSEL", title: "Checklist de fechamento do mês", pillar: "EDUCATIVO", goal: "Salvamentos (fim de mês)", key: "ideia-5" },
   { date: "2026-11-30", format: "CARROSSEL", title: "Faturamento não é lucro", pillar: "MITOS", goal: "Debate e salvamentos", key: "faturamento-nao-e-lucro" },
   { date: "2026-12-01", format: "REEL", title: "Reel: O que o cliente recebe todo mês", pillar: "AUTORIDADE", goal: "Apresentar o serviço", key: "cal-reel-1" },
   { date: "2026-12-02", format: "CARROSSEL", title: "3 sinais de que o dinheiro da empresa está misturado com o seu", pillar: "EDUCATIVO", goal: "Identificação e compartilhamento", key: "sinais-contas-misturadas" },
-  { date: "2026-12-03", format: "REEL", title: "Reel: 3 perguntas que todo dono de empresa deveria saber responder", pillar: "EDUCATIVO", goal: "Alcance", key: "cal-reel-2" },
+  { date: "2026-12-03", format: "REEL", title: "Antes e depois: financeiro desorganizado x organizado", pillar: "BASTIDORES", goal: "Conexão e prova visual", key: "ideia-10" },
   { date: "2026-12-04", format: "CARROSSEL", title: "Fluxo de caixa em 4 passos simples", pillar: "EDUCATIVO", goal: "Salvamentos", key: "fluxo-de-caixa-4-passos" },
   { date: "2026-12-07", format: "CARROSSEL", title: "5 erros que fazem a empresa vender e não sobrar dinheiro", pillar: "MITOS", goal: "Comentários", key: "5-erros-vende-e-nao-sobra" },
   { date: "2026-12-08", format: "REEL", title: "Mito: minha empresa é pequena, não preciso de controle", pillar: "MITOS", goal: "Alcance e debate", key: "ideia-8" },
@@ -41,6 +45,16 @@ export interface ReelScript {
 }
 
 export const REEL_SCRIPTS: Record<string, ReelScript> = {
+  "cal-reel-0": {
+    hook: "Voltei! E hoje começa uma série para você organizar o financeiro da sua empresa.",
+    script: "Olhe para a câmera e diga: oi, eu sou a Rosan, tenho 11 anos de contabilidade e hoje cuido do financeiro de empresas.\nConte que, a partir de hoje, toda semana tem 3 carrosséis e 2 reels com dicas simples.\nPeça para a pessoa seguir o perfil e ativar o sino para não perder.",
+    caption: "Voltei com tudo! Toda semana, dicas simples para organizar o financeiro da sua empresa. Siga o perfil e me conte nos comentários: qual é a sua maior dificuldade hoje no financeiro?",
+  },
+  "ideia-10": {
+    hook: "Financeiro bagunçado x financeiro organizado: veja a diferença.",
+    script: "Mostre dois lados (sem dados de clientes reais): de um lado, notas soltas, mensagens e planilhas perdidas; do outro, tudo em um só lugar, com contas, banco conferido e relatório.\nTermine dizendo qual lado você prefere para a sua empresa.",
+    caption: "Organizar o financeiro não é luxo, é o que dá tranquilidade para decidir. De que lado está a sua empresa hoje? Responda nos comentários.",
+  },
   "cal-reel-1": {
     hook: "O que você recebe quando contrata um BPO financeiro?",
     script: "1) Suas contas pagas e recebidas em dia.\n2) O banco conferido com o sistema.\n3) Um relatório simples do mês.\n4) Uma conversa para decidir o próximo passo.",
@@ -83,6 +97,37 @@ export const REEL_SCRIPTS: Record<string, ReelScript> = {
   },
 };
 
+/** Texto pronto de carrosséis que não vêm da biblioteca padrão. */
+export const CAROUSEL_EXTRAS: Record<string, { slidesText: string; caption: string; hashtags: string }> = {
+  "ideia-5": {
+    slidesText: `Checklist de fechamento do mês
+Salve para conferir no último dia útil.
+---
+1. Contas pagas e recebidas
+Confira se tudo o que venceu no mês foi baixado.
+---
+2. Banco conferido
+O saldo do sistema bate com o extrato do banco?
+---
+3. Contas em aberto
+Liste o que ficou para o próximo mês e combine data.
+---
+4. Impostos e folha
+Separe o dinheiro de quem vence no início do mês seguinte.
+---
+5. Resultado do mês
+Quanto entrou, quanto saiu e quanto sobrou de verdade.
+---
+6. Próximo mês
+Anote o que vence nos primeiros dias para não se atrasar.
+---
+Fechou o mês sem susto?
+Salve este post e mande para quem cuida do financeiro com você.`,
+    caption: "Todo fim de mês, a mesma pergunta: está tudo em ordem? Use este checklist no último dia útil e comece o mês seguinte com tranquilidade. Salve para não esquecer e me conte nos comentários: qual desses itens você mais esquece?",
+    hashtags: HASHTAGS,
+  },
+};
+
 export const STORIES_WEEK = [
   { day: "Segunda", topic: "A meta da semana: uma coisa que você vai organizar no financeiro dos clientes", format: "Você falando + enquete “Você já fez isso?”" },
   { day: "Terça", topic: "Bastidores: um momento do seu dia de trabalho (tela, café, reunião)", format: "Fotos e vídeos curtos" },
@@ -109,6 +154,12 @@ export const INSIGHTS = {
     ["Seguidores", "179"],
     ["Horários em que seguidores estão mais ativos", "Entre 6h e 15h, com picos às 6h e às 12h"],
     ["Último post", "4 de novembro (19 dias sem publicar em 23/11)"],
+  ] as const,
+  tiles: [
+    ["1.231", "visualizações em 30 dias"],
+    ["179", "seguidores"],
+    ["36", "visitas ao perfil"],
+    ["1", "toque no link da bio"],
   ] as const,
   worked: [
     "Reel “Por trás de toda empresa que cresce de verdade”: 251 visualizações, o mais visto do mês.",

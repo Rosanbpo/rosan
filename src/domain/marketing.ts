@@ -80,9 +80,12 @@ export const BRAND_STYLE_INFO: Record<BrandStyle, { label: string; note: string 
 
 export const DEFAULT_BRAND = {
   navy: "#0C1633",
-  gold: "#F0D5AA",
+  gold: "#C5A364",
   cream: "#FBF8F3",
-  brown: "#8E744F",
+  brown: "#684331",
+  slate: "#475673",
+  bronze: "#AE926D",
+  sand: "#CCB69F",
   titleFont: "inter" as FontKey,
   bodyFont: "inter" as FontKey,
   style: "MINIMALISTA" as BrandStyle,

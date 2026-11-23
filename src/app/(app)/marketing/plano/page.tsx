@@ -1,7 +1,8 @@
 import { CopyCaption } from "@/components/marketing-tools";
 import { MarketingTabs } from "@/components/marketing-tabs";
-import { PageHeader } from "@/components/ui/layout";
+import { MarketingHero } from "@/components/marketing-hero";
 import { INSIGHTS, PROFILE } from "@/domain/marketing-plan";
+import { requireActor } from "@/server/context";
 
 export const metadata = { title: "Plano do Instagram · Marketing" };
 
@@ -21,11 +22,20 @@ const List = ({ items }: { items: readonly string[] }) => (
   </ul>
 );
 
-export default function PlanPage() {
+export default async function PlanPage() {
+  const actor = await requireActor();
   return (
     <>
-      <PageHeader title="Marketing" description="Diagnóstico do perfil @rosanfinancas e o que mudar: bio, link, destaques, feed e site." />
+      <MarketingHero actor={actor} />
       <MarketingTabs active="plano" />
+      <ul className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {INSIGHTS.tiles.map(([n, l]) => (
+          <li key={l} className="card p-4">
+            <p className="text-3xl font-semibold tracking-tight text-brand-900">{n}</p>
+            <p className="mt-1 text-xs text-slate-600">{l}</p>
+          </li>
+        ))}
+      </ul>
       <div className="grid gap-5 xl:grid-cols-2">
         <Card title={`Números do perfil (${INSIGHTS.asOf})`}>
           <dl className="space-y-2 text-sm">
