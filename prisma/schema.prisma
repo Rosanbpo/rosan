@@ -13,6 +13,8 @@ datasource db {
 
 model Organization {
   marketingIdeas  MarketingIdea[]
+  marketingBrand  MarketingBrand?
+  marketingPhotos MarketingPhoto[]
   runningTimers   RunningTimer[]
   pricingSheet    PricingSheet?
   contracts       Contract[]
@@ -1421,6 +1423,8 @@ model MarketingIdea {
   /// Chave do post pronto da biblioteca (evita importar duas vezes).
   libraryKey     String?
   publishOn      DateTime? @db.Date
+  /// Foto de fundo da capa (MarketingPhoto), opcional.
+  photoId        String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -1428,4 +1432,39 @@ model MarketingIdea {
 
   @@unique([organizationId, libraryKey])
   @@index([organizationId, status])
+}
+
+/// Identidade visual dos posts: cores, fontes e estilo escolhidos pela dona.
+model MarketingBrand {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  navy           String   @default("#0C1633")
+  gold           String   @default("#F0D5AA")
+  cream          String   @default("#FBF8F3")
+  brown          String   @default("#8E744F")
+  /// Chave da fonte dos títulos e do texto (ver domain/marketing.ts).
+  titleFont      String   @default("inter")
+  bodyFont       String   @default("inter")
+  /// MINIMALISTA | CLASSICO | MODERNO
+  style          String   @default("MINIMALISTA")
+  /// Anotações livres sobre o tom e as regras da marca.
+  guidelines     String   @default("")
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+/// Fotos enviadas para usar nos posts.
+model MarketingPhoto {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  mime           String
+  size           Int
+  data           Bytes
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
 }

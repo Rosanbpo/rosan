@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { CoverPhotoPicker } from "@/components/marketing-identity";
 import { CopyCaption, DeleteIdea, DownloadAll } from "@/components/marketing-tools";
 import { ActionForm, Field, SubmitButton } from "@/components/ui/action-form";
 import { PageHeader } from "@/components/ui/layout";
@@ -6,7 +7,7 @@ import { updateIdeaAction } from "@/app/actions/marketing";
 import { parseSlides, PILLARS, PILLAR_LABEL, POST_STATUSES, POST_STATUS_LABEL } from "@/domain/marketing";
 import { NotFoundError } from "@/domain/permissions";
 import { requireActor } from "@/server/context";
-import { getIdea } from "@/server/services/marketing";
+import { getIdea, listPhotos } from "@/server/services/marketing";
 
 export const metadata = { title: "Conteúdo · Marketing" };
 
@@ -17,6 +18,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
     if (e instanceof NotFoundError) notFound();
     throw e;
   });
+  const photos = await listPhotos(actor);
   const slides = parseSlides(idea.slidesText);
   const v = idea.updatedAt.getTime();
   const copy = [idea.caption, idea.hashtags].filter(Boolean).join("\n\n");
@@ -64,6 +66,10 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
           <Field label="Slides" name="slidesText" hint="Separe os slides com uma linha “---”. A primeira linha de cada slide é o título; o resto é o texto. O primeiro é a capa e o último é o encerramento.">
             <textarea name="slidesText" className="input font-mono text-[13px]" rows={16} defaultValue={idea.slidesText} placeholder={"Título da capa\nSubtítulo\n---\n1. Primeiro ponto\nExplicação curta\n---\nSalve este post\nChamada final"} />
           </Field>
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-slate-800">Foto de fundo da capa</p>
+            <CoverPhotoPicker ideaId={id} photos={photos} current={idea.photoId} />
+          </div>
           <Field label="Legenda" name="caption">
             <textarea name="caption" className="input" rows={6} defaultValue={idea.caption} />
           </Field>
@@ -82,7 +88,7 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
         <section aria-label="Prévia dos slides">
           <h2 className="mb-2 text-sm font-semibold text-brand-900">Prévia ({slides.length} slides)</h2>
           {slides.length === 0 ? (
-            <div className="card p-6 text-sm text-slate-600">Escreva o texto dos slides ao lado e salve: a prévia aparece aqui, já com a identidade da Rosan.</div>
+            <div className="card p-6 text-sm text-slate-600">Escreva o texto dos slides ao lado e salve: a prévia aparece aqui, já com a sua identidade visual.</div>
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
               {slides.map((_, i) => (

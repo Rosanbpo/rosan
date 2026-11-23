@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { LIBRARY_IDEAS, LIBRARY_POSTS } from "@/domain/marketing-library";
-import { PILLARS, POST_STATUSES } from "@/domain/marketing";
+import { BRAND_STYLES, DEFAULT_BRAND, FONT_KEYS, PILLARS, POST_STATUSES, type BrandSettings } from "@/domain/marketing";
 import { assertCan, NotFoundError, ValidationError, type Actor } from "@/domain/permissions";
 import { prisma } from "../db";
 
@@ -79,4 +79,90 @@ export async function importLibrary(actor: Actor) {
     added++;
   }
   return added;
+}
+
+// ---------- Identidade visual e fotos ----------
+
+
+const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use cores no formato #RRGGBB.");
+const brandInput = z.object({
+  navy: hex,
+  gold: hex,
+  cream: hex,
+  brown: hex,
+  titleFont: z.enum(FONT_KEYS as [string, ...string[]]),
+  bodyFont: z.enum(FONT_KEYS as [string, ...string[]]),
+  style: z.enum(BRAND_STYLES),
+  guidelines: z.string().max(3000).default(""),
+});
+
+export async function getBrand(actor: Actor): Promise<BrandSettings> {
+  assertCan(actor, "crm.manage");
+  const row = await prisma.marketingBrand.findUnique({ where: { organizationId: actor.organizationId } });
+  if (!row) return { ...DEFAULT_BRAND };
+  return {
+    navy: row.navy,
+    gold: row.gold,
+    cream: row.cream,
+    brown: row.brown,
+    titleFont: (FONT_KEYS.includes(row.titleFont as never) ? row.titleFont : "inter") as BrandSettings["titleFont"],
+    bodyFont: (FONT_KEYS.includes(row.bodyFont as never) ? row.bodyFont : "inter") as BrandSettings["bodyFont"],
+    style: (BRAND_STYLES.includes(row.style as never) ? row.style : "MINIMALISTA") as BrandSettings["style"],
+    guidelines: row.guidelines,
+  };
+}
+
+export async function saveBrand(actor: Actor, raw: unknown) {
+  assertCan(actor, "crm.manage");
+  const r = brandInput.safeParse(raw);
+  if (!r.success) throw new ValidationError(r.error.issues[0]?.message ?? "Dados inválidos.");
+  const data = { ...r.data, navy: r.data.navy.toUpperCase(), gold: r.data.gold.toUpperCase(), cream: r.data.cream.toUpperCase(), brown: r.data.brown.toUpperCase() };
+  await prisma.marketingBrand.upsert({
+    where: { organizationId: actor.organizationId },
+    create: { ...data, organizationId: actor.organizationId },
+    update: data,
+  });
+}
+
+export const PHOTO_MAX_BYTES = 3 * 1024 * 1024;
+const PHOTO_MIMES = ["image/jpeg", "image/png", "image/webp"];
+
+export async function listPhotos(actor: Actor) {
+  assertCan(actor, "crm.manage");
+  return prisma.marketingPhoto.findMany({
+    where: { organizationId: actor.organizationId },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, name: true, size: true, createdAt: true },
+  });
+}
+
+export async function addPhoto(actor: Actor, file: { name: string; mime: string; data: Buffer }) {
+  assertCan(actor, "crm.manage");
+  if (!PHOTO_MIMES.includes(file.mime)) throw new ValidationError("Envie uma foto JPG, PNG ou WebP.");
+  if (file.data.length === 0) throw new ValidationError("O arquivo está vazio.");
+  if (file.data.length > PHOTO_MAX_BYTES) throw new ValidationError("A foto passa de 3 MB. Envie uma menor.");
+  const count = await prisma.marketingPhoto.count({ where: { organizationId: actor.organizationId } });
+  if (count >= 60) throw new ValidationError("Limite de 60 fotos. Apague alguma para enviar outra.");
+  return prisma.marketingPhoto.create({
+    data: { organizationId: actor.organizationId, name: file.name.slice(0, 120) || "foto", mime: file.mime, size: file.data.length, data: new Uint8Array(file.data) },
+  });
+}
+
+export async function getPhoto(actor: Actor, id: string) {
+  assertCan(actor, "crm.manage");
+  const row = await prisma.marketingPhoto.findFirst({ where: { id, organizationId: actor.organizationId } });
+  if (!row) throw new NotFoundError("Foto não encontrada.");
+  return row;
+}
+
+export async function deletePhoto(actor: Actor, id: string) {
+  await getPhoto(actor, id);
+  await prisma.marketingIdea.updateMany({ where: { organizationId: actor.organizationId, photoId: id }, data: { photoId: null } });
+  await prisma.marketingPhoto.delete({ where: { id } });
+}
+
+export async function setIdeaPhoto(actor: Actor, ideaId: string, photoId: string) {
+  await getIdea(actor, ideaId);
+  if (photoId) await getPhoto(actor, photoId);
+  await prisma.marketingIdea.update({ where: { id: ideaId }, data: { photoId: photoId || null } });
 }
