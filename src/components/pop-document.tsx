@@ -58,6 +58,14 @@ function Block({ b }: { b: PopBlock }) {
           <Rich text={b.text} />
         </p>
       );
+    case "image":
+      return (
+        <figure className="my-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`/pops/imagem/${b.id}`} alt={b.caption || "Imagem do POP"} loading="lazy" className="max-h-[32rem] max-w-full rounded-md border border-slate-200" />
+          {b.caption && <figcaption className="mt-1 text-xs text-slate-500">{b.caption}</figcaption>}
+        </figure>
+      );
     case "divider":
       return <hr className="my-2 border-slate-200" />;
     case "callout": {

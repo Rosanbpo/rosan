@@ -7,6 +7,7 @@
  *   1. Passo             (linhas recuadas logo abaixo viram o detalhe do passo)
  *   - Tópico             - [ ] Item de checklist
  *   | Coluna A | Coluna B |      (primeira linha é o cabeçalho)
+ *   ![legenda](img:ID)   (imagem enviada para o sistema)
  *   ---                  (divisor)
  *   Texto com **negrito**.
  */
@@ -27,6 +28,7 @@ export type PopBlock =
   | { type: "checks"; items: PopItem[] }
   | { type: "table"; rows: string[][] }
   | { type: "paragraph"; text: string }
+  | { type: "image"; id: string; caption: string }
   | { type: "divider" };
 
 const CALLOUT_RE = /^>\s*(?:\[(aviso|regra|dica|info|resultado)\]\s*)?(.*)$/i;
@@ -67,6 +69,12 @@ export function parsePop(content: string): PopBlock[] {
     const h = /^(#{1,3})\s+(.*)$/.exec(t);
     if (h) {
       blocks.push({ type: "heading", level: h[1]!.length >= 3 ? 3 : 2, text: h[2]!.trim() });
+      i++;
+      continue;
+    }
+    const img = /^!\[([^\]]*)\]\(img:([A-Za-z0-9_-]+)\)$/.exec(t);
+    if (img) {
+      blocks.push({ type: "image", id: img[2]!, caption: img[1]!.trim() });
       i++;
       continue;
     }
@@ -143,7 +151,7 @@ export function parsePop(content: string): PopBlock[] {
     }
     // parágrafo: junta linhas seguidas até uma linha em branco ou outro tipo de bloco
     const para: string[] = [];
-    while (i < lines.length && !isBlank(lines[i]!) && !/^(#{1,3}\s|>|\||-{3,}$|[-•*]\s|\d+[.)]\s)/.test(lines[i]!.trim())) para.push(lines[i++]!.trim());
+    while (i < lines.length && !isBlank(lines[i]!) && !/^(#{1,3}\s|>|\||!\[|-{3,}$|[-•*]\s|\d+[.)]\s)/.test(lines[i]!.trim())) para.push(lines[i++]!.trim());
     if (para.length) blocks.push({ type: "paragraph", text: para.join(" ") });
     else i++;
   }

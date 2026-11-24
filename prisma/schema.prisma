@@ -15,6 +15,7 @@ model Organization {
   marketingIdeas  MarketingIdea[]
   marketingBrand  MarketingBrand?
   marketingPhotos MarketingPhoto[]
+  procedureImages ProcedureImage[]
   runningTimers   RunningTimer[]
   pricingSheet    PricingSheet?
   contracts       Contract[]
@@ -1483,4 +1484,19 @@ model MarketingPhoto {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, createdAt])
+}
+
+/// Imagem (print) usada dentro de um POP. Guardada no banco, nunca no código.
+model ProcedureImage {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  mime           String
+  size           Int
+  data           Bytes
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
