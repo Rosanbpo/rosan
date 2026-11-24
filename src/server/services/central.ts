@@ -1,3 +1,4 @@
+import { startOfToday } from "@/domain/dates";
 import { addDays, instantToLocalDate, localDateTimeToInstant, makeLocalDate, parseLocalDate } from "@/domain/dates";
 import { previousCompetence } from "@/domain/documents";
 import { clientHealth } from "@/domain/health";
@@ -31,7 +32,7 @@ export async function centralOverview(actor: Actor, now = new Date()) {
     }),
     prisma.task.groupBy({
       by: ["clientId"],
-      where: { AND: [open, { dueAt: { lt: now } }] },
+      where: { AND: [open, { dueAt: { lt: startOfToday(now) } }] },
       _count: { _all: true },
     }),
     prisma.pending.groupBy({

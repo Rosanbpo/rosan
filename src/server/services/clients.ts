@@ -1,3 +1,4 @@
+import { startOfToday } from "@/domain/dates";
 import { checkSecondDue } from "@/domain/installments";
 import type { Prisma } from "@prisma/client";
 import { dbDateToLocalDate, localDateToDbDate } from "@/domain/dates";
@@ -58,7 +59,7 @@ export async function listClients(actor: Actor, filters: ClientListFilters = {})
     where: {
       clientId: { in: rows.map((r) => r.id) },
       status: { notIn: ["CONCLUIDA", "CANCELADA"] },
-      dueAt: { lt: now },
+      dueAt: { lt: startOfToday(now) },
       archivedAt: null,
     },
     _count: { _all: true },
@@ -242,7 +243,7 @@ export async function clientIndicators(actor: Actor, clientId: string) {
   const base = { clientId, archivedAt: null } satisfies Prisma.TaskWhereInput;
   const [open, overdue, waiting, review, completed] = await Promise.all([
     prisma.task.count({ where: { ...base, status: { notIn: ["CONCLUIDA", "CANCELADA"] } } }),
-    prisma.task.count({ where: { ...base, status: { notIn: ["CONCLUIDA", "CANCELADA"] }, dueAt: { lt: now } } }),
+    prisma.task.count({ where: { ...base, status: { notIn: ["CONCLUIDA", "CANCELADA"] }, dueAt: { lt: startOfToday(now) } } }),
     prisma.task.count({ where: { ...base, status: { in: ["AGUARDANDO_CLIENTE", "AGUARDANDO_TERCEIRO"] } } }),
     prisma.task.count({ where: { ...base, status: "EM_REVISAO" } }),
     prisma.task.findMany({

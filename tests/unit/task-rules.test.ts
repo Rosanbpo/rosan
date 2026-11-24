@@ -27,13 +27,17 @@ const task = (t: Partial<TaskSnapshot> = {}): TaskSnapshot => ({
 
 describe("atraso calculado", () => {
   const now = new Date("2026-05-10T12:00:00Z");
-  it("tarefa aberta com prazo vencido está atrasada", () => {
-    expect(isOverdue({ status: "EM_ANDAMENTO", dueAt: new Date("2026-05-10T11:59:00Z") }, now)).toBe(true);
+  it("tarefa aberta com prazo de um dia anterior está atrasada", () => {
+    expect(isOverdue({ status: "EM_ANDAMENTO", dueAt: new Date("2026-05-09T20:00:00Z") }, now)).toBe(true);
     expect(isOverdue({ status: "AGUARDANDO_CLIENTE", dueAt: new Date("2026-05-01T00:00:00Z") }, now)).toBe(true);
   });
   it("concluídas e canceladas nunca aparecem como atrasadas", () => {
     expect(isOverdue({ status: "CONCLUIDA", dueAt: new Date("2026-01-01") }, now)).toBe(false);
     expect(isOverdue({ status: "CANCELADA", dueAt: new Date("2026-01-01") }, now)).toBe(false);
+  });
+  it("prazo de hoje não está atrasado, mesmo que o horário já tenha passado", () => {
+    expect(isOverdue({ status: "A_FAZER", dueAt: new Date("2026-05-10T11:59:00Z") }, now)).toBe(false);
+    expect(isOverdue({ status: "A_FAZER", dueAt: new Date("2026-05-10T04:00:00Z") }, now)).toBe(false);
   });
   it("prazo futuro não está atrasado", () => {
     expect(isOverdue({ status: "A_FAZER", dueAt: new Date("2026-05-10T12:01:00Z") }, now)).toBe(false);

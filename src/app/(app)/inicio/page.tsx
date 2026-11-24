@@ -1,3 +1,4 @@
+import { startOfToday } from "@/domain/dates";
 import { JOURNEY_STAGES, STAGE_LABEL } from "@/domain/enums";
 import Link from "next/link";
 import { STATUS_LABEL } from "@/domain/enums";
@@ -197,7 +198,7 @@ export default async function InicioPage() {
                     <Link href={`/tarefas/${t.id}`} className="block truncate font-medium hover:underline">{t.title}</Link>
                     <p className="truncate text-xs text-slate-500">{t.client?.tradeName ?? "Interna"}</p>
                   </div>
-                  <span className={`shrink-0 text-xs ${t.dueAt && t.dueAt < now ? "font-semibold text-red-700" : "text-slate-500"}`}>{fmtDateTime(t.dueAt)}</span>
+                  <span className={`shrink-0 text-xs ${t.dueAt && t.dueAt < startOfToday(now) ? "font-semibold text-red-700" : "text-slate-500"}`}>{fmtDateTime(t.dueAt)}</span>
                 </li>
               ))}
             </ul>

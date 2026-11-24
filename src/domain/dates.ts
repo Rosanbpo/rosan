@@ -114,3 +114,8 @@ export function competenceOf(date: LocalDate, rule: "NONE" | "CURRENT_MONTH" | "
   const target = rule === "PREVIOUS_MONTH" ? addMonths(y, m, -1) : { y, m };
   return `${target.y}-${String(target.m).padStart(2, "0")}`;
 }
+
+/** Início do dia de hoje (00:00 no fuso do app). Uma tarefa só está atrasada se o prazo é de um dia anterior a este. */
+export function startOfToday(now: Date = new Date(), timezone = DEFAULT_TIMEZONE): Date {
+  return localDateTimeToInstant(instantToLocalDate(now, timezone), "00:00", timezone);
+}

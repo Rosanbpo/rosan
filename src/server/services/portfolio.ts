@@ -1,3 +1,4 @@
+import { startOfToday } from "@/domain/dates";
 import { addMonths, instantToLocalDate, localDateToDbDate, makeLocalDate, parseLocalDate } from "@/domain/dates";
 import { assertCan, type Actor } from "@/domain/permissions";
 import { clientProfitability } from "@/domain/profitability";
@@ -66,7 +67,7 @@ export async function getPortfolio(actor: Actor, month: string) {
     }),
     prisma.task.groupBy({
       by: ["clientId"],
-      where: { clientId: { in: ids }, status: { notIn: ["CONCLUIDA", "CANCELADA"] }, dueAt: { lt: now }, archivedAt: null },
+      where: { clientId: { in: ids }, status: { notIn: ["CONCLUIDA", "CANCELADA"] }, dueAt: { lt: startOfToday(now) }, archivedAt: null },
       _count: { _all: true },
     }),
   ]);

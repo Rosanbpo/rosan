@@ -18,7 +18,7 @@ describe("relatório do mês", () => {
       prisma.task.create({ data: { organizationId: s.admin.organizationId, clientId: c.id, title, category: "OUTRAS", priority: "NORMAL", createdById: s.admin.userId, assigneeId: s.op.userId, dueAt: new Date(now.getTime() + hour), ...data } as never });
     await mk("No prazo", { status: "CONCLUIDA", completedAt: new Date(now.getTime() - hour), dueAt: now });
     await mk("Atrasada concluída", { status: "CONCLUIDA", completedAt: now, dueAt: new Date(now.getTime() - 2 * hour) });
-    await mk("Aberta vencida", { status: "A_FAZER", dueAt: new Date(now.getTime() - hour) });
+    await mk("Aberta vencida", { status: "A_FAZER", dueAt: new Date(now.getTime() - 48 * hour) });
     const r = await monthlyReport(s.admin, currentMonth(), now);
     expect(r.completed).toBe(2);
     expect(r.onTime).toBe(1);

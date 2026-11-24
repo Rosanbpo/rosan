@@ -1,3 +1,4 @@
+import { startOfToday } from "@/domain/dates";
 import type { Prisma } from "@prisma/client";
 import { addDays, instantToLocalDate, localDateTimeToInstant, makeLocalDate, parseLocalDate, type LocalDate } from "@/domain/dates";
 import type { Priority, TaskCategory } from "@/domain/enums";
@@ -49,7 +50,7 @@ export async function managerDashboard(actor: Actor, filters: DashboardFilters, 
   const count = (extra: Prisma.TaskWhereInput) => prisma.task.count({ where: where(extra) });
 
   const dueTodayW = { ...OPEN, dueAt: { gte: todayStart, lt: tomorrowStart } };
-  const overdueW = { ...OPEN, dueAt: { lt: now } };
+  const overdueW = { ...OPEN, dueAt: { lt: startOfToday(now) } };
   const waitingClientW = { status: "AGUARDANDO_CLIENTE" } as const;
   const reviewW = { status: "EM_REVISAO" } as const;
   const next7W = { ...OPEN, dueAt: { gte: tomorrowStart, lt: next7End } };
@@ -157,7 +158,7 @@ export async function myOperation(actor: Actor, now = new Date()) {
       take,
     });
   const [overdue, todayTasks, upcoming, returned, toReview, pendings] = await Promise.all([
-    q({ dueAt: { lt: now } }),
+    q({ dueAt: { lt: startOfToday(now) } }),
     q({ dueAt: { gte: now, lt: tomorrowStart } }),
     q({ dueAt: { gte: tomorrowStart, lt: horizon }, status: { in: ["A_FAZER", "EM_ANDAMENTO"] } }, 30),
     q({ returnCount: { gt: 0 }, status: "EM_ANDAMENTO" }),

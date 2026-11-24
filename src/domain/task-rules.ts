@@ -1,9 +1,10 @@
+import { startOfToday } from "./dates";
 import { can } from "./permissions";
 import { CLOSED_STATUSES, type Role, type TaskStatus } from "./enums";
 
 /** "Atrasada" é calculada: prazo vencido e tarefa ainda não concluída/cancelada. */
 export function isOverdue(task: { status: TaskStatus; dueAt: Date }, now: Date = new Date()): boolean {
-  return !CLOSED_STATUSES.includes(task.status) && task.dueAt.getTime() < now.getTime();
+  return !CLOSED_STATUSES.includes(task.status) && task.dueAt.getTime() < startOfToday(now).getTime();
 }
 
 /** Concluída no prazo: data de conclusão menor ou igual ao prazo. */

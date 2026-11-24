@@ -1,3 +1,4 @@
+import { startOfToday } from "@/domain/dates";
 import { localDateTimeToInstant, makeLocalDate, parseLocalDate } from "@/domain/dates";
 import { assertCan, type Actor } from "@/domain/permissions";
 import { APP_TIMEZONE } from "../config";
@@ -14,7 +15,7 @@ export async function teamOverview(actor: Actor, month: string, now = new Date()
   const [members, open, overdue, done, time, org_] = await Promise.all([
     prisma.membership.findMany({ where: { ...org, active: true }, include: { user: { select: { id: true, name: true, email: true, active: true, totpEnabledAt: true, _count: { select: { clientMemberships: true } } } } }, orderBy: { user: { name: "asc" } } }),
     prisma.task.groupBy({ by: ["assigneeId"], where: { ...org, status: { notIn: ["CONCLUIDA", "CANCELADA"] } }, _count: { _all: true } }),
-    prisma.task.groupBy({ by: ["assigneeId"], where: { ...org, status: { notIn: ["CONCLUIDA", "CANCELADA"] }, dueAt: { lt: now } }, _count: { _all: true } }),
+    prisma.task.groupBy({ by: ["assigneeId"], where: { ...org, status: { notIn: ["CONCLUIDA", "CANCELADA"] }, dueAt: { lt: startOfToday(now) } }, _count: { _all: true } }),
     prisma.task.findMany({ where: { ...org, status: "CONCLUIDA", completedAt: { gte: from, lt: to } }, select: { assigneeId: true, completedAt: true, dueAt: true } }),
     prisma.timeEntry.groupBy({ by: ["userId"], where: { ...org, workedOn: { gte: from, lt: to } }, _sum: { minutes: true } }),
     prisma.organization.findUniqueOrThrow({ where: { id: actor.organizationId }, select: { capacityHours: true } }),
