@@ -131,14 +131,14 @@ export function TimerMini({ taskId, runningSince, disabled }: { taskId: string; 
         <button
           type="submit"
           disabled={disabled || busy}
-          aria-label={running ? "Pausar cronômetro" : "Iniciar cronômetro"}
-          title={error ?? (running ? "Pausar" : "Iniciar")}
+          title={error ?? (running ? "Pausar a tarefa" : "Iniciar a tarefa")}
           className={cx(
-            "flex h-8 w-8 items-center justify-center rounded-full border transition-colors disabled:opacity-40",
-            running ? "border-brand-900 bg-brand-900 text-brand-200 hover:bg-brand-700" : "border-slate-300 bg-white text-brand-700 hover:bg-brand-50",
+            "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors disabled:opacity-40",
+            running ? "border-brand-900 bg-brand-900 text-white hover:bg-brand-600" : "border-slate-300 bg-white text-brand-900 hover:bg-brand-50",
           )}
         >
-          {busy ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : running ? <Pause aria-hidden className="h-4 w-4" /> : <Play aria-hidden className="h-4 w-4" />}
+          {busy ? <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> : running ? <Pause aria-hidden className="h-3.5 w-3.5" /> : <Play aria-hidden className="h-3.5 w-3.5" />}
+          {running ? "Pausar" : "Iniciar"}
         </button>
       </form>
       {running && <span className="font-mono text-xs font-semibold text-brand-900 tabular-nums">{formatClock(elapsed)}</span>}
@@ -172,5 +172,22 @@ export function RunningTimerPill({ taskId, taskTitle, clientName, startedAt }: {
         </button>
       </form>
     </div>
+  );
+}
+
+/** Botão "Concluir" para linhas de lista. */
+export function FinishMini({ taskId }: { taskId: string }) {
+  const fin = useServerAction(() => finishTaskAction(taskId, null));
+  return (
+    <form action={fin.run} className="flex items-center gap-1">
+      <button type="submit" disabled={fin.pending} title={fin.state?.error ?? "Concluir a tarefa"} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-emerald-300 bg-white px-3 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-40">
+        {fin.pending ? <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 aria-hidden className="h-3.5 w-3.5" />} Concluir
+      </button>
+      {fin.state?.error && (
+        <span role="alert" className="max-w-40 text-xs text-red-700">
+          {fin.state.error}
+        </span>
+      )}
+    </form>
   );
 }
