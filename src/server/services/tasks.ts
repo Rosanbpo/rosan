@@ -1,3 +1,4 @@
+import { startOfToday } from "@/domain/dates";
 import type { Prisma, TaskStatus as DbTaskStatus } from "@prisma/client";
 import { instantToLocalDate, instantToLocalTime, isValidLocalDate, localDateTimeToInstant, localDateToDbDate } from "@/domain/dates";
 import type { Priority, TaskCategory, TaskStatus } from "@/domain/enums";
@@ -50,7 +51,7 @@ export function buildTaskWhere(actor: Actor, f: TaskFilters, now = new Date()): 
   if (f.category) and.push({ category: f.category });
   if (f.priority) and.push({ priority: f.priority });
   if (f.origin) and.push({ origin: f.origin });
-  if (f.overdue) and.push({ status: { notIn: ["CONCLUIDA", "CANCELADA"] }, dueAt: { lt: now } });
+  if (f.overdue) and.push({ status: { notIn: ["CONCLUIDA", "CANCELADA"] }, dueAt: { lt: startOfToday(now) } });
   if (f.dueFrom || f.dueTo) and.push({ dueAt: { ...(f.dueFrom ? { gte: f.dueFrom } : {}), ...(f.dueTo ? { lt: f.dueTo } : {}) } });
   return { AND: and };
 }

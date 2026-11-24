@@ -1,3 +1,4 @@
+import { startOfToday } from "@/domain/dates";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Pencil, Plus } from "lucide-react";
 import { PROJECT_STATUS_LABEL, type Priority, type ProjectStatus, type TaskStatus } from "@/domain/enums";
@@ -125,7 +126,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                 .map((t) => ({
                   day: instantToLocalDate(t.dueAt, APP_TIMEZONE),
                   status: t.status,
-                  overdue: t.status !== "CONCLUIDA" && t.dueAt < now,
+                  overdue: t.status !== "CONCLUIDA" && t.dueAt < startOfToday(now),
                 }))}
             />
           </Card>
@@ -133,7 +134,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
             <Card title="O que falta no mês">
               {(() => {
                 const open = monthTasks.filter((t) => t.status !== "CONCLUIDA" && t.status !== "CANCELADA");
-                const late = open.filter((t) => t.dueAt < now).length;
+                const late = open.filter((t) => t.dueAt < startOfToday(now)).length;
                 return (
                   <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm">
                     <dt className="text-slate-500">Tarefas abertas</dt>

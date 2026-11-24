@@ -1,3 +1,4 @@
+import { startOfToday } from "@/domain/dates";
 import { addDays, instantToLocalDate, localDateTimeToInstant } from "@/domain/dates";
 import { assertCan, type Actor, can } from "@/domain/permissions";
 import { APP_TIMEZONE } from "../config";
@@ -34,7 +35,7 @@ export async function homeOverview(actor: Actor, now = new Date()) {
       take: 2000,
     }),
     prisma.task.count({ where: w({ ...OPEN, dueAt: { gte: todayStart, lt: tomorrowStart } }) }),
-    prisma.task.count({ where: w({ ...OPEN, dueAt: { lt: now } }) }),
+    prisma.task.count({ where: w({ ...OPEN, dueAt: { lt: startOfToday(now) } }) }),
     prisma.task.count({ where: w({ status: "AGUARDANDO_CLIENTE" }) }),
     prisma.timeEntry.aggregate({ where: { organizationId: actor.organizationId, workedOn: { gte: todayStart, lt: tomorrowStart } }, _sum: { minutes: true } }),
     prisma.timeEntry.aggregate({ where: { organizationId: actor.organizationId, workedOn: { gte: monthStart } }, _sum: { minutes: true } }),
@@ -65,7 +66,7 @@ export async function homeOverview(actor: Actor, now = new Date()) {
     const key = t.clientId ?? "interna";
     const row = per.get(key) ?? { id: t.clientId, name: t.client?.tradeName ?? "Avulsas", open: 0, overdue: 0, today: 0, next: [] };
     row.open++;
-    if (t.dueAt && t.dueAt < now) row.overdue++;
+    if (t.dueAt && t.dueAt < startOfToday(now)) row.overdue++;
     else if (t.dueAt && t.dueAt < tomorrowStart) row.today++;
     if (row.next.length < 3) row.next.push({ id: t.id, title: t.title, dueAt: t.dueAt });
     per.set(key, row);

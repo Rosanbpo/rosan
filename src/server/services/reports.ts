@@ -1,3 +1,4 @@
+import { startOfToday } from "@/domain/dates";
 import { instantToLocalDate, localDateTimeToInstant, makeLocalDate, parseLocalDate } from "@/domain/dates";
 import { CATEGORY_LABEL, STATUS_LABEL } from "@/domain/enums";
 import { toCsv } from "@/domain/csv";
@@ -55,7 +56,7 @@ export async function monthlyReport(actor: Actor, month: string, now = new Date(
     completed: done.length,
     onTime,
     onTimePct: done.length ? Math.round((onTime / done.length) * 100) : null,
-    overdueNow: backlog.filter((b) => b.dueAt < now).length,
+    overdueNow: backlog.filter((b) => b.dueAt < startOfToday(now)).length,
     perDay,
     perPerson: top(perPerson),
     perClient: top(perClient).slice(0, 10),

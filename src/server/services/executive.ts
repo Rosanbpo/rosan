@@ -1,3 +1,4 @@
+import { startOfToday } from "@/domain/dates";
 import { addDays, instantToLocalDate, localDateToDbDate, localDateTimeToInstant, makeLocalDate, parseLocalDate } from "@/domain/dates";
 import { capacity, goalForecast } from "@/domain/executive";
 import { assertCan, type Actor } from "@/domain/permissions";
@@ -50,7 +51,7 @@ export async function executiveOverview(actor: Actor, now = new Date()) {
     getPortfolio(actor, month),
     centralOverview(actor, now),
     prisma.client.count({ where: { organizationId: actor.organizationId, archivedAt: null, status: "IMPLANTACAO" } }),
-    prisma.task.count({ where: { AND: [buildTaskWhere(actor, { open: true }), { dueAt: { lt: now } }] } }),
+    prisma.task.count({ where: { AND: [buildTaskWhere(actor, { open: true }), { dueAt: { lt: startOfToday(now) } }] } }),
     prisma.task.aggregate({
       where: { AND: [buildTaskWhere(actor, { open: true }), { dueAt: { gte: monthStart, lt: monthEnd } }] },
       _sum: { estimatedMinutes: true },

@@ -1,3 +1,4 @@
+import { startOfToday } from "@/domain/dates";
 import { billingDaysLabel, monthlyInstallments } from "@/domain/installments";
 import Link from "next/link";
 import {
@@ -468,7 +469,7 @@ export default async function ClientPage({
       {aba === "pendencias" && (
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
-            <Stat label="Dependem de nós" value={String(ours.length)} tone={ours.some((t) => t.dueAt < now) ? "danger" : "default"} hint="Tarefas abertas com a equipe" />
+            <Stat label="Dependem de nós" value={String(ours.length)} tone={ours.some((t) => t.dueAt < startOfToday(now)) ? "danger" : "default"} hint="Tarefas abertas com a equipe" />
             <Stat label="Dependem do cliente" value={String(clientSide.length + missingDocs.length)} tone="warning" hint="Pendências e documentos" />
             <Stat label="Dependem de terceiros" value={String(thirdSide.length)} tone="info" hint="Banco, contador, órgãos" />
           </div>
