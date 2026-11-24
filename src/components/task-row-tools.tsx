@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, Loader2, Pencil, Trash2 } from "lucide-react";
 import { deleteTaskAction, rescheduleTaskAction } from "@/app/actions/tasks";
 import type { TaskRights } from "@/domain/task-rules";
-import { TimerMini } from "./task-timer";
+import { FinishMini, TimerMini } from "./task-timer";
 
 /** Mudar o dia do prazo sem sair da tela. */
 export function RescheduleButton({ taskId, dueDate }: { taskId: string; dueDate: string }) {
@@ -112,6 +112,7 @@ export function TaskRowTools({
   return (
     <div className="flex items-center justify-end gap-1">
       {rights.canTime && <TimerMini taskId={taskId} runningSince={runningSince} />}
+      {rights.canTime && <FinishMini taskId={taskId} />}
       {rights.canEdit && (
         <Link href={`/tarefas/${taskId}/editar`} aria-label="Editar tarefa" title="Editar tarefa" className="icon-btn">
           <Pencil aria-hidden className="h-4 w-4" />
