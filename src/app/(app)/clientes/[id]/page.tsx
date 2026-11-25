@@ -168,6 +168,18 @@ const LEGACY_TABS: Record<string, string> = {
   particularidades: "pops",
 };
 
+function Fold({ title, hint, open, children }: { title: string; hint?: string; open?: boolean; children: React.ReactNode }) {
+  return (
+    <details open={open} className="group mb-3 rounded-xl border border-hair bg-white">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+        <span className="text-sm font-semibold text-brand-900">{title}</span>
+        <span className="flex items-center gap-3 text-xs text-slate-500">{hint}<span aria-hidden className="transition group-open:rotate-180">▾</span></span>
+      </summary>
+      <div className="border-t border-hair p-4">{children}</div>
+    </details>
+  );
+}
+
 export const metadata = { title: "Painel do cliente" };
 
 export default async function ClientPage({
@@ -690,7 +702,8 @@ export default async function ClientPage({
         <p role="status" className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Dados salvos.</p>
       )}
       {aba === "dados" && (
-        manage && formPeople ? (
+        <Fold title="Cadastro" hint={client.contactName ?? undefined} open={!!sp.salvo}>
+        {manage && formPeople ? (
           <ClientForm
             action={updateClientAction.bind(null, id)}
             people={formPeople}
@@ -719,11 +732,12 @@ export default async function ClientPage({
             <dt className="text-slate-500">Responsável</dt>
             <dd>{client.responsibleOperator?.name ?? "—"}</dd>
           </dl>
-        )
+        )}
+        </Fold>
       )}
 
-      {aba === "dados" && <div className="mt-6" />}
       {aba === "dados" && showFinance && (
+        <Fold title="Contrato e rentabilidade" hint={finance && finance.monthlyFee !== null ? `${fmtMoney(finance.monthlyFee)}/mês` : undefined}>
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-6">
             {finance && (
@@ -900,6 +914,7 @@ export default async function ClientPage({
             )}
           </div>
         </div>
+        </Fold>
       )}
 
       {aba === "dados" && manage && client.status !== "ENCERRADO" && (
@@ -914,11 +929,15 @@ export default async function ClientPage({
         </details>
       )}
 
-      {aba === "dados" && vol && <DiagnosisPanel clientId={id} diagnosis={vol.diagnosis} rows={vol.rows} manage={manage} flash={{ dx: sp.dx, erro: sp.dxerro }} />}
+      {aba === "dados" && vol && (
+        <Fold title="Diagnóstico e volume" open={!!(sp.dx || sp.dxerro)}>
+          <DiagnosisPanel clientId={id} diagnosis={vol.diagnosis} rows={vol.rows} manage={manage} flash={{ dx: sp.dx, erro: sp.dxerro }} />
+        </Fold>
+      )}
 
       {aba === "dados" && (
-        <section className="card mt-6 max-w-4xl p-5">
-          <h2 className="text-base font-semibold text-brand-900">🤝 Combinados do onboarding</h2>
+        <Fold title="Combinados do onboarding" open={!!(sp.ob || sp.oberro)}>
+        <section className="max-w-4xl">
           <p className="mb-3 text-xs text-slate-500">Objetivos, responsabilidades e canais combinados com este cliente. As tarefas do onboarding ficam na aba Jornada.</p>
           {sp.ob && <p className="mb-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">Combinados salvos.</p>}
           {sp.oberro && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{sp.oberro}</p>}
@@ -940,12 +959,13 @@ export default async function ClientPage({
             <button type="submit" className="btn-primary">Salvar combinados</button>
           </form>
         </section>
+        </Fold>
       )}
 
       {aba === "dados" && (
-        <div className="mt-6">
+        <Fold title="Bancos" hint={`${banks.length} conta${banks.length === 1 ? "" : "s"}`}>
           <BankAccountsPanel clientId={id} accounts={banks} canEdit={manage} />
-        </div>
+        </Fold>
       )}
 
       {aba === "historico" && (
