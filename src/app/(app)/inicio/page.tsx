@@ -1,4 +1,3 @@
-import { startOfToday } from "@/domain/dates";
 import { JOURNEY_STAGES, STAGE_LABEL } from "@/domain/enums";
 import Link from "next/link";
 import { STATUS_LABEL } from "@/domain/enums";
@@ -8,6 +7,7 @@ import { homeOverview } from "@/server/services/home";
 import { diagnosisInbox } from "@/server/services/diagnosis";
 import { managerDashboard } from "@/server/services/dashboard";
 import { TaskTable } from "@/components/task-table";
+import { FinishMini, TimerMini } from "@/components/task-timer";
 import { fmtMinutes } from "@/lib/format";
 
 export const metadata = { title: "Início" };
@@ -30,18 +30,30 @@ function greeting(now: Date) {
   return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
 }
 
-function Tile({ label, emoji, value, hint, cls, href }: { label: string; emoji: string; value: string; hint: string; cls: string; href?: string }) {
-  const body = (
-    <div className={`h-full rounded-lg border p-3 ${cls}`}>
-      <div className="flex items-start justify-between">
-        <p className="text-xs font-semibold">{label}</p>
-        <span aria-hidden>{emoji}</span>
-      </div>
-      <p className="mt-1 text-xl font-bold text-brand-900">{value}</p>
-      <p className="text-xs opacity-80">{hint}</p>
-    </div>
+function initialsOf(name: string) {
+  return name.replace("Amanda ›", "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
+}
+
+function ProgressRing({ done, total }: { done: number; total: number }) {
+  const r = 26;
+  const c = 2 * Math.PI * r;
+  const frac = total > 0 ? Math.min(1, done / total) : 0;
+  return (
+    <svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label={`${done} de ${total} tarefas feitas hoje`}>
+      <circle cx="32" cy="32" r={r} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="7" />
+      <circle cx="32" cy="32" r={r} fill="none" stroke="#c5a364" strokeWidth="7" strokeLinecap="round" strokeDasharray={`${frac * c} ${c}`} transform="rotate(-90 32 32)" />
+      <text x="32" y="37" textAnchor="middle" fontSize="14" fontWeight="600" fill="#fff">{done}/{total}</text>
+    </svg>
   );
-  return href ? <Link href={href} className="block hover:opacity-90">{body}</Link> : body;
+}
+
+function Stat({ href, icon, label, value, cls }: { href: string; icon: string; label: string; value: string; cls: string }) {
+  return (
+    <Link href={href} className="card flex items-center gap-3 px-3.5 py-3 hover:border-brand-500">
+      <span aria-hidden className={`flex h-9 w-9 items-center justify-center rounded-xl text-base ${cls}`}>{icon}</span>
+      <span><span className="block text-xs text-slate-500">{label}</span><span className="block text-lg font-semibold text-brand-900 tabular-nums">{value}</span></span>
+    </Link>
+  );
 }
 
 export default async function InicioPage() {
@@ -55,10 +67,23 @@ export default async function InicioPage() {
 
   return (
     <div className="text-[13px] [&_.text-sm]:text-[13px]">
-      <header className="mb-4">
-        <h1 className="text-xl font-bold text-brand-900">{greeting(now)}, {first}! 👋</h1>
-        <p className="mt-1 text-sm text-slate-500">{dateLabel} · {d.dueToday} tarefa{d.dueToday === 1 ? "" : "s"} para hoje</p>
-      </header>
+      <section aria-label="Resumo do dia" className="mb-4 flex items-center justify-between gap-4 rounded-2xl bg-brand-900 px-5 py-4 text-white">
+        <div className="min-w-0">
+          <p className="text-xs text-brand-200">{dateLabel}</p>
+          <h1 className="mt-0.5 text-xl font-semibold">{greeting(now)}, {first}</h1>
+          <p className="mt-1 text-xs text-brand-200">
+            {d.dayTasks.length + d.doneToday} tarefa{d.dayTasks.length + d.doneToday === 1 ? "" : "s"} hoje
+            {d.overdue > 0 && <>, {d.overdue} atrasada{d.overdue === 1 ? "" : "s"} pedem atenção</>}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-4">
+          <div className="text-right">
+            <p className="text-xs text-brand-200">Horas hoje</p>
+            <p className="text-lg font-semibold tabular-nums">{d.hoursToday}h</p>
+          </div>
+          <ProgressRing done={d.doneToday} total={d.dayTasks.length + d.doneToday} />
+        </div>
+      </section>
 
       {dx.unseen.length > 0 && (
         <section className="mb-4 rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4" role="status" aria-label="Diagnósticos respondidos">
@@ -92,9 +117,99 @@ export default async function InicioPage() {
         </details>
       )}
 
-      <section aria-label="Insights da operação" className="mb-4">
-        <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-brand-900">💡 Insights da operação <span className="rounded-full bg-slate-200 px-2 text-xs">{d.insights.length}</span></h2>
-        <div className="grid gap-3 md:grid-cols-2">
+
+      <div className="mb-4 grid grid-cols-2 gap-2.5 md:grid-cols-4">
+        <Stat href="/hoje" icon="☀️" label="Para hoje" value={String(d.dueToday)} cls="bg-amber-50 text-amber-800" />
+        <Stat href="/tarefas?atrasadas=1" icon="⚠️" label="Atrasadas" value={String(d.overdue)} cls="bg-red-50 text-red-700" />
+        <Stat href="/pendencias" icon="⏳" label="Aguardando cliente" value={String(d.waitingClient)} cls="bg-orange-50 text-orange-800" />
+        <Stat href="/carteira" icon="💰" label="MRR" value={d.mrr === null ? "—" : fmtMoney(d.mrr)} cls="bg-emerald-50 text-emerald-800" />
+      </div>
+
+      <div className="mb-4 grid gap-4 lg:grid-cols-5">
+        <section className="card lg:col-span-3" aria-label="Seu dia">
+          <div className="flex items-center justify-between border-b border-hair px-5 py-3">
+            <h2 className="text-[15px] font-semibold text-brand-900">Seu dia</h2>
+            <Link href="/hoje" className="text-sm text-brand-700 hover:underline">Ver o dia completo →</Link>
+          </div>
+          {d.dayTasks.length ? (
+            <ol className="px-5 py-4">
+              {d.dayTasks.map((t, i) => {
+                const running = t.runningSince !== null;
+                const time = t.dueAt ? new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }).format(t.dueAt) : "";
+                return (
+                  <li key={t.id} className="relative flex gap-3 pb-3 last:pb-0">
+                    <span className="w-11 shrink-0 pt-2 text-right text-xs text-slate-500 tabular-nums">{time}</span>
+                    <span aria-hidden className="relative flex w-3 shrink-0 justify-center">
+                      {i < d.dayTasks.length - 1 && <span className="absolute top-4 -bottom-3 w-px bg-hair" />}
+                      <span className={`mt-3 h-2.5 w-2.5 rounded-full border-2 ${running ? "border-gold bg-gold" : "border-slate-300 bg-white"}`} />
+                    </span>
+                    <div className={`min-w-0 flex-1 rounded-xl border p-3 ${running ? "border-2 border-gold" : "border-hair"}`}>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-[11px] font-semibold text-brand-700">{initialsOf(t.client)}</span>
+                        <div className="min-w-0 flex-1">
+                          <Link href={`/tarefas/${t.id}`} className="block truncate font-medium text-brand-900 hover:underline">{t.title}</Link>
+                          <p className="truncate text-xs text-slate-500">{t.client}{running && " · rodando"}</p>
+                        </div>
+                        {t.canTime && <TimerMini taskId={t.id} runningSince={t.runningSince} />}
+                        {t.canTime && <FinishMini taskId={t.id} />}
+                      </div>
+                      {t.checkTotal > 0 && (
+                        <div className="mt-2">
+                          <div className="h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-gold" style={{ width: `${(t.checkDone / t.checkTotal) * 100}%` }} /></div>
+                          <p className="mt-1 text-[11px] text-slate-500">Checklist {t.checkDone} de {t.checkTotal}</p>
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            <p className="p-5 text-sm text-slate-500">{d.doneToday > 0 ? "Tudo feito por hoje. ✨" : "Nada para hoje."}</p>
+          )}
+        </section>
+
+        <div className="space-y-4 lg:col-span-2">
+          <section className={`rounded-2xl border p-4 ${d.overdue > 0 ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50"}`} aria-label="Atrasadas">
+            {d.overdue > 0 ? (
+              <>
+                <p className="font-semibold text-red-700">⚠️ {d.overdue} atrasada{d.overdue === 1 ? "" : "s"}</p>
+                <p className="mt-1 text-sm text-red-700/90">
+                  A mais antiga tem {d.oldestOverdueDays} dia{d.oldestOverdueDays === 1 ? "" : "s"}.
+                  {d.topOverdue && ` ${d.topOverdue.count} ${d.topOverdue.count === 1 ? "é" : "são"} de ${d.topOverdue.name}.`}
+                </p>
+                <Link href="/tarefas?atrasadas=1" className="mt-3 inline-block rounded-full border border-red-300 bg-white px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100">Resolver atrasadas</Link>
+              </>
+            ) : (
+              <p className="font-semibold text-emerald-800">🎉 Nenhuma tarefa atrasada</p>
+            )}
+          </section>
+          <section className="card p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-brand-900">Próximos 7 dias</h2>
+              <Link href="/tarefas?prazo=7dias" className="text-xs text-brand-700 hover:underline">Ver todas →</Link>
+            </div>
+            {d.next7.length ? (
+              <ul className="mt-2 divide-y divide-hair">
+                {d.next7.slice(0, 5).map((t) => (
+                  <li key={t.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <div className="min-w-0"><Link href={`/tarefas/${t.id}`} className="block truncate hover:underline">{t.title}</Link><p className="truncate text-xs text-slate-500">{t.client?.tradeName ?? "Interna"}</p></div>
+                    <span className="shrink-0 text-xs text-slate-500">{fmtDateTime(t.dueAt)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="mt-2 text-sm text-slate-500">Nada previsto para os próximos 7 dias.</p>}
+          </section>
+        </div>
+      </div>
+
+      <details className="card group mb-4">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 [&::-webkit-details-marker]:hidden">
+          <h2 className="text-[15px] font-semibold text-brand-900">Avisos da operação <span className="ml-1 rounded-full bg-slate-200 px-2 text-xs">{d.insights.length}</span></h2>
+          <span className="text-sm text-brand-700 group-open:hidden">Mostrar ▾</span>
+          <span className="hidden text-sm text-brand-700 group-open:inline">Esconder ▴</span>
+        </summary>
+        <div className="grid gap-3 border-t border-hair p-4 md:grid-cols-2">
           {d.insights.map((i) => (
             <div key={i.title} className={`rounded-lg border px-4 py-3 ${TONE_BOX[i.tone]}`}>
               <p className="font-semibold text-brand-900"><span aria-hidden>{i.emoji}</span> {i.title}</p>
@@ -103,18 +218,15 @@ export default async function InicioPage() {
             </div>
           ))}
         </div>
-      </section>
+      </details>
 
-      <div className="mb-4 grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-8">
-        <Tile label="MRR" emoji="💰" value={d.mrr === null ? "—" : fmtMoney(d.mrr)} hint={`${d.activeClients} clientes ativos`} cls="border-sky-200 bg-sky-50 text-sky-800" href="/carteira" />
-        <Tile label="Para hoje" emoji="☀️" value={String(d.dueToday)} hint="vencem hoje" cls="border-amber-200 bg-amber-50 text-amber-800" href="/hoje" />
-        <Tile label="Atrasadas" emoji="🔴" value={String(d.overdue)} hint="precisam de atenção" cls="border-red-200 bg-red-50 text-red-700" href="/tarefas?atrasadas=1" />
-        <Tile label="Pendências" emoji="📋" value={String(d.waitingClient)} hint="aguardando cliente" cls="border-orange-200 bg-orange-50 text-orange-800" href="/pendencias" />
-        <Tile label="Diagnósticos" emoji="📝" value={String(dx.waiting.length)} hint="aguardando resposta" cls="border-amber-200 bg-amber-50 text-amber-800" />
-        <Tile label="Onboarding" emoji="🚀" value={String(d.onboarding)} hint="em implantação" cls="border-violet-200 bg-violet-50 text-violet-800" href="/biblioteca?secao=jornada" />
-        <Tile label="Abertas" emoji="🗂️" value={String(d.openTotal)} hint="tarefas em aberto" cls="border-slate-200 bg-white text-slate-700" href="/tarefas" />
-        <Tile label="Horas hoje" emoji="⏱️" value={`${d.hoursToday}h`} hint="apontadas" cls="border-teal-200 bg-teal-50 text-teal-800" />
-      </div>
+      <details className="group mb-4">
+        <summary className="card flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 [&::-webkit-details-marker]:hidden">
+          <h2 className="text-[15px] font-semibold text-brand-900">Mais análises</h2>
+          <span className="text-sm text-brand-700 group-open:hidden">Mostrar ▾</span>
+          <span className="hidden text-sm text-brand-700 group-open:inline">Esconder ▴</span>
+        </summary>
+        <div className="mt-4">
 
       <details className="card group mb-4">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 [&::-webkit-details-marker]:hidden">
@@ -185,27 +297,6 @@ export default async function InicioPage() {
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="card">
-          <div className="flex items-center justify-between border-b border-hair px-5 py-3">
-            <h2 className="text-[15px] font-semibold text-brand-900">☀️ Para fazer hoje</h2>
-            <Link href="/tarefas?prazo=hoje" className="text-sm text-brand-700 hover:underline">Ver todas →</Link>
-          </div>
-          {d.todayList.length ? (
-            <ul className="divide-y divide-hair">
-              {d.todayList.map((t) => (
-                <li key={t.id} className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
-                  <div className="min-w-0">
-                    <Link href={`/tarefas/${t.id}`} className="block truncate font-medium hover:underline">{t.title}</Link>
-                    <p className="truncate text-xs text-slate-500">{t.client?.tradeName ?? "Interna"}</p>
-                  </div>
-                  <span className={`shrink-0 text-xs ${t.dueAt && t.dueAt < startOfToday(now) ? "font-semibold text-red-700" : "text-slate-500"}`}>{fmtDateTime(t.dueAt)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="p-5 text-sm text-slate-500">Nada pendente para hoje. ✨</p>
-          )}
-        </section>
 
         <section className="card">
           <div className="border-b border-hair px-5 py-3"><h2 className="text-[15px] font-semibold text-brand-900">📊 Distribuição de tarefas</h2></div>
@@ -219,22 +310,6 @@ export default async function InicioPage() {
           </ul>
         </section>
 
-        <section className="card lg:col-span-2">
-          <div className="flex items-center justify-between border-b border-hair px-5 py-3">
-            <h2 className="text-[15px] font-semibold text-brand-900">📅 Próximos 7 dias</h2>
-            <Link href="/tarefas?prazo=7dias" className="text-sm text-brand-700 hover:underline">Ver todas →</Link>
-          </div>
-          {d.next7.length ? (
-            <ul className="divide-y divide-hair">
-              {d.next7.map((t) => (
-                <li key={t.id} className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
-                  <div className="min-w-0"><Link href={`/tarefas/${t.id}`} className="block truncate font-medium hover:underline">{t.title}</Link><p className="text-xs text-slate-500">{t.client?.tradeName ?? "Interna"}</p></div>
-                  <span className="shrink-0 text-xs text-slate-500">{fmtDateTime(t.dueAt)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : <p className="p-5 text-sm text-slate-500">Nada previsto para os próximos 7 dias.</p>}
-        </section>
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
@@ -260,6 +335,8 @@ export default async function InicioPage() {
           ) : <p className="p-5 text-sm text-slate-500">Sem tarefas abertas.</p>}
         </section>
       </div>
+        </div>
+      </details>
     </div>
   );
 }

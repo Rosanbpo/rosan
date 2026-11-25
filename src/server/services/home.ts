@@ -1,6 +1,7 @@
 import { startOfToday } from "@/domain/dates";
 import { addDays, instantToLocalDate, localDateTimeToInstant } from "@/domain/dates";
 import { assertCan, type Actor, can } from "@/domain/permissions";
+import { taskRights } from "@/domain/task-rules";
 import { APP_TIMEZONE } from "../config";
 import { prisma } from "../db";
 import { clientScope } from "./access";
@@ -23,7 +24,7 @@ export async function homeOverview(actor: Actor, now = new Date()) {
   const w = (extra: object) => ({ AND: [base, extra] });
   const showFinance = can(actor, "finance.view");
 
-  const [clients, openTasks, dueTodayCount, overdueCount, waitingClient, minutesToday, minutesMonth, org, byStatus, next7, todayList] = await Promise.all([
+  const [clients, openTasks, dueTodayCount, overdueCount, waitingClient, minutesToday, minutesMonth, org, byStatus, next7, todayList, dayRows, doneToday, running] = await Promise.all([
     prisma.client.findMany({
       where: { ...clientScope(actor), archivedAt: null, status: { not: "ENCERRADO" } },
       select: { id: true, tradeName: true, status: true, monthlyFee: true, journeyStage: true, responsibleOperatorId: true },
@@ -53,6 +54,18 @@ export async function homeOverview(actor: Actor, now = new Date()) {
       orderBy: { dueAt: "asc" },
       take: 8,
     }),
+    prisma.task.findMany({
+      where: w({ ...OPEN, dueAt: { gte: todayStart, lt: tomorrowStart } }),
+      select: {
+        id: true, title: true, status: true, dueAt: true, assigneeId: true, reviewerId: true, createdById: true, origin: true,
+        client: { select: { tradeName: true } },
+        checklistItems: { select: { done: true } },
+      },
+      orderBy: [{ dueAt: "asc" }, { title: "asc" }],
+      take: 40,
+    }),
+    prisma.task.count({ where: w({ status: "CONCLUIDA", completedAt: { gte: todayStart, lt: tomorrowStart } }) }),
+    prisma.runningTimer.findUnique({ where: { userId: actor.userId }, select: { taskId: true, startedAt: true } }),
   ]);
 
   const active = clients.filter((c) => c.status === "ATIVO");
@@ -96,6 +109,20 @@ export async function homeOverview(actor: Actor, now = new Date()) {
   }
   if (!insights.length) insights.push({ tone: "success", emoji: "🎉", title: "Operação em dia", text: "Nenhum alerta no momento.", href: "/tarefas", cta: "Ver tarefas" });
 
+  const oldest = openTasks.find((t) => t.dueAt && t.dueAt < startOfToday(now));
+  const oldestOverdueDays = oldest?.dueAt ? Math.max(1, Math.round((startOfToday(now).getTime() - oldest.dueAt.getTime()) / 86_400_000)) : 0;
+  const topOverdue = [...per.values()].filter((c) => c.overdue > 0).sort((a, b) => b.overdue - a.overdue)[0] ?? null;
+  const dayTasks = dayRows.map((t) => ({
+    id: t.id,
+    title: t.title,
+    dueAt: t.dueAt,
+    client: t.client?.tradeName ?? "Interna",
+    checkDone: t.checklistItems.filter((c) => c.done).length,
+    checkTotal: t.checklistItems.length,
+    runningSince: running?.taskId === t.id ? running.startedAt.toISOString() : null,
+    canTime: taskRights(actor, t).canTime,
+  }));
+
   const journey = clients.filter((c) => c.journeyStage).reduce<Record<string, { id: string; name: string }[]>>((acc, c) => { (acc[c.journeyStage!] ??= []).push({ id: c.id, name: c.tradeName }); return acc; }, {});
 
   return {
@@ -104,5 +131,6 @@ export async function homeOverview(actor: Actor, now = new Date()) {
     hoursToday: Math.round(((minutesToday._sum.minutes ?? 0) / 60) * 10) / 10,
     nps: nps.nps, insights, byClient, byStatus: byStatus.map((s) => ({ status: s.status, count: s._count._all })), next7, todayList,
     openTotal: openTasks.length,
+    dayTasks, doneToday, oldestOverdueDays, topOverdue: topOverdue ? { name: topOverdue.name, count: topOverdue.overdue } : null,
   };
 }
