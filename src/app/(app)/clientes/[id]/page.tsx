@@ -329,7 +329,6 @@ export default async function ClientPage({
         </div>
       </section>
 
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_16rem]">
       <div className="card min-w-0 overflow-hidden">
         <nav aria-label="Seções do cliente" className="flex gap-1 overflow-x-auto border-b border-hair bg-slate-50/60 px-3">
           {GROUPS.map((g) => {
@@ -976,27 +975,6 @@ export default async function ClientPage({
         </div>
       )}
         </div>
-      </div>
-      <aside aria-label="Ficha do cliente" className="card p-4 text-sm xl:sticky xl:top-4">
-        <h2 className="mb-3 text-sm font-semibold text-brand-900">Ficha</h2>
-        <dl className="space-y-2.5">
-          {[
-            ["Responsável", client.responsibleOperator?.name],
-            ["Gestor", client.manager?.name],
-            ["Sistema do cliente", client.software],
-            ["Contato", client.contactName],
-            ["Telefone", client.contactPhone],
-            ["E-mail", client.contactEmail],
-            ["Cliente desde", client.startDate ? fmtLocalDate(client.startDate) : null],
-          ].map(([k, v]) => (
-            <div key={k as string}>
-              <dt className="text-xs text-slate-500">{k}</dt>
-              <dd className="break-words text-slate-800">{v || "—"}</dd>
-            </div>
-          ))}
-        </dl>
-        <Link href={`/clientes/${id}?aba=dados`} className="mt-3 inline-block text-xs text-brand-700 hover:underline">Editar dados →</Link>
-      </aside>
       </div>
     </>
   );
