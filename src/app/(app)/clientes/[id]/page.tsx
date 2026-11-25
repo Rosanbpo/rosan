@@ -133,6 +133,15 @@ const TABS: Array<{
   { key: "historico", label: "Histórico", icon: History, show: () => true },
 ];
 
+const GROUPS: Array<{ key: string; label: string; icon: typeof Mail; keys: string[] }> = [
+  { key: "g-resumo", label: "Resumo", icon: LayoutDashboard, keys: ["resumo", "hoje"] },
+  { key: "g-trabalho", label: "Trabalho", icon: Repeat, keys: ["rotinas", "pendencias", "jornada"] },
+  { key: "g-cadastro", label: "Dados e acessos", icon: UserRound, keys: ["dados", "cofre"] },
+  { key: "g-combinados", label: "Observações e atas", icon: BookOpenCheck, keys: ["pops", "atas"] },
+  { key: "g-fech", label: "Fechamentos", icon: FolderKanban, keys: ["fechamentos"] },
+  { key: "g-hist", label: "Histórico", icon: History, keys: ["historico"] },
+];
+
 const TAB_TONE: Record<string, string> = {
   hoje: "text-amber-500",
   resumo: "text-blue-600",
@@ -298,6 +307,10 @@ export default async function ClientPage({
               <FileSignature aria-hidden className="h-4 w-4" /> Novo contrato
             </Link>
           )}
+          {manage && (
+            <details className="relative">
+              <summary className="btn-secondary cursor-pointer list-none" aria-label="Mais ações">⋯</summary>
+              <div className="absolute right-0 z-20 mt-1 flex w-56 flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
           {manage &&
             (client.archivedAt ? (
               <ConfirmAction action={archiveClientAction.bind(null, id, false)} label="Reativar" className="btn-secondary" confirm="Reativar este cliente?" />
@@ -309,26 +322,47 @@ export default async function ClientPage({
                 confirm="Arquivar o cliente? O histórico é preservado e as recorrências ativas serão pausadas."
               />
             ))}
-          {manage && <DeleteClient action={deleteClientAction.bind(null, id)} name={client.tradeName} />}
+          <DeleteClient action={deleteClientAction.bind(null, id)} name={client.tradeName} />
+              </div>
+            </details>
+          )}
         </div>
       </section>
 
-      <div className="card overflow-hidden">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_16rem]">
+      <div className="card min-w-0 overflow-hidden">
         <nav aria-label="Seções do cliente" className="flex gap-1 overflow-x-auto border-b border-hair bg-slate-50/60 px-3">
-          {TABS.filter((t) => t.show(actor, extras, finance)).map((t) => (
-            <Link
-              key={t.key}
-              href={`/clientes/${id}?aba=${t.key}`}
-              aria-current={aba === t.key ? "page" : undefined}
-              className={`-mb-px flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-[13px] font-medium transition-colors ${
-                aba === t.key ? "border-brand-700 text-brand-700" : "border-transparent text-slate-500 hover:text-brand-900"
-              }`}
-            >
-              <t.icon aria-hidden className={`h-4 w-4 ${aba === t.key ? "text-brand-700" : TAB_TONE[t.key] ?? "text-slate-400"}`} />
-              {t.label}
-            </Link>
-          ))}
+          {GROUPS.map((g) => {
+            const keys = g.keys.filter((k) => TABS.some((t) => t.key === k && t.show(actor, extras, finance)));
+            if (!keys.length) return null;
+            const on = keys.includes(aba);
+            return (
+              <Link
+                key={g.key}
+                href={`/clientes/${id}?aba=${on ? aba : keys[0]}`}
+                aria-current={on ? "page" : undefined}
+                className={`-mb-px flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-[13px] font-medium transition-colors ${on ? "border-brand-700 text-brand-700" : "border-transparent text-slate-500 hover:text-brand-900"}`}
+              >
+                <g.icon aria-hidden className={`h-4 w-4 ${on ? "text-brand-700" : "text-slate-400"}`} />
+                {g.label}
+              </Link>
+            );
+          })}
         </nav>
+        {(() => {
+          const g = GROUPS.find((x) => x.keys.includes(aba));
+          const subs = g ? g.keys.map((k) => TABS.find((t) => t.key === k)!).filter((t) => t.show(actor, extras, finance)) : [];
+          if (subs.length < 2) return null;
+          return (
+            <div className="flex flex-wrap gap-1.5 border-b border-hair px-5 py-2.5" aria-label="Subseções">
+              {subs.map((t) => (
+                <Link key={t.key} href={`/clientes/${id}?aba=${t.key}`} aria-current={aba === t.key ? "page" : undefined} className={`rounded-full px-3 py-1 text-xs font-medium ${aba === t.key ? "bg-brand-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+                  {t.label}
+                </Link>
+              ))}
+            </div>
+          );
+        })()}
         <div className="p-5">
       {aba === "hoje" && <ClientDayPanel clientId={id} />}
 
@@ -942,6 +976,27 @@ export default async function ClientPage({
         </div>
       )}
         </div>
+      </div>
+      <aside aria-label="Ficha do cliente" className="card p-4 text-sm xl:sticky xl:top-4">
+        <h2 className="mb-3 text-sm font-semibold text-brand-900">Ficha</h2>
+        <dl className="space-y-2.5">
+          {[
+            ["Responsável", client.responsibleOperator?.name],
+            ["Gestor", client.manager?.name],
+            ["Sistema do cliente", client.software],
+            ["Contato", client.contactName],
+            ["Telefone", client.contactPhone],
+            ["E-mail", client.contactEmail],
+            ["Cliente desde", client.startDate ? fmtLocalDate(client.startDate) : null],
+          ].map(([k, v]) => (
+            <div key={k as string}>
+              <dt className="text-xs text-slate-500">{k}</dt>
+              <dd className="break-words text-slate-800">{v || "—"}</dd>
+            </div>
+          ))}
+        </dl>
+        <Link href={`/clientes/${id}?aba=dados`} className="mt-3 inline-block text-xs text-brand-700 hover:underline">Editar dados →</Link>
+      </aside>
       </div>
     </>
   );
