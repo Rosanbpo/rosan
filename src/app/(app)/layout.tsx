@@ -1,6 +1,7 @@
 import { LogOut } from "lucide-react";
 import { signOut } from "@/auth";
 import { Sidebar, type NavItem } from "@/components/sidebar";
+import { SectionTabs, type SectionDef } from "@/components/section-tabs";
 import { ROLE_LABEL } from "@/domain/enums";
 import { can } from "@/domain/permissions";
 import { APP_NAME } from "@/lib/app-config";
@@ -22,36 +23,32 @@ export default async function AppLayout({ children, modal }: { children: React.R
   const lib = await allowedSections(actor);
   const dash = can(actor, "dashboard.view");
   const fin = can(actor, "finance.view");
+  const crm = can(actor, "crm.manage");
   const items: NavItem[] = [
-    ...(dash ? [{ href: "/inicio", label: "Início", icon: "inicio" as const }] : []),
-    { href: "/tarefas", label: "Tarefas", icon: "tarefas" },
-    ...(can(actor, "recurrences.manage") ? [{ href: "/rotinas", label: "Modelos", icon: "rotinas" as const }] : []),
-    { href: "/pendencias", label: "Pendências", icon: "pendencias" },
-    { href: "/avulsas", label: "Avulsas", icon: "avulsas" },
-    ...(dash ? [{ href: "/agenda", label: "Agenda", icon: "agenda" as const }] : []),
-    { href: "/minha-operacao", label: "Meu painel", icon: "operacao", badge: myOverdue },
-    ...(can(actor, "crm.manage") ? [{ group: "Comercial", href: "/comercial", label: "Painel comercial", icon: "comercial" as const }] : []),
-    ...(can(actor, "crm.manage") ? [{ group: "Comercial", href: "/crm", label: "CRM", icon: "crm" as const }] : []),
+    ...(dash ? [{ group: "Operação", href: "/inicio", label: "Início", icon: "inicio" as const }] : []),
+    { group: "Operação", href: "/tarefas", label: "Tarefas", icon: "tarefas", badge: myOverdue, match: ["/pendencias", "/avulsas", "/agenda", "/minha-operacao"] },
+    ...(can(actor, "recurrences.manage") ? [{ group: "Operação", href: "/rotinas", label: "Rotinas", icon: "rotinas" as const }] : []),
+    { group: "Operação", href: "/projetos", label: "Projetos", icon: "projetos" },
+    { group: "Clientes", href: "/clientes", label: "Clientes", icon: "clientes", match: ["/central", "/cofre"] },
+    ...(crm ? [{ group: "Comercial", href: "/crm", label: "Funil", icon: "crm" as const, match: ["/comercial"] }] : []),
+    ...(crm || can(actor, "contracts.manage") ? [{ group: "Comercial", href: crm ? "/propostas" : "/contratos", label: "Propostas e contratos", icon: "propostas" as const, match: ["/propostas", "/contratos"] }] : []),
     ...(can(actor, "pricing.manage") ? [{ group: "Comercial", href: "/precificacao", label: "Precificação", icon: "precificacao" as const }] : []),
-    ...(can(actor, "crm.manage") ? [{ group: "Comercial", href: "/propostas", label: "Propostas", icon: "propostas" as const }] : []),
-    ...(can(actor, "crm.manage") ? [{ group: "Comercial", href: "/marketing", label: "Marketing", icon: "marketing" as const }] : []),
-    ...(can(actor, "contracts.manage") ? [{ group: "Comercial", href: "/contratos", label: "Contratos", icon: "contratos" as const }] : []),
-    { group: "Clientes", href: "/clientes", label: "Clientes", icon: "clientes" },
-    ...(dash ? [{ group: "Clientes", href: "/central", label: "Central", icon: "central" as const }] : []),
-    { group: "Clientes", href: "/cofre", label: "Cofre", icon: "cofre" },
-    ...(dash ? [{ group: "Análise", href: "/executivo", label: "Executivo", icon: "executivo" as const }] : []),
-    ...(fin ? [{ group: "Análise", href: "/carteira", label: "Rentabilidade", icon: "carteira" as const }] : []),
-    ...(dash ? [{ group: "Análise", href: "/equipe", label: "Equipe", icon: "equipe" as const }] : []),
-    ...(dash ? [{ group: "Análise", href: "/metas", label: "Metas", icon: "metas" as const }] : []),
-    ...(dash ? [{ group: "Análise", href: "/simulador", label: "Simulador", icon: "simulador" as const }] : []),
-    ...(dash ? [{ group: "Análise", href: "/churn", label: "Saídas", icon: "churn" as const }] : []),
-    ...(dash ? [{ group: "Análise", href: "/relatorios", label: "Relatórios", icon: "relatorios" as const }] : []),
-    { group: "Ferramentas", href: "/biblioteca", label: "Estrutura Rosan", icon: "biblioteca" },
-    ...(lib.includes("pops") ? [{ group: "Ferramentas", href: "/pops", label: "Processos e POPs", icon: "pops" as const }] : []),
-    ...(lib.includes("cultura") ? [{ group: "Ferramentas", href: "/cultura", label: "Missão e valores", icon: "cultura" as const }] : []),
-    { group: "Ferramentas", href: "/projetos", label: "Projetos", icon: "projetos" },
-    ...(can(actor, "org.settings") ? [{ group: "Ferramentas", href: "/configuracoes", label: "Configuração", icon: "config" as const }] : []),
-    { group: "Ferramentas", href: "/conta", label: "Minha conta", icon: "conta" },
+    ...(crm ? [{ group: "Comercial", href: "/marketing", label: "Marketing", icon: "marketing" as const }] : []),
+    ...(dash ? [{ group: "Gestão", href: "/executivo", label: "Visão geral", icon: "executivo" as const, match: ["/metas", "/simulador", "/churn"] }] : []),
+    ...(fin ? [{ group: "Gestão", href: "/carteira", label: "Rentabilidade", icon: "carteira" as const }] : []),
+    ...(dash ? [{ group: "Gestão", href: "/equipe", label: "Equipe", icon: "equipe" as const }] : []),
+    ...(dash ? [{ group: "Gestão", href: "/relatorios", label: "Relatórios", icon: "relatorios" as const }] : []),
+    { group: "Conhecimento", href: "/biblioteca", label: "Conhecimento", icon: "biblioteca", match: ["/pops", "/cultura"] },
+    ...(can(actor, "org.settings") ? [{ group: "Sistema", href: "/configuracoes", label: "Configuração", icon: "config" as const }] : []),
+    { group: "Sistema", href: "/conta", label: "Minha conta", icon: "conta" },
+  ];
+  const sections: SectionDef[] = [
+    { tabs: [{ href: "/tarefas", label: "Tarefas" }, { href: "/pendencias", label: "Pendências" }, { href: "/avulsas", label: "Avulsas" }, ...(dash ? [{ href: "/agenda", label: "Agenda" }] : []), { href: "/minha-operacao", label: "Meu painel" }] },
+    { tabs: [{ href: "/clientes", label: "Clientes" }, ...(dash ? [{ href: "/central", label: "Central" }] : []), { href: "/cofre", label: "Cofre de acessos" }] },
+    ...(crm ? [{ tabs: [{ href: "/crm", label: "Funil" }, { href: "/comercial", label: "Painel comercial" }] }] : []),
+    ...(crm ? [{ tabs: [{ href: "/propostas", label: "Propostas" }, ...(can(actor, "contracts.manage") ? [{ href: "/contratos", label: "Contratos" }] : [])] }] : []),
+    ...(dash ? [{ tabs: [{ href: "/executivo", label: "Executivo" }, { href: "/metas", label: "Metas" }, { href: "/simulador", label: "Simulador" }, { href: "/churn", label: "Saídas" }] }] : []),
+    { tabs: [{ href: "/biblioteca", label: "Estrutura Rosan" }, ...(lib.includes("pops") ? [{ href: "/pops", label: "Processos e POPs" }] : []), ...(lib.includes("cultura") ? [{ href: "/cultura", label: "Missão e valores" }] : [])] },
   ];
 
   return (
@@ -79,7 +76,10 @@ export default async function AppLayout({ children, modal }: { children: React.R
         }
       />
       <main id="conteudo" className="px-4 py-6 sm:px-6 lg:ml-56 lg:px-8">
-        <div className="mx-auto max-w-7xl">{children}</div>
+        <div className="mx-auto max-w-7xl">
+          <SectionTabs sections={sections} />
+          {children}
+        </div>
       </main>
       {modal}
       {running && <RunningTimerPill taskId={running.taskId} taskTitle={running.taskTitle} clientName={running.clientName} startedAt={running.startedAt} />}

@@ -82,6 +82,7 @@ export interface NavItem {
   label: string;
   icon: keyof typeof ICONS;
   badge?: number;
+  match?: string[];
 }
 
 export function Sidebar({
@@ -106,7 +107,7 @@ export function Sidebar({
     <nav aria-label="Menu principal" className="flex flex-1 flex-col gap-px px-2.5 pb-3">
       {items.map((item, idx) => {
         const Icon = ICONS[item.icon];
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const active = [item.href, ...(item.match ?? [])].some((h) => pathname === h || pathname.startsWith(`${h}/`));
         const heading = item.group && item.group !== items[idx - 1]?.group ? item.group : null;
         return (
           <div key={item.href} className="flex flex-col">
