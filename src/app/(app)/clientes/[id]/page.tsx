@@ -471,6 +471,7 @@ export default async function ClientPage({
                   rows={openTasks.rows}
                   showClient={false}
                   showAssignee={false}
+                  compact
                   caption="Tarefas abertas do cliente"
                   actor={actor}
                   running={running}
@@ -502,8 +503,8 @@ export default async function ClientPage({
               )}
             </Card>
 
-            <details className="group"><summary className="mb-2 cursor-pointer text-sm font-semibold text-brand-900">Concluídas recentemente</summary>
-            <Card title="Concluídas recentemente" bodyClassName="p-0">
+            <details className="group"><summary className="mb-2 cursor-pointer text-sm font-semibold text-brand-900">Ver concluídas recentemente</summary>
+            <Card title="Últimas concluídas" bodyClassName="p-0">
               {recentDone.rows.length ? (
                 <TaskTable
                   rows={recentDone.rows}
