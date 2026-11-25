@@ -61,7 +61,7 @@ import { updateClientAction } from "@/app/actions/clients";
 import { moneyInput } from "@/lib/format";
 import { ClientStatusBadge } from "@/components/ui/badges";
 import { TaskTable } from "@/components/task-table";
-import { ClientDashboardTop } from "@/components/client-dashboard-top";
+import { closingProgress } from "@/domain/closing";
 import { JourneyStepper } from "@/components/journey-stepper";
 import { DiagnosisPanel } from "@/components/diagnosis-panel";
 import { volumeOverview } from "@/server/services/diagnosis";
@@ -271,7 +271,7 @@ export default async function ClientPage({
 
   return (
     <>
-      <section className="card mb-5 flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between" aria-label="Resumo do cliente">
+      <section className="card mb-5 flex flex-col gap-4 p-5 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between" aria-label="Resumo do cliente">
         <div className="flex min-w-0 items-center gap-4">
           <Link href="/clientes" className="btn-secondary btn-sm shrink-0">
             ← Clientes
@@ -287,30 +287,23 @@ export default async function ClientPage({
               {client.archivedAt && <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 ring-1 ring-zinc-200 ring-inset">Arquivado</span>}
             </h1>
             <p className="mt-0.5 truncate text-sm text-slate-500">
-              {client.legalName}
-              {client.cnpj ? ` · ${fmtCnpj(client.cnpj)}` : ""}
+              {[client.legalName !== client.tradeName ? client.legalName : null, client.cnpj ? fmtCnpj(client.cnpj) : null, client.software, finance && finance.monthlyFee !== null ? `${fmtMoney(finance.monthlyFee)}/mês${finance.billingDay ? ` · vence ${billingDaysLabel(finance.billingDay, finance.billingDay2)}` : ""}` : null].filter(Boolean).join(" · ")}
             </p>
-            {finance && finance.monthlyFee !== null && (
-              <p className="mt-0.5 text-sm font-semibold text-emerald-700">
-                {fmtMoney(finance.monthlyFee)}/mês
-                {finance.billingDay ? <span className="ml-2 font-normal text-slate-500">vence {billingDaysLabel(finance.billingDay, finance.billingDay2)}</span> : null}
-              </p>
-            )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2 lg:justify-end">
           <Link href={`/tarefas/nova?clientId=${id}`} className="btn-primary">
             <Plus aria-hidden className="h-4 w-4" /> Nova tarefa
           </Link>
-          {can(actor, "contracts.manage") && (
-            <Link href="/contratos/novo" className="btn-secondary">
-              <FileSignature aria-hidden className="h-4 w-4" /> Novo contrato
-            </Link>
-          )}
-          {manage && (
+          {(manage || can(actor, "contracts.manage")) && (
             <details className="relative">
               <summary className="btn-secondary cursor-pointer list-none" aria-label="Mais ações">⋯</summary>
               <div className="absolute right-0 z-20 mt-1 flex w-56 flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+                {can(actor, "contracts.manage") && (
+                  <Link href="/contratos/novo" className="btn-secondary">
+                    <FileSignature aria-hidden className="h-4 w-4" /> Novo contrato
+                  </Link>
+                )}
           {manage &&
             (client.archivedAt ? (
               <ConfirmAction action={archiveClientAction.bind(null, id, false)} label="Reativar" className="btn-secondary" confirm="Reativar este cliente?" />
@@ -322,11 +315,18 @@ export default async function ClientPage({
                 confirm="Arquivar o cliente? O histórico é preservado e as recorrências ativas serão pausadas."
               />
             ))}
-          <DeleteClient action={deleteClientAction.bind(null, id)} name={client.tradeName} />
+                {manage && <DeleteClient action={deleteClientAction.bind(null, id)} name={client.tradeName} />}
               </div>
             </details>
           )}
         </div>
+        <dl className="flex w-full flex-wrap items-center gap-x-6 gap-y-2 border-t border-hair pt-3 text-sm lg:order-last">
+          <Link href={`/tarefas?clientId=${id}&abertas=1`} className="hover:underline"><dd className="inline text-base font-semibold text-brand-900">{indicators.open}</dd> <dt className="inline text-slate-500">abertas</dt></Link>
+          <Link href={`/tarefas?clientId=${id}&atrasadas=1`} className="hover:underline"><dd className={`inline text-base font-semibold ${indicators.overdue ? "text-red-600" : "text-brand-900"}`}>{indicators.overdue}</dd> <dt className="inline text-slate-500">{indicators.overdue === 1 ? "atrasada" : "atrasadas"}</dt></Link>
+          <Link href={`/clientes/${id}?aba=pendencias`} className="hover:underline"><dd className="inline text-base font-semibold text-brand-900">{indicators.waiting}</dd> <dt className="inline text-slate-500">aguardando</dt></Link>
+          <span><dd className="inline text-base font-semibold text-brand-900">{indicators.completed30}</dd> <dt className="inline text-slate-500">concluídas em 30 dias</dt></span>
+          <span><dd className="inline text-base font-semibold text-emerald-700">{fmtPercent(indicators.onTimeRate)}</dd> <dt className="inline text-slate-500">no prazo</dt></span>
+        </dl>
       </section>
 
       <div className="card min-w-0 overflow-hidden">
@@ -367,17 +367,60 @@ export default async function ClientPage({
 
       {aba === "resumo" && (
         <>
-          <ClientDashboardTop
-            clientId={id}
-            closing={closingSummary}
-            ours={ours.length}
-            clientSide={clientSide.length}
-            thirdSide={thirdSide.length}
-            missingDocs={missingDocs.length}
-            fee={finance?.monthlyFee ?? null}
-            billing={finance?.billingDay ? billingDaysLabel(finance.billingDay, finance.billingDay2) : null}
-            overdue={indicators.overdue}
-          />
+          {(() => {
+            const items: { key: string; tone: "red" | "amber" | "slate"; text: string; href: string; right: string }[] = [
+              ...ours.filter((t) => t.dueAt < startOfToday(now)).map((t) => ({ key: `t${t.id}`, tone: "red" as const, text: t.title, href: `/tarefas/${t.id}`, right: "atrasada" })),
+              ...clientSide.map((p) => ({ key: `p${p.id}`, tone: "amber" as const, text: p.task.title, href: `/clientes/${id}?aba=pendencias`, right: `cliente, ${waitingTime(p.requestedAt, now)}` })),
+              ...missingDocs.map((d) => ({ key: `d${d.id}`, tone: "slate" as const, text: `Documento: ${d.name}`, href: `/clientes/${id}?aba=pendencias`, right: "não recebido" })),
+            ].slice(0, 8);
+            const prog = closingSummary?.closing ? closingProgress(closingSummary.closing.items) : null;
+            const missing = [
+              !client.software && { t: "Informar o sistema do cliente", h: `/clientes/${id}?aba=dados` },
+              !ours.length && !openTasks.rows.length && { t: "Criar as rotinas do mês", h: `/clientes/${id}?aba=rotinas` },
+              !client.responsibleOperator && { t: "Definir o responsável", h: `/clientes/${id}?aba=dados` },
+            ].filter(Boolean) as { t: string; h: string }[];
+            return (
+              <div className="mb-6 grid gap-4 lg:grid-cols-5">
+                <section className="card p-4 lg:col-span-3" aria-label="Precisa de ação">
+                  <h2 className="mb-2 text-sm font-semibold text-brand-900">Precisa de ação</h2>
+                  {items.length ? (
+                    <ul className="divide-y divide-slate-100">
+                      {items.map((i) => (
+                        <li key={i.key}>
+                          <Link href={i.href} className="flex items-center justify-between gap-3 py-2 text-sm hover:bg-slate-50">
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${i.tone === "red" ? "bg-red-500" : i.tone === "amber" ? "bg-amber-500" : "bg-slate-400"}`} />
+                              <span className="truncate">{i.text}</span>
+                            </span>
+                            <span className={`shrink-0 text-xs ${i.tone === "red" ? "text-red-600" : "text-slate-500"}`}>{i.right}</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="py-3 text-sm text-emerald-700">Tudo em dia com este cliente.</p>
+                  )}
+                </section>
+                <div className="space-y-4 lg:col-span-2">
+                  <Link href={`/clientes/${id}?aba=fechamentos`} className="card block p-4 hover:border-brand-200">
+                    <p className="text-sm font-semibold text-brand-900">Fechamento do mês</p>
+                    <p className="mt-1 text-sm text-slate-600">{prog ? `${prog.done} de ${prog.total} itens (${prog.pct}%)` : "Não iniciado"}</p>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-brand-700" style={{ width: `${prog?.pct ?? 0}%` }} /></div>
+                  </Link>
+                  {missing.length > 0 && (
+                    <section className="card p-4" aria-label="Falta preencher">
+                      <h2 className="text-sm font-semibold text-brand-900">Falta preencher</h2>
+                      <ul className="mt-1 space-y-1">
+                        {missing.map((m) => (
+                          <li key={m.t}><Link href={m.h} className="text-sm text-brand-700 hover:underline">{m.t}</Link></li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
           {highlights.length > 0 && (
             <section className="mb-6" aria-label="Observações importantes">
               <div className="mb-2 flex items-center justify-between">
@@ -398,40 +441,6 @@ export default async function ClientPage({
               </ul>
             </section>
           )}
-          <JourneyStepper current={client.journeyStage} clientId={id} />
-          <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-            <Stat
-              label="Abertas"
-              value={indicators.open}
-              href={`/tarefas?clientId=${id}&abertas=1`}
-            />
-            <Stat
-              label="Atrasadas"
-              value={indicators.overdue}
-              tone={indicators.overdue ? "danger" : "default"}
-              href={`/tarefas?clientId=${id}&atrasadas=1`}
-            />
-            <Stat
-              label="Aguardando"
-              value={indicators.waiting}
-              hint="Cliente ou terceiro"
-              href={`/pendencias?clientId=${id}`}
-            />
-            <Stat
-              label="Em revisão"
-              value={indicators.review}
-              tone="info"
-              href={`/tarefas?clientId=${id}&status=EM_REVISAO`}
-            />
-            <Stat label="Concluídas (30 dias)" value={indicators.completed30} />
-            <Stat
-              label="No prazo (30 dias)"
-              value={fmtPercent(indicators.onTimeRate)}
-              hint="Concluídas até o prazo ÷ concluídas"
-              tone="success"
-            />
-          </div>
-
           <div className="space-y-6">
             <Card
               title="Tarefas abertas"
@@ -481,6 +490,7 @@ export default async function ClientPage({
               )}
             </Card>
 
+            <details className="group"><summary className="mb-2 cursor-pointer text-sm font-semibold text-brand-900">Concluídas recentemente</summary>
             <Card title="Concluídas recentemente" bodyClassName="p-0">
               {recentDone.rows.length ? (
                 <TaskTable
@@ -495,6 +505,7 @@ export default async function ClientPage({
                 </p>
               )}
             </Card>
+            </details>
           </div>
         </>
       )}
