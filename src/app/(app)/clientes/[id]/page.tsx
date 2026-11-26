@@ -78,6 +78,8 @@ import { closeClientAction } from "@/app/actions/gestao";
 import { NpsCard } from "@/components/nps-card";
 import { clientNps } from "@/server/services/nps";
 import { ClosingPanel } from "@/components/closing-panel";
+import { PortalAccessPanel } from "@/components/portal-access-panel";
+import { listPortalUsers } from "@/server/services/portal-auth";
 import { ClientLogoBox } from "@/components/client-logo-box";
 import { getClosing, closingHistory, currentCompetence } from "@/server/services/closings";
 import { isCompetenceMonth } from "@/domain/closing";
@@ -254,6 +256,7 @@ export default async function ClientPage({
         }
       : null;
   const manage = can(actor, "clients.manage");
+  const portalUsers = manage && aba === "dados" ? await listPortalUsers(actor, id) : [];
   const formPeople = aba === "dados" && manage ? await assignableUsers(actor) : null;
   const finance = can(actor, "finance.view")
     ? await clientMonthSummary(actor, id)
@@ -966,6 +969,15 @@ export default async function ClientPage({
       {aba === "dados" && (
         <Fold title="Bancos" hint={`${banks.length} conta${banks.length === 1 ? "" : "s"}`}>
           <BankAccountsPanel clientId={id} accounts={banks} canEdit={manage} />
+        </Fold>
+      )}
+
+      {aba === "dados" && manage && (
+        <Fold title="Acesso ao Portal do Cliente" hint={`${portalUsers.filter((u) => !u.revokedAt).length} usuário(s)`}>
+          <PortalAccessPanel
+            clientId={id}
+            users={portalUsers.map((a) => ({ id: a.user.id, name: a.user.name, email: a.user.email, status: a.user.status, lastLoginAt: a.user.lastLoginAt?.toISOString() ?? null, revoked: !!a.revokedAt }))}
+          />
         </Fold>
       )}
 

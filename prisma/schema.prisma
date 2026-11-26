@@ -149,6 +149,7 @@ model Client {
   clientNotes           ClientNote[]
   reminders             ClientReminder[]
   logo                  ClientLogo?
+  portalAccesses        PortalAccess[]
   diagnosis             ClientDiagnosis?
   onboarding            ClientOnboarding?
   npsResponses          ClientNps[]
@@ -1324,6 +1325,68 @@ model FocusSession {
   tiny           Boolean  @default(false)
 
   @@index([userId, startedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Portal do Cliente (identidade separada da equipe)
+// ---------------------------------------------------------------------------
+enum PortalUserStatus {
+  CONVIDADO
+  ATIVO
+  SUSPENSO
+}
+
+model PortalUser {
+  id               String           @id @default(cuid())
+  organizationId   String
+  email            String           @unique
+  name             String
+  passwordHash     String?
+  status           PortalUserStatus @default(CONVIDADO)
+  inviteTokenHash  String?          @unique
+  inviteExpiresAt  DateTime?
+  resetTokenHash   String?          @unique
+  resetExpiresAt   DateTime?
+  failedLogins     Int              @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  createdById      String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  accesses PortalAccess[]
+  sessions PortalSession[]
+
+  @@index([organizationId])
+}
+
+/// Quais empresas (clientes) cada usuário do portal pode ver.
+model PortalAccess {
+  portalUserId   String
+  clientId       String
+  organizationId String
+  createdAt      DateTime @default(now())
+  revokedAt      DateTime?
+
+  user   PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+  client Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@id([portalUserId, clientId])
+  @@index([clientId])
+}
+
+model PortalSession {
+  id           String    @id @default(cuid())
+  portalUserId String
+  tokenHash    String    @unique
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  userAgent    String?
+
+  user PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
+
+  @@index([portalUserId])
 }
 
 model AgendaFeed {

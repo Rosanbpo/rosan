@@ -13,7 +13,7 @@ export const authConfig = {
     authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;
       const { pathname } = request.nextUrl;
-      if (pathname.startsWith("/login") || pathname.startsWith("/primeiro-acesso") || pathname.startsWith("/diagnostico/") || pathname.startsWith("/nps/") || pathname.startsWith("/agenda/feed/") || pathname.startsWith("/assinar/")) return true;
+      if (pathname.startsWith("/login") || pathname.startsWith("/portal") || pathname.startsWith("/primeiro-acesso") || pathname.startsWith("/diagnostico/") || pathname.startsWith("/nps/") || pathname.startsWith("/agenda/feed/") || pathname.startsWith("/assinar/")) return true;
       return isLoggedIn;
     },
     jwt({ token, user }) {
