@@ -94,11 +94,6 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
         }
         actions={
           <>
-            {rights.canTime && (
-              <Link href={`/foco?tarefa=${task.id}`} className="btn-secondary">
-                Focar nesta tarefa
-              </Link>
-            )}
             {rights.canReschedule && <RescheduleButton taskId={task.id} dueDate={instantToLocalDate(task.dueAt, APP_TIMEZONE)} />}
             {rights.canEdit && (
               <Link href={`/tarefas/${task.id}/editar`} className="btn-secondary">

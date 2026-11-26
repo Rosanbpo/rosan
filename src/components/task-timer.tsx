@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Loader2, Pause, Play, Timer } from "lucide-react";
+import { CheckCircle2, Loader2, Pause, Target, Timer } from "lucide-react";
 import { finishTaskAction, pauseTimerAction, startTimerAction } from "@/app/actions/timer";
 import type { ActionState } from "@/lib/action-state";
 import { cx } from "@/lib/ui";
@@ -79,17 +80,26 @@ export function TaskTimer({ taskId, runningSince, trackedSeconds, otherRunning, 
 
         <div className="flex flex-wrap items-center gap-2">
           {!running ? (
-            <form action={start.run}>
-              <button type="submit" disabled={disabled || busy} title={disabledReason} className="btn-primary">
-                {start.pending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Play aria-hidden className="h-4 w-4" />} Iniciar
+            disabled ? (
+              <button type="button" disabled title={disabledReason} className="btn-primary">
+                <Target aria-hidden className="h-4 w-4" /> Focar
               </button>
-            </form>
+            ) : (
+              <Link href={`/foco?tarefa=${taskId}`} className="btn-primary">
+                <Target aria-hidden className="h-4 w-4" /> Focar
+              </Link>
+            )
           ) : (
-            <form action={pause.run}>
-              <button type="submit" disabled={busy} className="btn-secondary !border-brand-500 !bg-white/10 !text-brand-100 hover:!bg-white/20">
-                {pause.pending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Pause aria-hidden className="h-4 w-4" />} Pausar
-              </button>
-            </form>
+            <>
+              <Link href={`/foco?tarefa=${taskId}`} className="btn-secondary !border-brand-500 !bg-white/10 !text-brand-100 hover:!bg-white/20">
+                <Target aria-hidden className="h-4 w-4" /> Abrir o foco
+              </Link>
+              <form action={pause.run}>
+                <button type="submit" disabled={busy} className="btn-secondary !border-brand-500 !bg-white/10 !text-brand-100 hover:!bg-white/20">
+                  {pause.pending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Pause aria-hidden className="h-4 w-4" />} Pausar
+                </button>
+              </form>
+            </>
           )}
           {canFinish && (
             <form action={finish.run}>
@@ -117,36 +127,25 @@ export function TaskTimer({ taskId, runningSince, trackedSeconds, otherRunning, 
   );
 }
 
-/** Versão compacta para listas: relógio + iniciar/pausar. */
+/** Versão compacta para listas: abre o Foco (pomodoro), que é quem conta o tempo da tarefa. */
 export function TimerMini({ taskId, runningSince, disabled }: { taskId: string; runningSince: string | null; disabled?: boolean }) {
   const elapsed = useElapsed(runningSince);
-  const start = useServerAction(() => startTimerAction(taskId, null));
-  const pause = useServerAction(() => pauseTimerAction(taskId, null));
   const running = runningSince !== null;
-  const busy = start.pending || pause.pending;
-  const error = start.state?.error ?? pause.state?.error;
+  if (disabled) return null;
   return (
     <div className="flex items-center gap-2">
-      <form action={running ? pause.run : start.run}>
-        <button
-          type="submit"
-          disabled={disabled || busy}
-          title={error ?? (running ? "Pausar a tarefa" : "Iniciar a tarefa")}
-          className={cx(
-            "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors disabled:opacity-40",
-            running ? "border-brand-900 bg-brand-900 text-white hover:bg-brand-600" : "border-slate-300 bg-white text-brand-900 hover:bg-brand-50",
-          )}
-        >
-          {busy ? <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> : running ? <Pause aria-hidden className="h-3.5 w-3.5" /> : <Play aria-hidden className="h-3.5 w-3.5" />}
-          {running ? "Pausar" : "Iniciar"}
-        </button>
-      </form>
+      <Link
+        href={`/foco?tarefa=${taskId}`}
+        title={running ? "Abrir o foco desta tarefa" : "Focar nesta tarefa (pomodoro)"}
+        className={cx(
+          "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
+          running ? "border-brand-900 bg-brand-900 text-white hover:bg-brand-600" : "border-slate-300 bg-white text-brand-900 hover:bg-brand-50",
+        )}
+      >
+        <Target aria-hidden className="h-3.5 w-3.5" />
+        {running ? "Em foco" : "Focar"}
+      </Link>
       {running && <span className="font-mono text-xs font-semibold text-brand-900 tabular-nums">{formatClock(elapsed)}</span>}
-      {error && (
-        <span role="alert" className="max-w-40 text-xs text-red-700">
-          {error}
-        </span>
-      )}
     </div>
   );
 }
