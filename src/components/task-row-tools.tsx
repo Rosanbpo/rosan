@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Flag, Loader2, Pencil, Target, Trash2 } from "lucide-react";
+import { CalendarDays, Flag, Loader2, Pencil, Trash2 } from "lucide-react";
 import { deleteTaskAction, rescheduleTaskAction } from "@/app/actions/tasks";
 import { addDayGoalAction } from "@/app/actions/day-goal";
 import type { TaskRights } from "@/domain/task-rules";
@@ -114,7 +114,6 @@ export function TaskRowTools({
   return (
     <div className="flex items-center justify-end gap-1">
       {rights.canTime && <button type="button" aria-label="Colocar na meta do dia" title="Colocar na meta do dia" className="icon-btn" onClick={async () => { await addDayGoalAction(taskId, null); router.refresh(); }}><Flag aria-hidden className="h-4 w-4" /></button>}
-      {rights.canTime && <Link href={`/foco?tarefa=${taskId}`} aria-label="Focar nesta tarefa (pomodoro)" title="Focar nesta tarefa (pomodoro)" className="icon-btn"><Target aria-hidden className="h-4 w-4" /></Link>}
       {rights.canTime && <TimerMini taskId={taskId} runningSince={runningSince} />}
       {rights.canTime && <FinishMini taskId={taskId} />}
       {rights.canEdit && (

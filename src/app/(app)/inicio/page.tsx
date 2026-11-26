@@ -2,6 +2,9 @@ import { JOURNEY_STAGES, STAGE_LABEL } from "@/domain/enums";
 import Link from "next/link";
 import { DayGoalBoard } from "@/components/day-goal-board";
 import { dayGoal } from "@/server/services/day-goal";
+import { agendaMonth } from "@/server/services/agenda";
+import { googleEvents } from "@/server/services/google-agenda";
+import { addDays } from "@/domain/dates";
 import { STATUS_LABEL } from "@/domain/enums";
 import { fmtDateTime, fmtMoney } from "@/lib/format";
 import { requirePermission } from "@/server/context";
@@ -66,6 +69,10 @@ export default async function InicioPage() {
   const first = actor.name.split(" ")[0];
   const dateLabel = new Intl.DateTimeFormat("pt-BR", { dateStyle: "full", timeZone: "America/Sao_Paulo" }).format(now);
   const total = Math.max(1, d.byStatus.reduce((a, s) => a + s.count, 0));
+
+  const agendaToday = (await agendaMonth(actor, d.today.slice(0, 7))).events.filter((e) => e.date === d.today && e.kind !== "TAREFA" && e.kind !== "VENCIMENTO");
+  const gToday = await googleEvents(actor, d.today, addDays(d.today, 1));
+  const appts = [...agendaToday, ...gToday.events].sort((a, b) => (a.time ?? "99").localeCompare(b.time ?? "99"));
 
   return (
     <div className="text-[13px] [&_.text-sm]:text-[13px]">
@@ -196,6 +203,28 @@ export default async function InicioPage() {
         </section>
 
         <div className="space-y-4 lg:col-span-2">
+          <section className="card p-4" aria-label="Compromissos de hoje">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[15px] font-semibold text-brand-900">Compromissos de hoje</h2>
+              <Link href={`/agenda/compromisso/novo?data=${d.today}`} className="text-sm text-brand-700 hover:underline">+ Novo</Link>
+            </div>
+            {appts.length ? (
+              <ul className="mt-2 divide-y divide-slate-100">
+                {appts.map((e, i) => (
+                  <li key={i}>
+                    <Link href={e.href} {...(e.external ? { target: "_blank", rel: "noreferrer" } : {})} className="flex items-center gap-3 py-2 hover:bg-slate-50">
+                      <span className="w-20 shrink-0 text-xs font-semibold text-brand-700 tabular-nums">{e.time ? `${e.time}${e.endTime ? `–${e.endTime}` : ""}` : "Dia todo"}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm">{e.label}</span>
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${e.kind === "GOOGLE" ? "bg-blue-500" : "bg-teal-500"}`} aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-slate-500">Nada marcado para hoje.</p>
+            )}
+            {gToday.error && <p className="mt-2 text-xs text-amber-700">Google Agenda indisponível agora.</p>}
+          </section>
           <section className={`rounded-2xl border p-4 ${d.overdue > 0 ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50"}`} aria-label="Atrasadas">
             {d.overdue > 0 ? (
               <>

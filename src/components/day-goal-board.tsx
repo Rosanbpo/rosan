@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { addDayGoalFormAction, removeDayGoalFormAction } from "@/app/actions/day-goal";
-import { FinishMini } from "@/components/task-timer";
+import { FinishMini, TimerMini } from "@/components/task-timer";
 import type { dayGoal } from "@/server/services/day-goal";
 
 type Goal = Awaited<ReturnType<typeof dayGoal>>;
@@ -35,7 +35,7 @@ export function DayGoalBoard({ goal }: { goal: Goal }) {
                 <Link href={`/tarefas/${t.id}`} className={`block truncate text-sm font-medium hover:underline ${t.done ? "text-slate-400 line-through" : "text-brand-900"}`}>{t.title}</Link>
                 {t.client && <p className="truncate text-xs text-slate-500">{t.client}</p>}
               </div>
-              {!t.done && <Link href={`/foco?tarefa=${t.id}`} className="btn-secondary btn-sm">Focar</Link>}
+              {!t.done && <TimerMini taskId={t.id} runningSince={null} />}
               {!t.done && <FinishMini taskId={t.id} />}
               {!t.done && (
                 <form action={removeDayGoalFormAction}>
