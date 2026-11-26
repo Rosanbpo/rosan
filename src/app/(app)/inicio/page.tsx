@@ -131,44 +131,65 @@ export default async function InicioPage() {
       </div>
 
       <div className="mb-4 grid gap-4 lg:grid-cols-5">
-        <section className="card lg:col-span-3" aria-label="Seu dia">
+        <section className="card lg:col-span-3" aria-label="Para hoje">
           <div className="flex items-center justify-between border-b border-hair px-5 py-3">
-            <h2 className="text-[15px] font-semibold text-brand-900">Seu dia</h2>
-            <Link href="/hoje" className="text-sm text-brand-700 hover:underline">Ver o dia completo →</Link>
+            <h2 className="text-[15px] font-semibold text-brand-900">Para hoje</h2>
+            <Link href="/hoje" className="text-sm text-brand-700 hover:underline">Ver tudo →</Link>
           </div>
           {d.dayTasks.length ? (
-            <ol className="px-5 py-4">
-              {d.dayTasks.map((t, i) => {
-                const running = t.runningSince !== null;
-                const time = t.dueAt ? new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }).format(t.dueAt) : "";
-                return (
-                  <li key={t.id} className="relative flex gap-3 pb-3 last:pb-0">
-                    <span className="w-11 shrink-0 pt-2 text-right text-xs text-slate-500 tabular-nums">{time}</span>
-                    <span aria-hidden className="relative flex w-3 shrink-0 justify-center">
-                      {i < d.dayTasks.length - 1 && <span className="absolute top-4 -bottom-3 w-px bg-hair" />}
-                      <span className={`mt-3 h-2.5 w-2.5 rounded-full border-2 ${running ? "border-gold bg-gold" : "border-slate-300 bg-white"}`} />
-                    </span>
-                    <div className={`min-w-0 flex-1 rounded-xl border p-3 ${running ? "border-2 border-gold" : "border-hair"}`}>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-[11px] font-semibold text-brand-700">{initialsOf(t.client)}</span>
-                        <div className="min-w-0 flex-1">
-                          <Link href={`/tarefas/${t.id}`} className="block truncate font-medium text-brand-900 hover:underline">{t.title}</Link>
-                          <p className="truncate text-xs text-slate-500">{t.client}{running && " · rodando"}</p>
-                        </div>
-                        {t.canTime && <TimerMini taskId={t.id} runningSince={t.runningSince} />}
-                        {t.canTime && <FinishMini taskId={t.id} />}
-                      </div>
+            <div className="space-y-4 px-5 py-4">
+              {(() => {
+                const running = d.dayTasks.filter((t) => t.runningSince !== null);
+                const groups = new Map<string, typeof d.dayTasks>();
+                for (const t of d.dayTasks.filter((t) => t.runningSince === null)) groups.set(t.client, [...(groups.get(t.client) ?? []), t]);
+                const row = (t: (typeof d.dayTasks)[number]) => (
+                  <li key={t.id} className="flex items-center gap-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/tarefas/${t.id}`} className="block truncate text-sm font-medium text-brand-900 hover:underline">{t.title}</Link>
                       {t.checkTotal > 0 && (
-                        <div className="mt-2">
-                          <div className="h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-gold" style={{ width: `${(t.checkDone / t.checkTotal) * 100}%` }} /></div>
-                          <p className="mt-1 text-[11px] text-slate-500">Checklist {t.checkDone} de {t.checkTotal}</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <div className="h-1 w-24 rounded-full bg-slate-100"><div className="h-full rounded-full bg-gold" style={{ width: `${(t.checkDone / t.checkTotal) * 100}%` }} /></div>
+                          <span className="text-[11px] text-slate-500">{t.checkDone}/{t.checkTotal}</span>
                         </div>
                       )}
                     </div>
+                    {t.canTime && <TimerMini taskId={t.id} runningSince={t.runningSince} />}
+                    {t.canTime && <FinishMini taskId={t.id} />}
                   </li>
                 );
-              })}
-            </ol>
+                return (
+                  <>
+                    {running.length > 0 && (
+                      <div className="rounded-xl border-2 border-gold bg-amber-50/40 px-4 py-2">
+                        <p className="text-xs font-semibold text-amber-800">Rodando agora</p>
+                        <ul className="divide-y divide-amber-100">
+                          {running.map((t) => (
+                            <li key={t.id} className="flex items-center gap-3 py-2">
+                              <div className="min-w-0 flex-1">
+                                <Link href={`/tarefas/${t.id}`} className="block truncate text-sm font-medium text-brand-900 hover:underline">{t.title}</Link>
+                                <p className="truncate text-xs text-slate-500">{t.client}</p>
+                              </div>
+                              {t.canTime && <TimerMini taskId={t.id} runningSince={t.runningSince} />}
+                              {t.canTime && <FinishMini taskId={t.id} />}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {[...groups.entries()].map(([client, list]) => (
+                      <div key={client} className="rounded-xl border border-hair px-4 py-2">
+                        <p className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-50 text-[10px] text-brand-700">{initialsOf(client)}</span>
+                          {client}
+                          <span className="font-normal text-slate-400">{list.length} {list.length === 1 ? "tarefa" : "tarefas"}</span>
+                        </p>
+                        <ul className="divide-y divide-slate-100">{list.map(row)}</ul>
+                      </div>
+                    ))}
+                  </>
+                );
+              })()}
+            </div>
           ) : (
             <p className="p-5 text-sm text-slate-500">{d.doneToday > 0 ? "Tudo feito por hoje. ✨" : "Nada para hoje."}</p>
           )}
@@ -199,7 +220,7 @@ export default async function InicioPage() {
                 {d.next7.slice(0, 5).map((t) => (
                   <li key={t.id} className="flex items-center justify-between gap-3 py-2 text-sm">
                     <div className="min-w-0"><Link href={`/tarefas/${t.id}`} className="block truncate hover:underline">{t.title}</Link><p className="truncate text-xs text-slate-500">{t.client?.tradeName ?? "Interna"}</p></div>
-                    <span className="shrink-0 text-xs text-slate-500">{fmtDateTime(t.dueAt)}</span>
+                    <span className="shrink-0 text-xs text-slate-500">{new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" }).format(t.dueAt)}</span>
                   </li>
                 ))}
               </ul>
