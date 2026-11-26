@@ -8,7 +8,9 @@ import { prisma } from "../db";
 import { clientScope } from "./access";
 import { buildTaskWhere } from "./tasks";
 
-export type AgendaEvent = { date: LocalDate; kind: "REUNIAO" | "TAREFA" | "LEAD" | "CONTRATO" | "VENCIMENTO"; label: string; href: string };
+export type AgendaEvent = { date: LocalDate; kind: "REUNIAO" | "TAREFA" | "LEAD" | "CONTRATO" | "VENCIMENTO" | "GOOGLE"; label: string; href: string; time?: string; endTime?: string; external?: boolean };
+
+const hhmmLocal = (d: Date) => new Intl.DateTimeFormat("pt-BR", { timeZone: APP_TIMEZONE, hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
 
 const next = (y: number, m: number) => (m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 });
 
@@ -29,7 +31,7 @@ export async function agendaMonth(actor: Actor, month: string) {
     orderBy: { dueAt: "asc" },
     take: 600,
   });
-  for (const t of tasks) events.push({ date: instantToLocalDate(t.dueAt!, APP_TIMEZONE), kind: t.category === "REUNIAO_CLIENTE" ? "REUNIAO" : "TAREFA", label: `${t.title}${t.client ? ` · ${t.client.tradeName}` : ""}`, href: `/tarefas/${t.id}` });
+  for (const t of tasks) events.push({ date: instantToLocalDate(t.dueAt!, APP_TIMEZONE), kind: t.category === "REUNIAO_CLIENTE" ? "REUNIAO" : "TAREFA", label: `${t.title}${t.client ? ` · ${t.client.tradeName}` : ""}`, href: `/tarefas/${t.id}`, time: hhmmLocal(t.dueAt!) === "00:00" ? undefined : hhmmLocal(t.dueAt!) });
 
   if (can(actor, "crm.manage")) {
     const leads = await prisma.lead.findMany({ where: { organizationId: actor.organizationId, nextActionAt: { gte: new Date(`${first}T00:00:00Z`), lt: new Date(`${after}T00:00:00Z`) }, stage: { notIn: ["GANHO", "PERDIDO"] } }, select: { id: true, companyName: true, nextAction: true, nextActionAt: true } });
@@ -48,7 +50,7 @@ export async function agendaMonth(actor: Actor, month: string) {
     const dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
     for (const c of clients) for (const d of [c.billingDay, c.billingDay2]) if (d) events.push({ date: makeLocalDate(y, m, Math.min(d, dim)), kind: "VENCIMENTO", label: `Vence mensalidade · ${c.tradeName}`, href: `/clientes/${c.id}?aba=financeiro` });
   }
-  events.sort((a, b) => a.date.localeCompare(b.date));
+  events.sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? ""));
   return { first, days: new Date(Date.UTC(y, m, 0)).getUTCDate(), events, addDays };
 }
 
@@ -62,7 +64,7 @@ export async function feedEvents(actor: Actor, origin: string): Promise<IcsEvent
     const month = `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, "0")}`;
     const { events } = await agendaMonth(actor, month);
     for (const e of events) {
-      const emoji = { REUNIAO: "🤝", TAREFA: "✅", LEAD: "📞", CONTRATO: "🔄", VENCIMENTO: "💰" }[e.kind];
+      const emoji = { REUNIAO: "🤝", TAREFA: "✅", LEAD: "📞", CONTRATO: "🔄", VENCIMENTO: "💰" }[e.kind as Exclude<AgendaEvent["kind"], "GOOGLE">];
       out.push({ uid: `${e.kind}-${e.href}-${e.date}@centralbpo`.replace(/[^\w@.:/-]/g, "_"), date: e.date, summary: `${emoji} ${e.label}`, url: origin + e.href });
     }
   }

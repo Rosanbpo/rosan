@@ -1273,6 +1273,14 @@ model EsteiraCustom {
 }
 
 /// Link secreto da agenda de cada usuário, para assinar no Google Calendar (somente leitura).
+/// Agenda do Google (endereço secreto iCal) que o usuário colou para ver os compromissos no sistema.
+model AgendaImport {
+  userId         String   @id
+  organizationId String
+  url            String
+  createdAt      DateTime @default(now())
+}
+
 model AgendaFeed {
   userId         String   @id
   organizationId String
