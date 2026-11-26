@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { pauseTimerAction, startTimerAction } from "@/app/actions/timer";
+import { pauseTimerAction, recordFocusAction, startTimerAction } from "@/app/actions/timer";
 
 export interface FocusTask {
   id: string;
@@ -21,7 +21,6 @@ interface Saved {
   tiny: boolean;
 }
 const KEY = "rosan-pomodoro-v1";
-const DAYKEY = "rosan-pomodoro-dia";
 const PRESETS = [
   { id: "25", label: "25 min foco · 5 pausa", focus: 25, short: 5, long: 15 },
   { id: "50", label: "50 min foco · 10 pausa", focus: 50, short: 10, long: 25 },
@@ -33,7 +32,6 @@ const mmss = (ms: number) => {
   const s = Math.max(0, Math.ceil(ms / 1000));
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 };
-const today = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
 
 function beep() {
   try {
@@ -50,13 +48,13 @@ function beep() {
   } catch {}
 }
 
-export function Pomodoro({ tasks, running, initialTaskId }: { tasks: FocusTask[]; running: string | null; initialTaskId?: string | null }) {
+export function Pomodoro({ tasks, running, initialTaskId, doneToday = 0 }: { tasks: FocusTask[]; running: string | null; initialTaskId?: string | null; doneToday?: number }) {
   const [preset, setPreset] = useState<(typeof PRESETS)[number]>(PRESETS[0]);
   const [taskId, setTaskId] = useState<string>(initialTaskId && tasks.some((t) => t.id === initialTaskId) ? initialTaskId : running ?? tasks[0]?.id ?? "");
   const [track, setTrack] = useState(true);
   const [state, setState] = useState<Saved | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [done, setDone] = useState(0);
+  const [done, setDone] = useState(doneToday);
   const [msg, setMsg] = useState<string | null>(null);
   const finished = useRef(false);
 
@@ -64,8 +62,6 @@ export function Pomodoro({ tasks, running, initialTaskId }: { tasks: FocusTask[]
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) setState(JSON.parse(raw) as Saved);
-      const d = JSON.parse(localStorage.getItem(DAYKEY) ?? "null") as { day: string; n: number } | null;
-      if (d?.day === today()) setDone(d.n);
     } catch {}
   }, []);
 
@@ -108,9 +104,7 @@ export function Pomodoro({ tasks, running, initialTaskId }: { tasks: FocusTask[]
     if (wasFocus) {
       const n = done + 1;
       setDone(n);
-      try {
-        localStorage.setItem(DAYKEY, JSON.stringify({ day: today(), n }));
-      } catch {}
+      void recordFocusAction({ taskId: state.taskId, startedAt: state.endsAt - state.total, seconds: state.total / 1000, plannedMinutes: state.total / 60000, completed: true, tiny: state.tiny });
       void stopTracking();
     }
     if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification(wasFocus ? "Foco concluído. Hora de uma pausa." : "Pausa acabou. Vamos voltar?");
@@ -154,7 +148,7 @@ export function Pomodoro({ tasks, running, initialTaskId }: { tasks: FocusTask[]
           <div className="flex flex-wrap justify-center gap-2">
             {state?.phase === "focus" ? (
               <>
-                <button className="btn-secondary" onClick={async () => { await stopTracking(); persist(null); }}>Parar</button>
+                <button className="btn-secondary" onClick={async () => { await stopTracking(); void recordFocusAction({ taskId: state.taskId, startedAt: state.endsAt - state.total, seconds: (state.total - Math.max(0, remaining)) / 1000, plannedMinutes: state.total / 60000, completed: false, tiny: state.tiny }); persist(null); }}>Parar</button>
                 <button className="btn-secondary" onClick={() => persist({ ...state, endsAt: state.endsAt + 5 * 60000, total: state.total + 5 * 60000 })}>+5 min</button>
               </>
             ) : (

@@ -26,7 +26,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
   const crm = can(actor, "crm.manage");
   const items: NavItem[] = [
     ...(dash ? [{ group: "Operação", href: "/inicio", label: "Início", icon: "inicio" as const }] : []),
-    { group: "Operação", href: "/tarefas", label: "Tarefas", icon: "tarefas", badge: myOverdue, match: ["/foco", "/pendencias", "/avulsas", "/agenda", "/minha-operacao"] },
+    { group: "Operação", href: "/tarefas", label: "Tarefas", icon: "tarefas", badge: myOverdue, match: ["/foco", "/resumo-dia", "/pendencias", "/avulsas", "/agenda", "/minha-operacao"] },
     ...(can(actor, "recurrences.manage") ? [{ group: "Operação", href: "/rotinas", label: "Rotinas", icon: "rotinas" as const }] : []),
     { group: "Operação", href: "/projetos", label: "Projetos", icon: "projetos" },
     { group: "Clientes", href: "/clientes", label: "Clientes", icon: "clientes", match: ["/central", "/cofre"] },
@@ -43,7 +43,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
     { group: "Sistema", href: "/conta", label: "Minha conta", icon: "conta" },
   ];
   const sections: SectionDef[] = [
-    { tabs: [{ href: "/tarefas", label: "Tarefas" }, { href: "/foco", label: "Foco" }, { href: "/pendencias", label: "Pendências" }, { href: "/avulsas", label: "Avulsas" }, ...(dash ? [{ href: "/agenda", label: "Agenda" }] : []), { href: "/minha-operacao", label: "Meu painel" }] },
+    { tabs: [{ href: "/tarefas", label: "Tarefas" }, { href: "/foco", label: "Foco" }, { href: "/foco/resumo", label: "Resumo do foco" }, { href: "/resumo-dia", label: "Resumo do dia" }, { href: "/pendencias", label: "Pendências" }, { href: "/avulsas", label: "Avulsas" }, ...(dash ? [{ href: "/agenda", label: "Agenda" }] : []), { href: "/minha-operacao", label: "Meu painel" }] },
     { tabs: [{ href: "/clientes", label: "Clientes" }, ...(dash ? [{ href: "/central", label: "Central" }] : []), { href: "/cofre", label: "Cofre de acessos" }] },
     ...(crm ? [{ tabs: [{ href: "/crm", label: "Funil" }, { href: "/comercial", label: "Painel comercial" }] }] : []),
     ...(crm ? [{ tabs: [{ href: "/propostas", label: "Propostas" }, ...(can(actor, "contracts.manage") ? [{ href: "/contratos", label: "Contratos" }] : [])] }] : []),

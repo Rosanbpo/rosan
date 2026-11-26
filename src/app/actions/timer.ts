@@ -26,3 +26,11 @@ export async function finishTaskAction(taskId: string, _: ActionState): Promise<
     return res.status === "EM_REVISAO" ? "Tarefa enviada para revisão." : "Tarefa concluída.";
   }, PATHS);
 }
+
+export async function recordFocusAction(input: { taskId: string | null; startedAt: number; seconds: number; plannedMinutes: number; completed: boolean; tiny: boolean }) {
+  const { recordFocus } = await import("@/server/services/focus");
+  const { getActor } = await import("@/server/context");
+  const actor = await getActor();
+  if (!actor) return;
+  await recordFocus(actor, input);
+}
