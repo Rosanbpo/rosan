@@ -1310,6 +1310,22 @@ model DayGoalTask {
   @@index([taskId])
 }
 
+/// Sessão de foco (pomodoro). Só entram sessões com pelo menos 1 minuto.
+model FocusSession {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  taskId         String?
+  clientId       String?
+  startedAt      DateTime
+  seconds        Int
+  plannedMinutes Int
+  completed      Boolean
+  tiny           Boolean  @default(false)
+
+  @@index([userId, startedAt])
+}
+
 model AgendaFeed {
   userId         String   @id
   organizationId String

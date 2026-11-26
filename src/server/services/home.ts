@@ -58,7 +58,7 @@ export async function homeOverview(actor: Actor, now = new Date()) {
       where: w({ ...OPEN, dueAt: { gte: todayStart, lt: tomorrowStart } }),
       select: {
         id: true, title: true, status: true, dueAt: true, assigneeId: true, reviewerId: true, createdById: true, origin: true,
-        client: { select: { tradeName: true } },
+        client: { select: { id: true, tradeName: true, logo: { select: { clientId: true } } } },
         checklistItems: { select: { done: true } },
       },
       orderBy: [{ dueAt: "asc" }, { title: "asc" }],
@@ -117,6 +117,8 @@ export async function homeOverview(actor: Actor, now = new Date()) {
     title: t.title,
     dueAt: t.dueAt,
     client: t.client?.tradeName ?? "Interna",
+    clientId: t.client?.id ?? null,
+    hasLogo: !!t.client?.logo,
     checkDone: t.checklistItems.filter((c) => c.done).length,
     checkTotal: t.checklistItems.length,
     runningSince: running?.taskId === t.id ? running.startedAt.toISOString() : null,

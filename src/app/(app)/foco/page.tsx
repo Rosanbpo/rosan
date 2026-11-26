@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/ui/layout";
 import { Pomodoro } from "@/components/pomodoro";
 import { isOverdue } from "@/domain/task-rules";
 import { requireActor } from "@/server/context";
+import { focusStats } from "@/server/services/focus";
 import { listTasks } from "@/server/services/tasks";
 import { getRunningTimer } from "@/server/services/timer";
 
@@ -12,6 +13,7 @@ export default async function FocoPage({ searchParams }: { searchParams: Promise
   const actor = await requireActor();
   const [list, running] = await Promise.all([listTasks(actor, { assigneeId: actor.userId, open: true, pageSize: 40 }), getRunningTimer(actor)]);
   const now = new Date();
+  const stats = await focusStats(actor, now);
   let extra: { id: string; title: string; client: string | null; overdue: boolean }[] = [];
   if (sp.tarefa && !list.rows.some((t) => t.id === sp.tarefa)) {
     const r = await listTasks(actor, { open: true, pageSize: 500 });
@@ -26,7 +28,7 @@ export default async function FocoPage({ searchParams }: { searchParams: Promise
   return (
     <>
       <PageHeader title="Foco" description="Trabalhe em blocos curtos com pausas. Escolha uma tarefa, aperte começar e deixe o resto para a pausa." />
-      <Pomodoro tasks={all} running={running?.taskId ?? null} initialTaskId={sp.tarefa ?? null} />
+      <Pomodoro tasks={all} running={running?.taskId ?? null} initialTaskId={sp.tarefa ?? null} doneToday={stats.today.n} />
     </>
   );
 }

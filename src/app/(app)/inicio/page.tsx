@@ -86,6 +86,7 @@ export default async function InicioPage() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-4">
+          <Link href="/resumo-dia" className="rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-white hover:bg-white/20">Resumo do dia</Link>
           <Link href="/foco" className="rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-white hover:bg-white/20">Focar agora</Link>
           <div className="text-right">
             <p className="text-xs text-brand-200">Horas hoje</p>
@@ -149,6 +150,7 @@ export default async function InicioPage() {
                 const running = d.dayTasks.filter((t) => t.runningSince !== null);
                 const groups = new Map<string, typeof d.dayTasks>();
                 for (const t of d.dayTasks.filter((t) => t.runningSince === null)) groups.set(t.client, [...(groups.get(t.client) ?? []), t]);
+                const meta = new Map(d.dayTasks.map((t) => [t.client, { id: t.clientId, logo: t.hasLogo }]));
                 const row = (t: (typeof d.dayTasks)[number]) => (
                   <li key={t.id} className="flex items-center gap-3 py-2">
                     <div className="min-w-0 flex-1">
@@ -183,16 +185,27 @@ export default async function InicioPage() {
                         </ul>
                       </div>
                     )}
-                    {[...groups.entries()].map(([client, list]) => (
-                      <div key={client} className="rounded-xl border border-hair px-4 py-2">
-                        <p className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-50 text-[10px] text-brand-700">{initialsOf(client)}</span>
-                          {client}
-                          <span className="font-normal text-slate-400">{list.length} {list.length === 1 ? "tarefa" : "tarefas"}</span>
-                        </p>
-                        <ul className="divide-y divide-slate-100">{list.map(row)}</ul>
-                      </div>
-                    ))}
+                    {[...groups.entries()].map(([client, list]) => {
+                      const m = meta.get(client);
+                      return (
+                        <details key={client} open className="group rounded-xl border border-hair px-4 py-2">
+                          <summary className="flex cursor-pointer list-none items-center gap-2.5 py-1 text-sm font-semibold text-slate-700">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-hair bg-brand-50 text-[11px] text-brand-700">
+                              {m?.logo && m.id ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={`/clientes/${m.id}/logo`} alt="" className="h-full w-full bg-white object-contain" />
+                              ) : (
+                                initialsOf(client)
+                              )}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate">{m?.id ? <Link href={`/clientes/${m.id}`} className="hover:underline">{client}</Link> : client}</span>
+                            <span className="text-xs font-normal text-slate-400">{list.length} {list.length === 1 ? "tarefa" : "tarefas"}</span>
+                            <span aria-hidden className="text-slate-400 transition group-open:rotate-180">▾</span>
+                          </summary>
+                          <ul className="divide-y divide-slate-100 border-t border-slate-100">{list.map(row)}</ul>
+                        </details>
+                      );
+                    })}
                   </>
                 );
               })()}
