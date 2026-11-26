@@ -18,6 +18,7 @@ import { currentCompetence } from "@/server/services/closings";
 export const metadata = { title: "Agenda" };
 
 const STYLE: Record<AgendaEvent["kind"], { cls: string; emoji: string; label: string }> = {
+  COMPROMISSO: { cls: "bg-teal-50 text-teal-800 ring-teal-200", emoji: "📌", label: "Meu compromisso" },
   GOOGLE: { cls: "bg-blue-50 text-blue-800 ring-blue-200", emoji: "📅", label: "Google Agenda" },
   REUNIAO: { cls: "bg-violet-50 text-violet-800 ring-violet-200", emoji: "🤝", label: "Reunião" },
   TAREFA: { cls: "bg-sky-50 text-sky-800 ring-sky-200", emoji: "✅", label: "Prazo de tarefa" },
@@ -74,7 +75,8 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
             <Link href="/agenda?vista=mes" className="btn-secondary btn-sm ml-2">Hoje</Link>
           </>
         )}
-        <span className="ml-auto inline-flex overflow-hidden rounded-lg border border-slate-200 text-xs font-medium">
+        <Link href={`/agenda/compromisso/novo?data=${todayKey}`} className="btn-primary btn-sm ml-auto">+ Novo compromisso</Link>
+        <span className="inline-flex overflow-hidden rounded-lg border border-slate-200 text-xs font-medium">
           <Link href="/agenda" className={`px-3 py-1.5 ${vista === "semana" ? "bg-brand-900 text-white" : "bg-white text-slate-600"}`}>Semana</Link>
           <Link href="/agenda?vista=mes" className={`px-3 py-1.5 ${vista === "mes" ? "bg-brand-900 text-white" : "bg-white text-slate-600"}`}>Mês</Link>
         </span>
@@ -88,7 +90,10 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
             const today = d === todayKey;
             return (
               <section key={d} aria-label={d} className={`card min-h-40 p-2.5 ${today ? "ring-2 ring-sky-300" : ""}`}>
-                <h3 className={`mb-2 text-xs font-semibold ${today ? "text-brand-700" : "text-slate-500"}`}>{["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][i]} {d.slice(8)}</h3>
+                <h3 className={`mb-2 flex items-center justify-between text-xs font-semibold ${today ? "text-brand-700" : "text-slate-500"}`}>
+                  <span>{["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][i]} {d.slice(8)}</span>
+                  <Link href={`/agenda/compromisso/novo?data=${d}`} aria-label={`Novo compromisso em ${d}`} title="Novo compromisso" className="rounded px-1.5 text-base leading-none text-slate-400 hover:bg-slate-100 hover:text-brand-700">+</Link>
+                </h3>
                 {list.length ? (
                   <ul className="space-y-1.5">
                     {list.map((e, k) => (
@@ -119,7 +124,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
             const list = (d && by.get(key)) || [];
             return (
               <div key={i} className={`min-h-28 border-b border-r border-hair p-1.5 ${d ? "" : "bg-slate-50/60"} ${key === todayKey ? "bg-sky-50/50" : ""}`}>
-                {d && <p className={`mb-1 text-xs ${key === todayKey ? "font-bold text-brand-700" : "text-slate-500"}`}>{d}</p>}
+                {d && <p className={`mb-1 flex justify-between text-xs ${key === todayKey ? "font-bold text-brand-700" : "text-slate-500"}`}><span>{d}</span><Link href={`/agenda/compromisso/novo?data=${key}`} aria-label={`Novo compromisso em ${key}`} className="px-1 text-slate-400 hover:text-brand-700">+</Link></p>}
                 <ul className="space-y-1">
                   {list.slice(0, 4).map((e, k) => <li key={k}><Link href={e.href} title={e.label} className={`block truncate rounded px-1.5 py-0.5 text-[11px] ring-1 ring-inset ${STYLE[e.kind].cls}`}>{e.time ? `${e.time} ` : ""}{STYLE[e.kind].emoji} {e.label}</Link></li>)}
                   {list.length > 4 && <li className="px-1 text-[11px] text-slate-500">+{list.length - 4} mais</li>}

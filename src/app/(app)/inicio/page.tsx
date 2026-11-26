@@ -1,5 +1,7 @@
 import { JOURNEY_STAGES, STAGE_LABEL } from "@/domain/enums";
 import Link from "next/link";
+import { DayGoalBoard } from "@/components/day-goal-board";
+import { dayGoal } from "@/server/services/day-goal";
 import { STATUS_LABEL } from "@/domain/enums";
 import { fmtDateTime, fmtMoney } from "@/lib/format";
 import { requirePermission } from "@/server/context";
@@ -59,7 +61,7 @@ function Stat({ href, icon, label, value, cls }: { href: string; icon: string; l
 export default async function InicioPage() {
   const actor = await requirePermission("dashboard.view");
   const now = new Date();
-  const [d, m, dx] = await Promise.all([homeOverview(actor, now), managerDashboard(actor, {}, now), diagnosisInbox(actor)]);
+  const [d, m, dx, goal] = await Promise.all([homeOverview(actor, now), managerDashboard(actor, {}, now), diagnosisInbox(actor), dayGoal(actor, now)]);
   const maxLoad = Math.max(1, ...m.workload.map((w) => w.open));
   const first = actor.name.split(" ")[0];
   const dateLabel = new Intl.DateTimeFormat("pt-BR", { dateStyle: "full", timeZone: "America/Sao_Paulo" }).format(now);
@@ -77,6 +79,7 @@ export default async function InicioPage() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-4">
+          <Link href="/foco" className="rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-white hover:bg-white/20">Focar agora</Link>
           <div className="text-right">
             <p className="text-xs text-brand-200">Horas hoje</p>
             <p className="text-lg font-semibold tabular-nums">{d.hoursToday}h</p>
@@ -84,6 +87,8 @@ export default async function InicioPage() {
           <ProgressRing done={d.doneToday} total={d.dayTasks.length + d.doneToday} />
         </div>
       </section>
+
+      <DayGoalBoard goal={goal} />
 
       {dx.unseen.length > 0 && (
         <section className="mb-4 rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4" role="status" aria-label="Diagnósticos respondidos">

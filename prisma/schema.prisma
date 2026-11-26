@@ -1281,6 +1281,35 @@ model AgendaImport {
   createdAt      DateTime @default(now())
 }
 
+/// Compromisso criado na agenda do sistema (reunião, ligação, lembrete). Pertence a quem criou.
+model Appointment {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  title          String
+  date           DateTime @db.Date
+  startTime      String?
+  endTime        String?
+  notes          String?
+  clientId       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId, date])
+}
+
+/// Tarefas que formam a meta do dia: cumpridas, o dia está vencido.
+model DayGoalTask {
+  userId         String
+  organizationId String
+  date           DateTime @db.Date
+  taskId         String
+  createdAt      DateTime @default(now())
+
+  @@id([userId, date, taskId])
+  @@index([taskId])
+}
+
 model AgendaFeed {
   userId         String   @id
   organizationId String

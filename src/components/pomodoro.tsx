@@ -50,9 +50,9 @@ function beep() {
   } catch {}
 }
 
-export function Pomodoro({ tasks, running }: { tasks: FocusTask[]; running: string | null }) {
+export function Pomodoro({ tasks, running, initialTaskId }: { tasks: FocusTask[]; running: string | null; initialTaskId?: string | null }) {
   const [preset, setPreset] = useState<(typeof PRESETS)[number]>(PRESETS[0]);
-  const [taskId, setTaskId] = useState<string>(running ?? tasks[0]?.id ?? "");
+  const [taskId, setTaskId] = useState<string>(initialTaskId && tasks.some((t) => t.id === initialTaskId) ? initialTaskId : running ?? tasks[0]?.id ?? "");
   const [track, setTrack] = useState(true);
   const [state, setState] = useState<Saved | null>(null);
   const [now, setNow] = useState(() => Date.now());
