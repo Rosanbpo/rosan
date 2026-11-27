@@ -1,3 +1,4 @@
+import { openRosanLifeAction } from "@/app/actions/rosan-life-access";
 import {
   SEMAFORO_LABEL,
   hasData,
@@ -61,9 +62,11 @@ export function SemaforoBadge({
 export function FollowCard({
   s,
   hasEmail,
+  clientId,
 }: {
   s: FollowState | undefined;
   hasEmail: boolean;
+  clientId: string;
 }) {
   const base = rosanLifeBase();
   const note = followNote(s, hasEmail);
@@ -75,20 +78,15 @@ export function FollowCard({
           <SemaforoBadge s={s} hasEmail={hasEmail} />
         </div>
         {base && hasData(s) && (
-          <a
-            href={`${base}/consultora`}
-            target="_blank"
-            rel="noreferrer"
-            className="btn-primary"
-          >
-            Abrir no ROSAN LIFE
-          </a>
+          <form action={openRosanLifeAction.bind(null, clientId)}>
+            <button className="btn-primary">Abrir no ROSAN LIFE</button>
+          </form>
         )}
       </div>
       {note && (
         <p className="mt-3 text-sm text-slate-600">
           {note === "Conta criada, sem permissão de acesso"
-            ? "A cliente criou a conta, mas ainda não permitiu o seu acesso. Peça o acesso em Painel da Consultora, no app, e ela decide dentro do aplicativo."
+            ? "A cliente criou a conta, mas ainda não permitiu o seu acesso. Peça a autorização na aba Acesso ao ROSAN LIFE; ela decide dentro do aplicativo."
             : note === "Ainda não criou a conta"
               ? "A cliente ainda não criou a conta no app. Envie o convite pela aba Consultoria."
               : note}
