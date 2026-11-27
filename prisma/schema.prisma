@@ -20,14 +20,14 @@ model Organization {
   pricingSheet    PricingSheet?
   contracts       Contract[]
   closings        ClientClosing[]
-  id              String          @id @default(cuid())
+  id              String           @id @default(cuid())
   name            String
-  timezone        String          @default("America/Sao_Paulo")
+  timezone        String           @default("America/Sao_Paulo")
   /// Custo médio da hora de trabalho (R$), usado na rentabilidade por cliente.
-  hourCost        Decimal?        @db.Decimal(10, 2)
+  hourCost        Decimal?         @db.Decimal(10, 2)
   /// Meta de receita recorrente mensal (R$) e data-alvo.
-  revenueGoal     Decimal?        @db.Decimal(12, 2)
-  revenueGoalDate DateTime?       @db.Date
+  revenueGoal     Decimal?         @db.Decimal(12, 2)
+  revenueGoalDate DateTime?        @db.Date
   /// Horas mensais disponíveis da equipe (capacidade).
   capacityHours   Int?
   /// Dados da empresa usados em propostas e contratos.
@@ -37,8 +37,8 @@ model Organization {
   phone           String?
   website         String?
   city            String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   memberships   Membership[]
   leads         Lead[]
@@ -170,6 +170,9 @@ model Client {
   contactChannels       String?
   status                ClientStatus          @default(IMPLANTACAO)
   services              String[]
+  /// Linhas de serviço contratadas (BPO e/ou Consultoria PF). Define quais abas aparecem no painel.
+  serviceLines          ServiceLine[]         @default([BPO_FINANCEIRO])
+  pfJourney             PfJourney?
   startDate             DateTime?             @db.Date
   notes                 String?
   /// Mensalidade contratada (R$) e dia de vencimento do boleto/fatura.
@@ -654,10 +657,10 @@ model Lead {
   convertedClient Client?        @relation(fields: [convertedClientId], references: [id], onDelete: SetNull)
   activities      LeadActivity[]
   proposals       Proposal[]
+  script          LeadScript?
 
   @@index([organizationId, stage])
   @@index([organizationId, nextActionAt])
-  script LeadScript?
 }
 
 /// Missão, visão e valores da empresa (uma linha por organização).
@@ -1337,22 +1340,22 @@ enum PortalUserStatus {
 }
 
 model PortalUser {
-  id               String           @id @default(cuid())
-  organizationId   String
-  email            String           @unique
-  name             String
-  passwordHash     String?
-  status           PortalUserStatus @default(CONVIDADO)
-  inviteTokenHash  String?          @unique
-  inviteExpiresAt  DateTime?
-  resetTokenHash   String?          @unique
-  resetExpiresAt   DateTime?
-  failedLogins     Int              @default(0)
-  lockedUntil      DateTime?
-  lastLoginAt      DateTime?
-  createdById      String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id              String           @id @default(cuid())
+  organizationId  String
+  email           String           @unique
+  name            String
+  passwordHash    String?
+  status          PortalUserStatus @default(CONVIDADO)
+  inviteTokenHash String?          @unique
+  inviteExpiresAt DateTime?
+  resetTokenHash  String?          @unique
+  resetExpiresAt  DateTime?
+  failedLogins    Int              @default(0)
+  lockedUntil     DateTime?
+  lastLoginAt     DateTime?
+  createdById     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   accesses PortalAccess[]
   sessions PortalSession[]
@@ -1365,7 +1368,7 @@ model PortalAccess {
   portalUserId   String
   clientId       String
   organizationId String
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
   revokedAt      DateTime?
 
   user   PortalUser @relation(fields: [portalUserId], references: [id], onDelete: Cascade)
@@ -1615,4 +1618,67 @@ model ProcedureImage {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
+}
+
+enum ServiceLine {
+  BPO_FINANCEIRO
+  CONSULTORIA_PF
+}
+
+enum PfStatus {
+  NOVO_INTERESSADO
+  AGUARDANDO_CONTRATACAO
+  CONTRATACAO_CONFIRMADA
+  AGUARDANDO_DIAGNOSTICO
+  DIAGNOSTICO_EM_PREPARACAO
+  PRIMEIRA_REUNIAO_AGENDADA
+  DIAGNOSTICO_REALIZADO
+  PLANEJAMENTO_EM_ELABORACAO
+  SEGUNDA_REUNIAO_AGENDADA
+  CONSULTORIA_CONCLUIDA
+  AGUARDANDO_DECISAO
+  ATIVO_APLICATIVO
+  ATIVO_ACOMPANHAMENTO
+}
+
+enum PfContinuity {
+  SEGUIR_SOZINHO
+  ACOMPANHAMENTO_MENSAL
+}
+
+/// Jornada da Consultoria Financeira Pessoal de um cliente (30 dias + continuidade).
+/// A cobrança é feita fora do sistema (Conta Azul): aqui só se marca "pago".
+model PfJourney {
+  id             String           @id @default(cuid())
+  organizationId String
+  clientId       String           @unique
+  status         PfStatus         @default(NOVO_INTERESSADO)
+  startDate      DateTime?        @db.Date
+  meeting1At     DateTime?        @db.Date
+  meeting2At     DateTime?        @db.Date
+  appBonusStart  DateTime?        @db.Date
+  continuity     PfContinuity?
+  paidAt         DateTime?        @db.Date
+  /// Itens do checklist concluídos, no formato "etapa.índice".
+  doneItems      String[]
+  /// Convite do ROSAN LIFE enviado em.
+  appInvitedAt   DateTime?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  client         Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  history        PfJourneyEvent[]
+
+  @@index([organizationId, status])
+}
+
+model PfJourneyEvent {
+  id        String    @id @default(cuid())
+  journeyId String
+  actorId   String?
+  summary   String
+  createdAt DateTime  @default(now())
+  journey   PfJourney @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+
+  @@index([journeyId, createdAt])
 }

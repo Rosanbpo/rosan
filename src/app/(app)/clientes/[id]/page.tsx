@@ -84,6 +84,8 @@ import { ClientLogoBox } from "@/components/client-logo-box";
 import { getClosing, closingHistory, currentCompetence } from "@/server/services/closings";
 import { isCompetenceMonth } from "@/domain/closing";
 import { getClientLogo } from "@/server/services/client-logo";
+import { PfJourneyPanel } from "@/components/pf-journey-panel";
+import { getPfJourney } from "@/server/services/pf-journey";
 import { ConfirmAction } from "@/components/confirm-action";
 import { archiveClientAction, deleteClientAction } from "@/app/actions/clients";
 import { DeleteClient } from "@/components/delete-client";
@@ -120,6 +122,7 @@ const TABS: Array<{
     actor: Parameters<typeof can>[0],
     extras: { contracts: unknown[]; proposals: unknown[] },
     finance: unknown,
+    lines: readonly string[],
   ) => boolean;
 }> = [
   { key: "hoje", label: "Hoje", icon: Sun, show: () => true },
@@ -127,6 +130,7 @@ const TABS: Array<{
   { key: "dados", label: "Dados", icon: UserRound, show: () => true },
   { key: "cofre", label: "Cofre", icon: KeyRound, show: () => true },
   { key: "jornada", label: "Jornada", icon: Route, show: () => true },
+  { key: "consultoria", label: "Consultoria PF", icon: Route, show: (_a, _e, _f, lines) => lines.includes("CONSULTORIA_PF") },
   { key: "rotinas", label: "Rotina", icon: Repeat, show: () => true },
   { key: "pops", label: "Observações e POPs", icon: BookOpenCheck, show: () => true },
   { key: "pendencias", label: "Pendências", icon: Hourglass, show: () => true },
@@ -137,7 +141,7 @@ const TABS: Array<{
 
 const GROUPS: Array<{ key: string; label: string; icon: typeof Mail; keys: string[] }> = [
   { key: "g-resumo", label: "Resumo", icon: LayoutDashboard, keys: ["resumo", "hoje"] },
-  { key: "g-trabalho", label: "Trabalho", icon: Repeat, keys: ["rotinas", "pendencias", "jornada"] },
+  { key: "g-trabalho", label: "Trabalho", icon: Repeat, keys: ["rotinas", "pendencias", "jornada", "consultoria"] },
   { key: "g-cadastro", label: "Dados e acessos", icon: UserRound, keys: ["dados", "cofre"] },
   { key: "g-combinados", label: "Observações e atas", icon: BookOpenCheck, keys: ["pops", "atas"] },
   { key: "g-fech", label: "Fechamentos", icon: FolderKanban, keys: ["fechamentos"] },
@@ -152,6 +156,7 @@ const TAB_TONE: Record<string, string> = {
   bancos: "text-indigo-500",
   cofre: "text-amber-500",
   jornada: "text-indigo-500",
+  consultoria: "text-rose-500",
   onboarding: "text-rose-400",
   rotinas: "text-blue-500",
   pops: "text-violet-500",
@@ -270,6 +275,7 @@ export default async function ClientPage({
   const vol = aba === "dados" ? await volumeOverview(actor, id) : null;
   const journeyData = aba === "jornada" ? await journeyForClient(actor, id, instantToLocalDate(new Date(), APP_TIMEZONE)) : null;
   const journeyPeople = aba === "jornada" ? await assignableUsers(actor, id) : [];
+  const pfData = aba === "consultoria" ? await getPfJourney(actor, id) : null;
   const onb = aba === "dados" ? await getOnboarding(actor, id) : null;
   if (aba === "dados") await markDiagnosisSeen(actor, id);
   const hdr = aba === "onboarding" ? await headers() : null;
@@ -347,7 +353,7 @@ export default async function ClientPage({
       <div className="card min-w-0 overflow-hidden">
         <nav aria-label="Seções do cliente" className="flex gap-1 overflow-x-auto border-b border-hair bg-slate-50/60 px-3">
           {GROUPS.map((g) => {
-            const keys = g.keys.filter((k) => TABS.some((t) => t.key === k && t.show(actor, extras, finance)));
+            const keys = g.keys.filter((k) => TABS.some((t) => t.key === k && t.show(actor, extras, finance, client.serviceLines)));
             if (!keys.length) return null;
             const on = keys.includes(aba);
             return (
@@ -365,7 +371,7 @@ export default async function ClientPage({
         </nav>
         {(() => {
           const g = GROUPS.find((x) => x.keys.includes(aba));
-          const subs = g ? g.keys.map((k) => TABS.find((t) => t.key === k)!).filter((t) => t.show(actor, extras, finance)) : [];
+          const subs = g ? g.keys.map((k) => TABS.find((t) => t.key === k)!).filter((t) => t.show(actor, extras, finance, client.serviceLines)) : [];
           if (subs.length < 2) return null;
           return (
             <div className="flex flex-wrap gap-1.5 border-b border-hair px-5 py-2.5" aria-label="Subseções">
@@ -624,6 +630,8 @@ export default async function ClientPage({
       {aba === "resumo" && npsData && (
         <div className="mt-6"><NpsCard clientId={id} rows={npsData.rows} nps={npsData.nps} manage={manage} flash={{ ok: sp.nps === "ok" ? "ok" : undefined, erro: sp.npserro }} link={npsLinkUrl} /></div>
       )}
+
+      {aba === "consultoria" && pfData && <PfJourneyPanel clientId={id} j={pfData} canEdit={manage} />}
 
       {aba === "jornada" && journeyData && (
         <div className="max-w-5xl">
