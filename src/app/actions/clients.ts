@@ -8,7 +8,7 @@ import { formObject, runAction } from "@/server/action-utils";
 import * as clients from "@/server/services/clients";
 import { importClientsCsv } from "@/server/services/clients-import";
 
-const ARRAYS = ["services", "memberIds"];
+const ARRAYS = ["services", "memberIds", "serviceLines"];
 
 export async function createClientAction(_: ActionState, fd: FormData): Promise<ActionState> {
   let id = "";

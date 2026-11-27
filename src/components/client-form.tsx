@@ -1,4 +1,5 @@
 import { CLIENT_STATUSES, CLIENT_STATUS_LABEL, JOURNEY_STAGES, ROLE_LABEL, STAGE_LABEL, SERVICE_OPTIONS, type Role } from "@/domain/enums";
+import { SERVICE_LINES, SERVICE_LINE_LABEL } from "@/domain/pf-journey";
 import type { ActionState } from "@/lib/action-state";
 import { ActionForm, Field, SubmitButton } from "./ui/action-form";
 
@@ -12,6 +13,7 @@ export interface ClientFormValues {
   contactChannels?: string | null;
   status?: string;
   services?: string[];
+  serviceLines?: string[];
   startDate?: string | null;
   monthlyFee?: string;
   billingDay?: number | null;
@@ -46,6 +48,18 @@ export function ClientForm({
         <h2 id="sec-id" className="text-sm font-semibold md:col-span-2">
           Identificação
         </h2>
+        <fieldset className="md:col-span-2">
+          <legend className="label">Serviço contratado</legend>
+          <p className="mb-2 text-xs text-slate-500">Define a jornada e as abas do painel. Para pessoa física, use o nome da pessoa nos campos de nome.</p>
+          <div className="flex flex-wrap gap-4">
+            {SERVICE_LINES.map((l) => (
+              <label key={l} className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="serviceLines" value={l} defaultChecked={(values.serviceLines ?? ["BPO_FINANCEIRO"]).includes(l)} />
+                {SERVICE_LINE_LABEL[l]}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <Field label="Razão social" name="legalName" required>
           <input id="legalName" name="legalName" required className="input" defaultValue={values.legalName} />
         </Field>

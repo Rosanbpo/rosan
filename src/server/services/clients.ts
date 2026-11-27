@@ -128,6 +128,7 @@ function toData(input: ClientInput) {
     contactChannels: input.contactChannels ?? null,
     status: input.status,
     services: input.services,
+    serviceLines: input.serviceLines,
     startDate: input.startDate ? localDateToDbDate(input.startDate) : null,
     notes: input.notes ?? null,
     monthlyFee: input.monthlyFee ?? null,

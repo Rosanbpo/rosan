@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ValidationError } from "@/domain/permissions";
 import { isValidLocalDate } from "@/domain/dates";
+import { SERVICE_LINES } from "@/domain/pf-journey";
 import {
   CLIENT_STATUSES,
   COMPETENCE_RULES,
@@ -87,6 +88,7 @@ export const clientSchema = z.object({
   contactChannels: optionalText(500),
   status: z.enum(CLIENT_STATUSES),
   services: z.array(z.string().trim().min(1).max(100)).max(30).default([]),
+  serviceLines: z.array(z.enum(SERVICE_LINES)).min(1, "Escolha ao menos um serviço.").default(["BPO_FINANCEIRO"]),
   startDate: optionalLocalDate,
   notes: optionalText(5000),
   monthlyFee: optionalMoney,
