@@ -88,6 +88,8 @@ import {
 } from "@/server/services/closings";
 import { isCompetenceMonth } from "@/domain/closing";
 import { getClientLogo } from "@/server/services/client-logo";
+import { FollowCard } from "@/components/rosan-life-follow";
+import { fetchFollowUp, followFor } from "@/server/services/rosan-life-follow";
 import {
   PfHeaderStats,
   PfJourneyPanel,
@@ -417,6 +419,13 @@ export default async function ClientPage({
   const pfData = lines.includes("CONSULTORIA_PF")
     ? await getPfJourney(actor, id)
     : null;
+  const follow =
+    pfData && (aba === "resumo" || aba === "consultoria")
+      ? followFor(
+          await fetchFollowUp(client.contactEmail ? [client.contactEmail] : []),
+          client.contactEmail,
+        )
+      : undefined;
   const onb = aba === "dados" ? await getOnboarding(actor, id) : null;
   if (aba === "dados") await markDiagnosisSeen(actor, id);
   const hdr = aba === "onboarding" ? await headers() : null;
@@ -648,15 +657,18 @@ export default async function ClientPage({
           {aba === "hoje" && <ClientDayPanel clientId={id} />}
 
           {aba === "resumo" && pfOnly && pfData && (
-            <PfSummary
-              clientId={id}
-              j={pfData}
-              client={{
-                name: client.tradeName,
-                email: client.contactEmail,
-                phone: client.contactPhone,
-              }}
-            />
+            <div className="max-w-5xl space-y-5">
+              <FollowCard s={follow} hasEmail={!!client.contactEmail} />
+              <PfSummary
+                clientId={id}
+                j={pfData}
+                client={{
+                  name: client.tradeName,
+                  email: client.contactEmail,
+                  phone: client.contactPhone,
+                }}
+              />
+            </div>
           )}
 
           {aba === "resumo" && !pfOnly && (
@@ -1141,7 +1153,10 @@ export default async function ClientPage({
           )}
 
           {aba === "consultoria" && pfData && (
-            <PfJourneyPanel clientId={id} j={pfData} canEdit={manage} />
+            <div className="space-y-5">
+              <FollowCard s={follow} hasEmail={!!client.contactEmail} />
+              <PfJourneyPanel clientId={id} j={pfData} canEdit={manage} />
+            </div>
           )}
 
           {aba === "jornada" && journeyData && (
