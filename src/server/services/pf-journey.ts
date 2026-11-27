@@ -130,7 +130,7 @@ export async function listPfClients(actor: Actor) {
   return clients.map((c) => {
     const j = c.pfJourney;
     const dl = pfDeadlines({ startDate: iso(j?.startDate ?? null), appBonusStart: iso(j?.appBonusStart ?? null) });
-    return { id: c.id, name: c.tradeName, email: c.contactEmail, status: (j?.status ?? "NOVO_INTERESSADO") as PfStatus, startDate: iso(j?.startDate ?? null), endDate: dl.endDate, appBonusEnd: dl.appBonusEnd, appInvitedAt: j?.appInvitedAt ?? null, paid: !!j?.paidAt };
+    return { id: c.id, name: c.tradeName, email: c.contactEmail, status: (j?.status ?? "NOVO_INTERESSADO") as PfStatus, startDate: iso(j?.startDate ?? null), endDate: dl.endDate, appBonusEnd: dl.appBonusEnd, appInvitedAt: j?.appInvitedAt ?? null, paid: !!j?.paidAt, continuity: (j?.continuity ?? null) as PfContinuity | null };
   });
 }
 
