@@ -21,14 +21,14 @@ export default async function RosanLifePage() {
       <div className="mb-5 grid gap-3 sm:grid-cols-2">
         <div className="card p-5">
           <h2 className="text-sm font-semibold">Convites de acesso</h2>
-          <p className="mt-1 text-sm text-slate-600">O cliente só cria conta no app com um convite seu. Gere o convite quando a contratação for confirmada.</p>
-          {invites ? <a href={invites} target="_blank" rel="noreferrer" className="btn-primary mt-3 inline-flex">Abrir convites no ROSAN LIFE</a> : <p className="mt-3 rounded-lg bg-amber-50 p-2 text-sm text-amber-800">Falta configurar o endereço do app (variável ROSAN_LIFE_URL).</p>}
+          <p className="mt-1 text-sm text-slate-600">O cliente só cria conta no app com um convite seu. Envie pela aba Consultoria PF de cada cliente; aqui você vê e revoga os convites.</p>
+          {invites ? <a href={invites} target="_blank" rel="noreferrer" className="btn-primary mt-3 inline-flex">Ver convites no app</a> : <p className="mt-3 rounded-lg bg-amber-50 p-2 text-sm text-amber-800">Falta configurar o endereço do app (variável ROSAN_LIFE_URL).</p>}
         </div>
         <div className="card p-5">
           <h2 className="text-sm font-semibold">Demonstração</h2>
           <p className="mt-1 text-sm text-slate-600">Cliente fictício pronto para apresentar o app numa reunião. Ele não mostra dados de ninguém.</p>
-          {base ? <a href={base} target="_blank" rel="noreferrer" className="btn-secondary mt-3 inline-flex">Abrir o app</a> : null}
-          <p className="mt-2 text-xs text-slate-500">Um clique que já entra na demonstração vem na fase 2.</p>
+          {base ? <a href={`${base}/login`} target="_blank" rel="noreferrer" className="btn-primary mt-3 inline-flex">Abrir demonstração</a> : null}
+          <p className="mt-2 text-xs text-slate-500">Na tela de login do app, toque em “Entrar na demonstração”.</p>
         </div>
       </div>
 

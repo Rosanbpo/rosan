@@ -1,4 +1,4 @@
-import { savePfDatesAction, setPfContinuityAction, setPfStatusAction, togglePfItemAction } from "@/app/actions/pf-journey";
+import { inviteRosanLifeAction, savePfDatesAction, setPfContinuityAction, setPfStatusAction, togglePfItemAction } from "@/app/actions/pf-journey";
 import {
   PF_CONTINUITY, PF_CONTINUITY_LABEL, PF_STAGES, PF_STATUSES, PF_STATUS_LABEL, itemKey, stageOfStatus,
   type PfContinuity, type PfStatus,
@@ -52,6 +52,11 @@ export function PfJourneyPanel({ clientId, j, canEdit }: { clientId: string; j: 
                 </select>
               </Field>
               <SubmitButton>Atualizar</SubmitButton>
+            </ActionForm>
+            <ActionForm action={inviteRosanLifeAction.bind(null, clientId)} className="card p-5" confirm={j.appInvitedAt ? "Já existe um convite enviado. Enviar outro substitui o anterior. Continuar?" : undefined}>
+              <h3 className="text-sm font-semibold">Acesso ao ROSAN LIFE</h3>
+              <p className="mt-1 text-xs text-slate-500">Envia por e-mail o convite para o contato principal do cliente criar a conta no app.</p>
+              <div className="mt-3"><SubmitButton>{j.appInvitedAt ? "Enviar novo convite" : "Enviar convite do ROSAN LIFE"}</SubmitButton></div>
             </ActionForm>
             <div className="card p-5">
               <h3 className="text-sm font-semibold">Continuidade após os 30 dias</h3>
