@@ -89,6 +89,8 @@ import {
 import { isCompetenceMonth } from "@/domain/closing";
 import { getClientLogo } from "@/server/services/client-logo";
 import { FollowCard } from "@/components/rosan-life-follow";
+import { RosanLifeAccessPanel } from "@/components/rosan-life-access-panel";
+import { getAccessInfo } from "@/server/services/rosan-life-access";
 import { fetchFollowUp, followFor } from "@/server/services/rosan-life-follow";
 import {
   PfHeaderStats,
@@ -165,6 +167,12 @@ const TABS: Array<{
     show: (_a, _e, _f, lines) => lines.includes("CONSULTORIA_PF"),
   },
   {
+    key: "rosanlife",
+    label: "Acesso ao ROSAN LIFE",
+    icon: Route,
+    show: (_a, _e, _f, lines) => lines.includes("CONSULTORIA_PF"),
+  },
+  {
     key: "rotinas",
     label: "Rotina",
     icon: Repeat,
@@ -214,7 +222,7 @@ const GROUPS: Array<{
     key: "g-consultoria",
     label: "Consultoria",
     icon: Route,
-    keys: ["consultoria"],
+    keys: ["consultoria", "rosanlife"],
   },
   {
     key: "g-cadastro",
@@ -426,6 +434,8 @@ export default async function ClientPage({
           client.contactEmail,
         )
       : undefined;
+  const accessInfo =
+    pfData && aba === "rosanlife" ? await getAccessInfo(actor, id) : null;
   const onb = aba === "dados" ? await getOnboarding(actor, id) : null;
   if (aba === "dados") await markDiagnosisSeen(actor, id);
   const hdr = aba === "onboarding" ? await headers() : null;
@@ -658,7 +668,11 @@ export default async function ClientPage({
 
           {aba === "resumo" && pfOnly && pfData && (
             <div className="max-w-5xl space-y-5">
-              <FollowCard s={follow} hasEmail={!!client.contactEmail} />
+              <FollowCard
+                s={follow}
+                hasEmail={!!client.contactEmail}
+                clientId={id}
+              />
               <PfSummary
                 clientId={id}
                 j={pfData}
@@ -1152,9 +1166,22 @@ export default async function ClientPage({
             </div>
           )}
 
+          {aba === "rosanlife" && accessInfo && (
+            <RosanLifeAccessPanel
+              clientId={id}
+              info={accessInfo}
+              hasEmail={!!client.contactEmail}
+              flash={sp.erro}
+            />
+          )}
+
           {aba === "consultoria" && pfData && (
             <div className="space-y-5">
-              <FollowCard s={follow} hasEmail={!!client.contactEmail} />
+              <FollowCard
+                s={follow}
+                hasEmail={!!client.contactEmail}
+                clientId={id}
+              />
               <PfJourneyPanel clientId={id} j={pfData} canEdit={manage} />
             </div>
           )}
