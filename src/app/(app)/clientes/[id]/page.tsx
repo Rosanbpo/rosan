@@ -81,10 +81,18 @@ import { ClosingPanel } from "@/components/closing-panel";
 import { PortalAccessPanel } from "@/components/portal-access-panel";
 import { listPortalUsers } from "@/server/services/portal-auth";
 import { ClientLogoBox } from "@/components/client-logo-box";
-import { getClosing, closingHistory, currentCompetence } from "@/server/services/closings";
+import {
+  getClosing,
+  closingHistory,
+  currentCompetence,
+} from "@/server/services/closings";
 import { isCompetenceMonth } from "@/domain/closing";
 import { getClientLogo } from "@/server/services/client-logo";
-import { PfJourneyPanel } from "@/components/pf-journey-panel";
+import {
+  PfHeaderStats,
+  PfJourneyPanel,
+  PfSummary,
+} from "@/components/pf-journey-panel";
 import { getPfJourney } from "@/server/services/pf-journey";
 import { ConfirmAction } from "@/components/confirm-action";
 import { archiveClientAction, deleteClientAction } from "@/app/actions/clients";
@@ -107,7 +115,10 @@ import {
   getClient,
 } from "@/server/services/clients";
 import { listClientNotes } from "@/server/services/client-notes";
-import { listClientProcedures, procedureOptions } from "@/server/services/procedures";
+import {
+  listClientProcedures,
+  procedureOptions,
+} from "@/server/services/procedures";
 import { listTasks } from "@/server/services/tasks";
 import { listPendings } from "@/server/services/pendings";
 import { clientMonthSummary } from "@/server/services/portfolio";
@@ -125,26 +136,102 @@ const TABS: Array<{
     lines: readonly string[],
   ) => boolean;
 }> = [
-  { key: "hoje", label: "Hoje", icon: Sun, show: () => true },
+  {
+    key: "hoje",
+    label: "Hoje",
+    icon: Sun,
+    show: (_a, _e, _f, lines) => lines.includes("BPO_FINANCEIRO"),
+  },
   { key: "resumo", label: "Resumo", icon: LayoutDashboard, show: () => true },
   { key: "dados", label: "Dados", icon: UserRound, show: () => true },
-  { key: "cofre", label: "Cofre", icon: KeyRound, show: () => true },
-  { key: "jornada", label: "Jornada", icon: Route, show: () => true },
-  { key: "consultoria", label: "Consultoria PF", icon: Route, show: (_a, _e, _f, lines) => lines.includes("CONSULTORIA_PF") },
-  { key: "rotinas", label: "Rotina", icon: Repeat, show: () => true },
-  { key: "pops", label: "Observações e POPs", icon: BookOpenCheck, show: () => true },
-  { key: "pendencias", label: "Pendências", icon: Hourglass, show: () => true },
+  {
+    key: "cofre",
+    label: "Cofre",
+    icon: KeyRound,
+    show: (_a, _e, _f, lines) => lines.includes("BPO_FINANCEIRO"),
+  },
+  {
+    key: "jornada",
+    label: "Jornada",
+    icon: Route,
+    show: (_a, _e, _f, lines) => lines.includes("BPO_FINANCEIRO"),
+  },
+  {
+    key: "consultoria",
+    label: "Jornada da consultoria",
+    icon: Route,
+    show: (_a, _e, _f, lines) => lines.includes("CONSULTORIA_PF"),
+  },
+  {
+    key: "rotinas",
+    label: "Rotina",
+    icon: Repeat,
+    show: (_a, _e, _f, lines) => lines.includes("BPO_FINANCEIRO"),
+  },
+  {
+    key: "pops",
+    label: "Observações e POPs",
+    icon: BookOpenCheck,
+    show: () => true,
+  },
+  {
+    key: "pendencias",
+    label: "Pendências",
+    icon: Hourglass,
+    show: (_a, _e, _f, lines) => lines.includes("BPO_FINANCEIRO"),
+  },
   { key: "atas", label: "Atas", icon: NotebookPen, show: () => true },
-  { key: "fechamentos", label: "Fechamentos", icon: FolderKanban, show: () => true },
+  {
+    key: "fechamentos",
+    label: "Fechamentos",
+    icon: FolderKanban,
+    show: (_a, _e, _f, lines) => lines.includes("BPO_FINANCEIRO"),
+  },
   { key: "historico", label: "Histórico", icon: History, show: () => true },
 ];
 
-const GROUPS: Array<{ key: string; label: string; icon: typeof Mail; keys: string[] }> = [
-  { key: "g-resumo", label: "Resumo", icon: LayoutDashboard, keys: ["resumo", "hoje"] },
-  { key: "g-trabalho", label: "Trabalho", icon: Repeat, keys: ["rotinas", "pendencias", "jornada", "consultoria"] },
-  { key: "g-cadastro", label: "Dados e acessos", icon: UserRound, keys: ["dados", "cofre"] },
-  { key: "g-combinados", label: "Observações e atas", icon: BookOpenCheck, keys: ["pops", "atas"] },
-  { key: "g-fech", label: "Fechamentos", icon: FolderKanban, keys: ["fechamentos"] },
+const GROUPS: Array<{
+  key: string;
+  label: string;
+  icon: typeof Mail;
+  keys: string[];
+}> = [
+  {
+    key: "g-resumo",
+    label: "Resumo",
+    icon: LayoutDashboard,
+    keys: ["resumo", "hoje"],
+  },
+  {
+    key: "g-trabalho",
+    label: "Trabalho",
+    icon: Repeat,
+    keys: ["rotinas", "pendencias", "jornada"],
+  },
+  {
+    key: "g-consultoria",
+    label: "Consultoria",
+    icon: Route,
+    keys: ["consultoria"],
+  },
+  {
+    key: "g-cadastro",
+    label: "Dados e acessos",
+    icon: UserRound,
+    keys: ["dados", "cofre"],
+  },
+  {
+    key: "g-combinados",
+    label: "Observações e atas",
+    icon: BookOpenCheck,
+    keys: ["pops", "atas"],
+  },
+  {
+    key: "g-fech",
+    label: "Fechamentos",
+    icon: FolderKanban,
+    keys: ["fechamentos"],
+  },
   { key: "g-hist", label: "Histórico", icon: History, keys: ["historico"] },
 ];
 
@@ -175,12 +262,30 @@ const LEGACY_TABS: Record<string, string> = {
   particularidades: "pops",
 };
 
-function Fold({ title, hint, open, children }: { title: string; hint?: string; open?: boolean; children: React.ReactNode }) {
+function Fold({
+  title,
+  hint,
+  open,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  open?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <details open={open} className="group mb-3 rounded-xl border border-hair bg-white">
+    <details
+      open={open}
+      className="group mb-3 rounded-xl border border-hair bg-white"
+    >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
         <span className="text-sm font-semibold text-brand-900">{title}</span>
-        <span className="flex items-center gap-3 text-xs text-slate-500">{hint}<span aria-hidden className="transition group-open:rotate-180">▾</span></span>
+        <span className="flex items-center gap-3 text-xs text-slate-500">
+          {hint}
+          <span aria-hidden className="transition group-open:rotate-180">
+            ▾
+          </span>
+        </span>
       </summary>
       <div className="border-t border-hair p-4">{children}</div>
     </details>
@@ -200,11 +305,20 @@ export default async function ClientPage({
   const { id } = await params;
   const sp = await searchParams;
   const requested = LEGACY_TABS[sp.aba ?? ""] ?? sp.aba;
-  const aba = TABS.some((t) => t.key === requested) ? (requested as string) : "resumo";
+  const client = await orNotFound(getClient(actor, id));
+  const lines = client.serviceLines as readonly string[];
+  const pfOnly =
+    lines.includes("CONSULTORIA_PF") && !lines.includes("BPO_FINANCEIRO");
+  const aba = TABS.some(
+    (t) =>
+      t.key === requested &&
+      t.show(actor, { contracts: [], proposals: [] }, null, lines),
+  )
+    ? (requested as string)
+    : "resumo";
   const competence = isCompetence(sp.competencia)
     ? sp.competencia
     : previousCompetence(instantToLocalDate(new Date(), APP_TIMEZONE));
-  const client = await orNotFound(getClient(actor, id));
   const [
     running,
     extras,
@@ -225,7 +339,11 @@ export default async function ClientPage({
     getRunningTimer(actor),
     clientPanelExtras(actor, id),
     clientIndicators(actor, id),
-    listTasks(actor, { clientId: id, open: true, pageSize: aba === "pendencias" ? 50 : 15 }),
+    listTasks(actor, {
+      clientId: id,
+      open: true,
+      pageSize: aba === "pendencias" ? 50 : 15,
+    }),
     listTasks(actor, {
       clientId: id,
       status: ["CONCLUIDA"],
@@ -239,8 +357,12 @@ export default async function ClientPage({
     aba === "cofre" ? listVault(actor, id) : Promise.resolve([]),
     aba === "cofre" ? vaultAccessLog(actor, id) : Promise.resolve([]),
     aba === "pops" ? listClientProcedures(actor, id) : Promise.resolve([]),
-    aba === "pops" && can(actor, "procedures.manage") ? procedureOptions(actor) : Promise.resolve([]),
-    aba === "pops" || aba === "atas" ? listClientNotes(actor, id, aba === "atas" ? "ATA" : "PARTICULARIDADE") : Promise.resolve([]),
+    aba === "pops" && can(actor, "procedures.manage")
+      ? procedureOptions(actor)
+      : Promise.resolve([]),
+    aba === "pops" || aba === "atas"
+      ? listClientNotes(actor, id, aba === "atas" ? "ATA" : "PARTICULARIDADE")
+      : Promise.resolve([]),
     aba === "resumo" ? highlightedNotes(actor, id) : Promise.resolve([]),
   ]);
   const routineForm =
@@ -261,54 +383,109 @@ export default async function ClientPage({
         }
       : null;
   const manage = can(actor, "clients.manage");
-  const portalUsers = manage && aba === "dados" ? await listPortalUsers(actor, id) : [];
-  const formPeople = aba === "dados" && manage ? await assignableUsers(actor) : null;
+  const portalUsers =
+    manage && aba === "dados" ? await listPortalUsers(actor, id) : [];
+  const formPeople =
+    aba === "dados" && manage ? await assignableUsers(actor) : null;
   const finance = can(actor, "finance.view")
     ? await clientMonthSummary(actor, id)
     : null;
   const now = new Date();
-  const showFinance = !!finance || can(actor, "contracts.manage") || extras.contracts.length > 0 || extras.proposals.length > 0;
+  const showFinance =
+    !!finance ||
+    can(actor, "contracts.manage") ||
+    extras.contracts.length > 0 ||
+    extras.proposals.length > 0;
   const closingMonth = isCompetenceMonth(sp.mes) ? sp.mes : currentCompetence();
-  const closingSummary = aba === "resumo" ? await getClosing(actor, id, currentCompetence()) : null;
-  const closingData = aba === "fechamentos" ? await getClosing(actor, id, closingMonth) : null;
-  const closingHist = aba === "fechamentos" ? await closingHistory(actor, id) : [];
+  const closingSummary =
+    aba === "resumo" ? await getClosing(actor, id, currentCompetence()) : null;
+  const closingData =
+    aba === "fechamentos" ? await getClosing(actor, id, closingMonth) : null;
+  const closingHist =
+    aba === "fechamentos" ? await closingHistory(actor, id) : [];
   const vol = aba === "dados" ? await volumeOverview(actor, id) : null;
-  const journeyData = aba === "jornada" ? await journeyForClient(actor, id, instantToLocalDate(new Date(), APP_TIMEZONE)) : null;
-  const journeyPeople = aba === "jornada" ? await assignableUsers(actor, id) : [];
-  const pfData = aba === "consultoria" ? await getPfJourney(actor, id) : null;
+  const journeyData =
+    aba === "jornada"
+      ? await journeyForClient(
+          actor,
+          id,
+          instantToLocalDate(new Date(), APP_TIMEZONE),
+        )
+      : null;
+  const journeyPeople =
+    aba === "jornada" ? await assignableUsers(actor, id) : [];
+  const pfData = lines.includes("CONSULTORIA_PF")
+    ? await getPfJourney(actor, id)
+    : null;
   const onb = aba === "dados" ? await getOnboarding(actor, id) : null;
   if (aba === "dados") await markDiagnosisSeen(actor, id);
   const hdr = aba === "onboarding" ? await headers() : null;
-  const origin = hdr ? `${hdr.get("x-forwarded-proto") ?? "https"}://${hdr.get("x-forwarded-host") ?? hdr.get("host")}` : "";
-  const npsData = aba === "resumo" ? await clientNps(actor, id) : null;
-  const npsTok = aba === "resumo" ? await prisma.npsLink.findUnique({ where: { clientId: id } }) : null;
+  const origin = hdr
+    ? `${hdr.get("x-forwarded-proto") ?? "https"}://${hdr.get("x-forwarded-host") ?? hdr.get("host")}`
+    : "";
+  const npsData =
+    aba === "resumo" && !pfOnly ? await clientNps(actor, id) : null;
+  const npsTok =
+    aba === "resumo" && !pfOnly
+      ? await prisma.npsLink.findUnique({ where: { clientId: id } })
+      : null;
   const hdr2 = aba === "resumo" ? await headers() : null;
-  const npsLinkUrl = npsTok && hdr2 ? `${hdr2.get("x-forwarded-proto") ?? "https"}://${hdr2.get("x-forwarded-host") ?? hdr2.get("host")}/nps/${npsTok.token}` : null;
+  const npsLinkUrl =
+    npsTok && hdr2
+      ? `${hdr2.get("x-forwarded-proto") ?? "https"}://${hdr2.get("x-forwarded-host") ?? hdr2.get("host")}/nps/${npsTok.token}`
+      : null;
   const hasLogo = !!(await getClientLogo(actor, id));
-  const ours = openTasks.rows.filter((t) => t.status === "A_FAZER" || t.status === "EM_ANDAMENTO" || t.status === "EM_REVISAO");
+  const ours = openTasks.rows.filter(
+    (t) =>
+      t.status === "A_FAZER" ||
+      t.status === "EM_ANDAMENTO" ||
+      t.status === "EM_REVISAO",
+  );
   const clientSide = pendings.rows.filter((p) => p.type === "CLIENTE");
   const thirdSide = pendings.rows.filter((p) => p.type === "TERCEIRO");
   const missingDocs = documents.filter((d) => !d.receivedAt);
 
   return (
     <>
-      <section className="card mb-5 flex flex-col gap-4 p-5 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between" aria-label="Resumo do cliente">
+      <section
+        className="card mb-5 flex flex-col gap-4 p-5 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between"
+        aria-label="Resumo do cliente"
+      >
         <div className="flex min-w-0 items-center gap-4">
           <Link href="/clientes" className="btn-secondary btn-sm shrink-0">
             ← Clientes
           </Link>
-          <ClientLogoBox clientId={id} name={client.tradeName} hasLogo={hasLogo} />
+          <ClientLogoBox
+            clientId={id}
+            name={client.tradeName}
+            hasLogo={hasLogo}
+          />
           <div className="min-w-0">
             <h1 className="flex flex-wrap items-center gap-2 text-[1.45rem] leading-tight font-bold text-brand-900">
               {client.tradeName}
               <ClientStatusBadge status={client.status} />
               {client.journeyStage && (
-                <span className="rounded-md bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-sky-200 ring-inset">{STAGE_LABEL[client.journeyStage]}</span>
+                <span className="rounded-md bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-sky-200 ring-inset">
+                  {STAGE_LABEL[client.journeyStage]}
+                </span>
               )}
-              {client.archivedAt && <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 ring-1 ring-zinc-200 ring-inset">Arquivado</span>}
+              {client.archivedAt && (
+                <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 ring-1 ring-zinc-200 ring-inset">
+                  Arquivado
+                </span>
+              )}
             </h1>
             <p className="mt-0.5 truncate text-sm text-slate-500">
-              {[client.legalName !== client.tradeName ? client.legalName : null, client.cnpj ? fmtCnpj(client.cnpj) : null, client.software, finance && finance.monthlyFee !== null ? `${fmtMoney(finance.monthlyFee)}/mês${finance.billingDay ? ` · vence ${billingDaysLabel(finance.billingDay, finance.billingDay2)}` : ""}` : null].filter(Boolean).join(" · ")}
+              {[
+                client.legalName !== client.tradeName ? client.legalName : null,
+                client.cnpj ? fmtCnpj(client.cnpj) : null,
+                client.software,
+                finance && finance.monthlyFee !== null
+                  ? `${fmtMoney(finance.monthlyFee)}/mês${finance.billingDay ? ` · vence ${billingDaysLabel(finance.billingDay, finance.billingDay2)}` : ""}`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
           </div>
         </div>
@@ -318,42 +495,109 @@ export default async function ClientPage({
           </Link>
           {(manage || can(actor, "contracts.manage")) && (
             <details className="relative">
-              <summary className="btn-secondary cursor-pointer list-none" aria-label="Mais ações">⋯</summary>
+              <summary
+                className="btn-secondary cursor-pointer list-none"
+                aria-label="Mais ações"
+              >
+                ⋯
+              </summary>
               <div className="absolute right-0 z-20 mt-1 flex w-56 flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
                 {can(actor, "contracts.manage") && (
                   <Link href="/contratos/novo" className="btn-secondary">
-                    <FileSignature aria-hidden className="h-4 w-4" /> Novo contrato
+                    <FileSignature aria-hidden className="h-4 w-4" /> Novo
+                    contrato
                   </Link>
                 )}
-          {manage &&
-            (client.archivedAt ? (
-              <ConfirmAction action={archiveClientAction.bind(null, id, false)} label="Reativar" className="btn-secondary" confirm="Reativar este cliente?" />
-            ) : (
-              <ConfirmAction
-                action={archiveClientAction.bind(null, id, true)}
-                label="Arquivar"
-                className="btn border border-red-200 bg-white text-red-700 hover:bg-red-50"
-                confirm="Arquivar o cliente? O histórico é preservado e as recorrências ativas serão pausadas."
-              />
-            ))}
-                {manage && <DeleteClient action={deleteClientAction.bind(null, id)} name={client.tradeName} />}
+                {manage &&
+                  (client.archivedAt ? (
+                    <ConfirmAction
+                      action={archiveClientAction.bind(null, id, false)}
+                      label="Reativar"
+                      className="btn-secondary"
+                      confirm="Reativar este cliente?"
+                    />
+                  ) : (
+                    <ConfirmAction
+                      action={archiveClientAction.bind(null, id, true)}
+                      label="Arquivar"
+                      className="btn border border-red-200 bg-white text-red-700 hover:bg-red-50"
+                      confirm="Arquivar o cliente? O histórico é preservado e as recorrências ativas serão pausadas."
+                    />
+                  ))}
+                {manage && (
+                  <DeleteClient
+                    action={deleteClientAction.bind(null, id)}
+                    name={client.tradeName}
+                  />
+                )}
               </div>
             </details>
           )}
         </div>
-        <dl className="flex w-full flex-wrap items-center gap-x-6 gap-y-2 border-t border-hair pt-3 text-sm lg:order-last">
-          <Link href={`/tarefas?clientId=${id}&abertas=1`} className="hover:underline"><dd className="inline text-base font-semibold text-brand-900">{indicators.open}</dd> <dt className="inline text-slate-500">abertas</dt></Link>
-          <Link href={`/tarefas?clientId=${id}&atrasadas=1`} className="hover:underline"><dd className={`inline text-base font-semibold ${indicators.overdue ? "text-red-600" : "text-brand-900"}`}>{indicators.overdue}</dd> <dt className="inline text-slate-500">{indicators.overdue === 1 ? "atrasada" : "atrasadas"}</dt></Link>
-          <Link href={`/clientes/${id}?aba=pendencias`} className="hover:underline"><dd className="inline text-base font-semibold text-brand-900">{indicators.waiting}</dd> <dt className="inline text-slate-500">aguardando</dt></Link>
-          <span><dd className="inline text-base font-semibold text-brand-900">{indicators.completed30}</dd> <dt className="inline text-slate-500">concluídas em 30 dias</dt></span>
-          <span><dd className="inline text-base font-semibold text-emerald-700">{fmtPercent(indicators.onTimeRate)}</dd> <dt className="inline text-slate-500">no prazo</dt></span>
-        </dl>
+        {pfOnly && pfData ? (
+          <PfHeaderStats j={pfData} />
+        ) : (
+          <dl className="flex w-full flex-wrap items-center gap-x-6 gap-y-2 border-t border-hair pt-3 text-sm lg:order-last">
+            <Link
+              href={`/tarefas?clientId=${id}&abertas=1`}
+              className="hover:underline"
+            >
+              <dd className="inline text-base font-semibold text-brand-900">
+                {indicators.open}
+              </dd>{" "}
+              <dt className="inline text-slate-500">abertas</dt>
+            </Link>
+            <Link
+              href={`/tarefas?clientId=${id}&atrasadas=1`}
+              className="hover:underline"
+            >
+              <dd
+                className={`inline text-base font-semibold ${indicators.overdue ? "text-red-600" : "text-brand-900"}`}
+              >
+                {indicators.overdue}
+              </dd>{" "}
+              <dt className="inline text-slate-500">
+                {indicators.overdue === 1 ? "atrasada" : "atrasadas"}
+              </dt>
+            </Link>
+            <Link
+              href={`/clientes/${id}?aba=pendencias`}
+              className="hover:underline"
+            >
+              <dd className="inline text-base font-semibold text-brand-900">
+                {indicators.waiting}
+              </dd>{" "}
+              <dt className="inline text-slate-500">aguardando</dt>
+            </Link>
+            <span>
+              <dd className="inline text-base font-semibold text-brand-900">
+                {indicators.completed30}
+              </dd>{" "}
+              <dt className="inline text-slate-500">concluídas em 30 dias</dt>
+            </span>
+            <span>
+              <dd className="inline text-base font-semibold text-emerald-700">
+                {fmtPercent(indicators.onTimeRate)}
+              </dd>{" "}
+              <dt className="inline text-slate-500">no prazo</dt>
+            </span>
+          </dl>
+        )}
       </section>
 
       <div className="card min-w-0 overflow-hidden">
-        <nav aria-label="Seções do cliente" className="flex gap-1 overflow-x-auto border-b border-hair bg-slate-50/60 px-3">
+        <nav
+          aria-label="Seções do cliente"
+          className="flex gap-1 overflow-x-auto border-b border-hair bg-slate-50/60 px-3"
+        >
           {GROUPS.map((g) => {
-            const keys = g.keys.filter((k) => TABS.some((t) => t.key === k && t.show(actor, extras, finance, client.serviceLines)));
+            const keys = g.keys.filter((k) =>
+              TABS.some(
+                (t) =>
+                  t.key === k &&
+                  t.show(actor, extras, finance, client.serviceLines),
+              ),
+            );
             if (!keys.length) return null;
             const on = keys.includes(aba);
             return (
@@ -363,7 +607,10 @@ export default async function ClientPage({
                 aria-current={on ? "page" : undefined}
                 className={`-mb-px flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-[13px] font-medium transition-colors ${on ? "border-brand-700 text-brand-700" : "border-transparent text-slate-500 hover:text-brand-900"}`}
               >
-                <g.icon aria-hidden className={`h-4 w-4 ${on ? "text-brand-700" : "text-slate-400"}`} />
+                <g.icon
+                  aria-hidden
+                  className={`h-4 w-4 ${on ? "text-brand-700" : "text-slate-400"}`}
+                />
                 {g.label}
               </Link>
             );
@@ -371,12 +618,26 @@ export default async function ClientPage({
         </nav>
         {(() => {
           const g = GROUPS.find((x) => x.keys.includes(aba));
-          const subs = g ? g.keys.map((k) => TABS.find((t) => t.key === k)!).filter((t) => t.show(actor, extras, finance, client.serviceLines)) : [];
+          const subs = g
+            ? g.keys
+                .map((k) => TABS.find((t) => t.key === k)!)
+                .filter((t) =>
+                  t.show(actor, extras, finance, client.serviceLines),
+                )
+            : [];
           if (subs.length < 2) return null;
           return (
-            <div className="flex flex-wrap gap-1.5 border-b border-hair px-5 py-2.5" aria-label="Subseções">
+            <div
+              className="flex flex-wrap gap-1.5 border-b border-hair px-5 py-2.5"
+              aria-label="Subseções"
+            >
               {subs.map((t) => (
-                <Link key={t.key} href={`/clientes/${id}?aba=${t.key}`} aria-current={aba === t.key ? "page" : undefined} className={`rounded-full px-3 py-1 text-xs font-medium ${aba === t.key ? "bg-brand-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+                <Link
+                  key={t.key}
+                  href={`/clientes/${id}?aba=${t.key}`}
+                  aria-current={aba === t.key ? "page" : undefined}
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${aba === t.key ? "bg-brand-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                >
                   {t.label}
                 </Link>
               ))}
@@ -384,648 +645,1119 @@ export default async function ClientPage({
           );
         })()}
         <div className="p-5">
-      {aba === "hoje" && <ClientDayPanel clientId={id} />}
+          {aba === "hoje" && <ClientDayPanel clientId={id} />}
 
-      {aba === "resumo" && (
-        <>
-          {(() => {
-            const items: { key: string; tone: "red" | "amber" | "slate"; text: string; href: string; right: string }[] = [
-              ...ours.filter((t) => t.dueAt < startOfToday(now)).map((t) => ({ key: `t${t.id}`, tone: "red" as const, text: t.title, href: `/tarefas/${t.id}`, right: "atrasada" })),
-              ...clientSide.map((p) => ({ key: `p${p.id}`, tone: "amber" as const, text: p.task.title, href: `/clientes/${id}?aba=pendencias`, right: `cliente, ${waitingTime(p.requestedAt, now)}` })),
-              ...missingDocs.map((d) => ({ key: `d${d.id}`, tone: "slate" as const, text: `Documento: ${d.name}`, href: `/clientes/${id}?aba=pendencias`, right: "não recebido" })),
-            ].slice(0, 8);
-            const prog = closingSummary?.closing ? closingProgress(closingSummary.closing.items) : null;
-            const missing = [
-              !client.software && { t: "Informar o sistema do cliente", h: `/clientes/${id}?aba=dados` },
-              !ours.length && !openTasks.rows.length && { t: "Criar as rotinas do mês", h: `/clientes/${id}?aba=rotinas` },
-              !client.responsibleOperator && { t: "Definir o responsável", h: `/clientes/${id}?aba=dados` },
-            ].filter(Boolean) as { t: string; h: string }[];
-            return (
-              <div className="mb-6 grid gap-4 lg:grid-cols-5">
-                <section className="card p-4 lg:col-span-3" aria-label="Precisa de ação">
-                  <h2 className="mb-2 text-sm font-semibold text-brand-900">Precisa de ação</h2>
-                  {items.length ? (
-                    <ul className="divide-y divide-slate-100">
-                      {items.map((i) => (
-                        <li key={i.key}>
-                          <Link href={i.href} className="flex items-center justify-between gap-3 py-2 text-sm hover:bg-slate-50">
-                            <span className="flex min-w-0 items-center gap-2">
-                              <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${i.tone === "red" ? "bg-red-500" : i.tone === "amber" ? "bg-amber-500" : "bg-slate-400"}`} />
-                              <span className="truncate">{i.text}</span>
-                            </span>
-                            <span className={`shrink-0 text-xs ${i.tone === "red" ? "text-red-600" : "text-slate-500"}`}>{i.right}</span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="py-3 text-sm text-emerald-700">Tudo em dia com este cliente.</p>
-                  )}
-                </section>
-                <div className="space-y-4 lg:col-span-2">
-                  <Link href={`/clientes/${id}?aba=fechamentos`} className="card block p-4 hover:border-brand-200">
-                    <p className="text-sm font-semibold text-brand-900">Fechamento do mês</p>
-                    <p className="mt-1 text-sm text-slate-600">{prog ? `${prog.done} de ${prog.total} itens (${prog.pct}%)` : "Não iniciado"}</p>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-brand-700" style={{ width: `${prog?.pct ?? 0}%` }} /></div>
-                  </Link>
-                  {missing.length > 0 && (
-                    <section className="card p-4" aria-label="Falta preencher">
-                      <h2 className="text-sm font-semibold text-brand-900">Falta preencher</h2>
-                      <ul className="mt-1 space-y-1">
-                        {missing.map((m) => (
-                          <li key={m.t}><Link href={m.h} className="text-sm text-brand-700 hover:underline">{m.t}</Link></li>
-                        ))}
-                      </ul>
-                    </section>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-          {highlights.length > 0 && (
-            <section className="mb-6" aria-label="Observações importantes">
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-brand-900">📌 Atenção com este cliente</h2>
-                <Link href={`/clientes/${id}?aba=pops`} className="text-xs text-brand-700 hover:underline">Ver todas as observações →</Link>
-              </div>
-              <ul className="grid gap-3 md:grid-cols-2">
-                {highlights.map((n) => {
-                  const t = NOTE_TONE[toneOf(n.tone)];
-                  return (
-                    <li key={n.id} className={`relative overflow-hidden rounded-xl border p-4 pl-5 ${t.card}`}>
-                      <span aria-hidden className={`absolute inset-y-0 left-0 w-1.5 ${t.bar}`} />
-                      <p className="text-sm font-semibold text-slate-900">{t.emoji} {n.title}</p>
-                      <p className="mt-1 line-clamp-3 whitespace-pre-line text-sm text-slate-700">{n.content.replace(/\*\*/g, "")}</p>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          )}
-          <div className="space-y-6">
-            <Card
-              title="Tarefas abertas"
-              actions={
-                <Link
-                  className="text-sm text-brand-700 hover:underline"
-                  href={`/tarefas?clientId=${id}`}
-                >
-                  Ver todas
-                </Link>
-              }
-              bodyClassName="p-0"
-            >
-              {openTasks.rows.length ? (
-                <TaskTable
-                  rows={openTasks.rows}
-                  showClient={false}
-                  showAssignee={false}
-                  compact
-                  caption="Tarefas abertas do cliente"
-                  actor={actor}
-                  running={running}
-                />
-              ) : (
-                <div className="p-4">
-                  <EmptyState
-                    title="Nenhuma tarefa aberta"
-                    description="Crie uma tarefa ou vincule uma rotina recorrente a este cliente."
-                  />
-                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-sm">
-                    <p className="font-semibold text-brand-900">Primeiros passos com este cliente</p>
-                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-700">
-                      <li>
-                        Complete bancos e sistema em <Link href={`/clientes/${id}?aba=bancos`} className="font-medium text-brand-700 hover:underline">Bancos</Link> e guarde os acessos no <Link href={`/clientes/${id}?aba=cofre`} className="font-medium text-brand-700 hover:underline">Cofre</Link>.
-                      </li>
-                      <li>
-                        Registre o que é específico dele em <Link href={`/clientes/${id}?aba=pops`} className="font-medium text-brand-700 hover:underline">Observações</Link>.
-                      </li>
-                      <li>
-                        Crie as rotinas do mês em <Link href="/rotinas/recorrencias" className="font-medium text-brand-700 hover:underline">Modelos e recorrências</Link>.
-                      </li>
-                      <li>
-                        Ou comece pela primeira <Link href={`/tarefas/nova?clientId=${id}`} className="font-medium text-brand-700 hover:underline">tarefa</Link>.
-                      </li>
-                    </ol>
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            <details className="group"><summary className="mb-2 cursor-pointer text-sm font-semibold text-brand-900">Ver concluídas recentemente</summary>
-            <Card title="Últimas concluídas" bodyClassName="p-0">
-              {recentDone.rows.length ? (
-                <TaskTable
-                  rows={recentDone.rows}
-                  showClient={false}
-                  compact
-                  caption="Tarefas concluídas recentemente"
-                />
-              ) : (
-                <p className="p-4 text-sm text-slate-500">
-                  Nenhuma tarefa concluída ainda.
-                </p>
-              )}
-            </Card>
-            </details>
-          </div>
-        </>
-      )}
-
-      {aba === "pendencias" && (
-        <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Stat label="Dependem de nós" value={String(ours.length)} tone={ours.some((t) => t.dueAt < startOfToday(now)) ? "danger" : "default"} hint="Tarefas abertas com a equipe" />
-            <Stat label="Dependem do cliente" value={String(clientSide.length + missingDocs.length)} tone="warning" hint="Pendências e documentos" />
-            <Stat label="Dependem de terceiros" value={String(thirdSide.length)} tone="info" hint="Banco, contador, órgãos" />
-          </div>
-
-          <Card title="Dependem de nós" description="Tarefas abertas deste cliente que estão com a equipe" bodyClassName="p-0">
-            {ours.length ? (
-              <TaskTable rows={ours} showClient={false} compact caption="Tarefas que dependem da equipe" actor={actor} running={running} />
-            ) : (
-              <p className="p-4 text-sm text-slate-500">Nada pendente com a equipe. Tudo em dia.</p>
-            )}
-          </Card>
-
-          <Card title="Dependem do cliente" description="Informações e documentos que estamos esperando dele">
-            {clientSide.length ? (
-              <ul className="divide-y divide-slate-100">
-                {clientSide.map((p) => (
-                  <li key={p.id} className="py-2 text-sm">
-                    <Link href={`/tarefas/${p.task.id}`} className="font-medium hover:underline">
-                      {p.task.title}
-                    </Link>
-                    <p>{p.reason}</p>
-                    <p className="text-xs text-slate-500">
-                      Aguardando há {waitingTime(p.requestedAt, now)}
-                      {p.respondent ? ` · com ${p.respondent}` : ""} · acompanhar em {fmtLocalDate(dbDateToLocalDate(p.followUpAt))}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-slate-500">Nenhuma pendência com o cliente.</p>
-            )}
-          </Card>
-
-          <Card title="Documentos do mês" description="O que o cliente precisa enviar por mês. Marque o que já chegou.">
-            <DocumentChecklist
+          {aba === "resumo" && pfOnly && pfData && (
+            <PfSummary
               clientId={id}
-              competence={competence}
-              canConfigure={manage}
-              items={documents.map((d) => ({
-                ...d,
-                receivedAt: d.receivedAt ? d.receivedAt.toISOString() : null,
-              }))}
+              j={pfData}
+              client={{
+                name: client.tradeName,
+                email: client.contactEmail,
+                phone: client.contactPhone,
+              }}
             />
-          </Card>
-
-          <Card title="Dependem de terceiros" description="Aguardando banco, contador, órgãos ou fornecedores">
-            {thirdSide.length ? (
-              <ul className="divide-y divide-slate-100">
-                {thirdSide.map((p) => (
-                  <li key={p.id} className="py-2 text-sm">
-                    <Link href={`/tarefas/${p.task.id}`} className="font-medium hover:underline">
-                      {p.task.title}
-                    </Link>
-                    <p>{p.reason}</p>
-                    <p className="text-xs text-slate-500">
-                      Aguardando há {waitingTime(p.requestedAt, now)}
-                      {p.respondent ? ` · com ${p.respondent}` : ""} · acompanhar em {fmtLocalDate(dbDateToLocalDate(p.followUpAt))}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-slate-500">Nenhuma pendência com terceiros.</p>
-            )}
-          </Card>
-        </div>
-      )}
-
-      {aba === "cofre" && <ClientVaultPanel clientId={id} items={vaultItems} log={vaultLog} canEdit={manage} configured={vaultConfigured()} />}
-
-      {aba === "pops" && (
-        <div className="space-y-8">
-          <section aria-labelledby="sec-part">
-            <h2 id="sec-part" className="mb-3 text-sm font-semibold text-brand-900">
-              Observações importantes
-            </h2>
-            <ClientNotesPanel clientId={id} kind="PARTICULARIDADE" rows={clientNotes} canDelete={manage} />
-          </section>
-          <section aria-labelledby="sec-pops">
-            <h2 id="sec-pops" className="mb-3 text-sm font-semibold text-brand-900">
-              POPs
-            </h2>
-            <ClientProceduresPanel clientId={id} rows={clientPops} standard={standardPops} canManage={can(actor, "procedures.manage")} />
-          </section>
-        </div>
-      )}
-
-      {aba === "atas" && (
-        <ClientNotesPanel clientId={id} kind="ATA" rows={clientNotes} canDelete={manage} />
-      )}
-
-      {aba === "resumo" && npsData && (
-        <div className="mt-6"><NpsCard clientId={id} rows={npsData.rows} nps={npsData.nps} manage={manage} flash={{ ok: sp.nps === "ok" ? "ok" : undefined, erro: sp.npserro }} link={npsLinkUrl} /></div>
-      )}
-
-      {aba === "consultoria" && pfData && <PfJourneyPanel clientId={id} j={pfData} canEdit={manage} />}
-
-      {aba === "jornada" && journeyData && (
-        <div className="max-w-5xl">
-          {sp.inicio && <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">Data de início da etapa atualizada{Number(sp.inicio) > 0 ? `; ${sp.inicio} prazo(s) refeito(s)` : ""}.</p>}
-          {sp.gerou && <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{sp.gerou} tarefa(s) criada(s). Veja em Tarefas.</p>}
-          {sp.erro && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{sp.erro}</p>}
-          <JourneyPanel
-            view={journeyData}
-            target={{ clientId: id }}
-            back={`/clientes/${id}?aba=jornada`}
-            today={instantToLocalDate(new Date(), APP_TIMEZONE)}
-            people={journeyPeople.map((p) => ({ id: p.id, name: p.name }))}
-            vars={{ nome: (client.contactName ?? client.tradeName).split(" ")[0], empresa: client.tradeName, minhaNome: actor.name, minhaEmpresa: "Rosan Finanças", valor: finance && finance.monthlyFee !== null ? fmtMoney(finance.monthlyFee) : "{valor}", data: "{data}" }}
-            canGenerate={can(actor, "projects.manage")}
-          />
-        </div>
-      )}
-
-      {aba === "fechamentos" && closingData && (
-        <ClosingPanel clientId={id} month={closingMonth} closing={closingData.closing} tasks={closingData.tasks} history={closingHist} manage={manage} />
-      )}
-
-      {aba === "rotinas" && (
-        <div className="space-y-6">
-          <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-4 text-sm text-slate-700">
-            <p className="font-semibold text-brand-900">
-              O que é a rotina do cliente?
-            </p>
-            <p className="mt-1">
-              É a agenda fixa deste cliente: o que precisa ser feito, em que dia
-              e horário. Cadastrada aqui, a rotina gera as tarefas sozinha, no
-              dia e horário certos.
-            </p>
-          </div>
-          <Card
-            title="Agenda de rotinas"
-            actions={
-              can(actor, "recurrences.manage") && (
-                <Link
-                  className="text-sm text-brand-700 hover:underline"
-                  href={`/rotinas/recorrencias/nova?clientId=${id}`}
-                >
-                  Cadastro avançado
-                </Link>
-              )
-            }
-          >
-            <ClientRoutineAgenda
-              editable={can(actor, "recurrences.manage")}
-              routines={client.recurrences.map((r) => ({
-                id: r.id,
-                name: r.template.title,
-                frequency: r.frequency,
-                weekdays: r.weekdays,
-                monthDays: r.monthDays,
-                nthBusinessDay: r.nthBusinessDay,
-                dueTime: r.dueTime,
-                status: r.status,
-                assignee: r.assignee?.name ?? null,
-              }))}
-            />
-          </Card>
-          {routineForm && (
-            <Card
-              title="Nova rotina"
-              description="Cadastro rápido: dia, horário e pronto."
-            >
-              <ClientRoutineForm
-                clientId={id}
-                templates={routineForm.templates}
-                people={routineForm.people}
-                projects={routineForm.projects}
-              />
-            </Card>
           )}
-        </div>
-      )}
 
-      {aba === "dados" && sp.salvo && (
-        <p role="status" className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Dados salvos.</p>
-      )}
-      {aba === "dados" && (
-        <Fold title="Cadastro" hint={client.contactName ?? undefined} open={!!sp.salvo}>
-        {manage && formPeople ? (
-          <ClientForm
-            action={updateClientAction.bind(null, id)}
-            people={formPeople}
-            submitLabel="Salvar dados"
-            cancelHref={`/clientes/${id}`}
-            values={{
-              ...client,
-              monthlyFee: moneyInput(client.monthlyFee === null ? null : Number(client.monthlyFee)),
-              directCost: moneyInput(client.directCost === null ? null : Number(client.directCost)),
-              startDate: client.startDate ? dbDateToLocalDate(client.startDate) : null,
-              memberIds: client.members.map((m) => m.userId),
-            }}
-          />
-        ) : (
-          <dl className="grid max-w-2xl grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-            <dt className="text-slate-500">CNPJ</dt>
-            <dd>{client.cnpj ? fmtCnpj(client.cnpj) : "—"}</dd>
-            <dt className="text-slate-500">Razão social</dt>
-            <dd>{client.legalName}</dd>
-            <dt className="text-slate-500">Contato</dt>
-            <dd>{client.contactName ?? "—"}</dd>
-            <dt className="text-slate-500">E-mail</dt>
-            <dd className="break-all">{client.contactEmail ?? "—"}</dd>
-            <dt className="text-slate-500">Telefone</dt>
-            <dd>{client.contactPhone ?? "—"}</dd>
-            <dt className="text-slate-500">Responsável</dt>
-            <dd>{client.responsibleOperator?.name ?? "—"}</dd>
-          </dl>
-        )}
-        </Fold>
-      )}
-
-      {aba === "dados" && showFinance && (
-        <Fold title="Contrato e rentabilidade" hint={finance && finance.monthlyFee !== null ? `${fmtMoney(finance.monthlyFee)}/mês` : undefined}>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-6">
-            {finance && (
-              <Card title="Contrato e rentabilidade" description="Mês atual">
-                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-                  <dt className="text-slate-500">Mensalidade</dt>
-                  <dd className="font-medium">
-                    {fmtMoney(finance.monthlyFee)}
-                  </dd>
-                  <dt className="text-slate-500">Vencimento</dt>
-                  <dd>
-                    {finance.billingDay ? (
-                      finance.billingDay2 ? (
-                        <span>
-                          {monthlyInstallments(finance.monthlyFee ?? 0, finance.billingDay, finance.billingDay2, finance.firstInstallmentPct)
-                            .map((i) => `${fmtMoney(i.amount)} no dia ${i.day}`)
-                            .join(" e ")}
-                        </span>
-                      ) : (
-                        `Dia ${finance.billingDay}`
-                      )
-                    ) : (
-                      "—"
-                    )}
-                  </dd>
-                  <dt className="text-slate-500">Horas no mês</dt>
-                  <dd>{fmtHours(finance.minutes)}</dd>
-                  <dt className="text-slate-500">Custo</dt>
-                  <dd>{fmtMoney(finance.cost)}</dd>
-                  <dt className="text-slate-500">Margem</dt>
-                  <dd
-                    className={
-                      finance.margin !== null && finance.margin < 0
-                        ? "font-semibold text-red-700"
-                        : "font-medium"
-                    }
-                  >
-                    {fmtMoney(finance.margin)}{" "}
-                    {finance.marginPct !== null && (
-                      <span className="text-xs text-slate-500">
-                        ({fmtPercent(finance.marginPct)})
-                      </span>
-                    )}
-                  </dd>
-                </dl>
-              </Card>
-            )}
-            <Card title="Horas trabalhadas" description="Últimos 6 meses">
+          {aba === "resumo" && !pfOnly && (
+            <>
               {(() => {
-                const max = Math.max(
-                  1,
-                  ...extras.hoursByMonth.map((m) => m.minutes),
-                );
+                const items: {
+                  key: string;
+                  tone: "red" | "amber" | "slate";
+                  text: string;
+                  href: string;
+                  right: string;
+                }[] = [
+                  ...ours
+                    .filter((t) => t.dueAt < startOfToday(now))
+                    .map((t) => ({
+                      key: `t${t.id}`,
+                      tone: "red" as const,
+                      text: t.title,
+                      href: `/tarefas/${t.id}`,
+                      right: "atrasada",
+                    })),
+                  ...clientSide.map((p) => ({
+                    key: `p${p.id}`,
+                    tone: "amber" as const,
+                    text: p.task.title,
+                    href: `/clientes/${id}?aba=pendencias`,
+                    right: `cliente, ${waitingTime(p.requestedAt, now)}`,
+                  })),
+                  ...missingDocs.map((d) => ({
+                    key: `d${d.id}`,
+                    tone: "slate" as const,
+                    text: `Documento: ${d.name}`,
+                    href: `/clientes/${id}?aba=pendencias`,
+                    right: "não recebido",
+                  })),
+                ].slice(0, 8);
+                const prog = closingSummary?.closing
+                  ? closingProgress(closingSummary.closing.items)
+                  : null;
+                const missing = [
+                  !client.software && {
+                    t: "Informar o sistema do cliente",
+                    h: `/clientes/${id}?aba=dados`,
+                  },
+                  !ours.length &&
+                    !openTasks.rows.length && {
+                      t: "Criar as rotinas do mês",
+                      h: `/clientes/${id}?aba=rotinas`,
+                    },
+                  !client.responsibleOperator && {
+                    t: "Definir o responsável",
+                    h: `/clientes/${id}?aba=dados`,
+                  },
+                ].filter(Boolean) as { t: string; h: string }[];
                 return (
-                  <ul className="space-y-1.5">
-                    {extras.hoursByMonth.map((m) => (
-                      <li
-                        key={m.month}
-                        className="grid grid-cols-[3.2rem_1fr_3.4rem] items-center gap-2 text-xs"
+                  <div className="mb-6 grid gap-4 lg:grid-cols-5">
+                    <section
+                      className="card p-4 lg:col-span-3"
+                      aria-label="Precisa de ação"
+                    >
+                      <h2 className="mb-2 text-sm font-semibold text-brand-900">
+                        Precisa de ação
+                      </h2>
+                      {items.length ? (
+                        <ul className="divide-y divide-slate-100">
+                          {items.map((i) => (
+                            <li key={i.key}>
+                              <Link
+                                href={i.href}
+                                className="flex items-center justify-between gap-3 py-2 text-sm hover:bg-slate-50"
+                              >
+                                <span className="flex min-w-0 items-center gap-2">
+                                  <span
+                                    aria-hidden
+                                    className={`h-2 w-2 shrink-0 rounded-full ${i.tone === "red" ? "bg-red-500" : i.tone === "amber" ? "bg-amber-500" : "bg-slate-400"}`}
+                                  />
+                                  <span className="truncate">{i.text}</span>
+                                </span>
+                                <span
+                                  className={`shrink-0 text-xs ${i.tone === "red" ? "text-red-600" : "text-slate-500"}`}
+                                >
+                                  {i.right}
+                                </span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="py-3 text-sm text-emerald-700">
+                          Tudo em dia com este cliente.
+                        </p>
+                      )}
+                    </section>
+                    <div className="space-y-4 lg:col-span-2">
+                      <Link
+                        href={`/clientes/${id}?aba=fechamentos`}
+                        className="card block p-4 hover:border-brand-200"
                       >
-                        <span className="text-slate-500">
-                          {m.month.slice(5)}/{m.month.slice(2, 4)}
-                        </span>
-                        <span className="h-2 rounded-full bg-slate-100">
-                          <span
-                            className="block h-2 rounded-full bg-brand-500"
-                            style={{ width: `${(m.minutes / max) * 100}%` }}
+                        <p className="text-sm font-semibold text-brand-900">
+                          Fechamento do mês
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {prog
+                            ? `${prog.done} de ${prog.total} itens (${prog.pct}%)`
+                            : "Não iniciado"}
+                        </p>
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className="h-full bg-brand-700"
+                            style={{ width: `${prog?.pct ?? 0}%` }}
                           />
-                        </span>
-                        <span className="text-right tabular-nums text-slate-700">
-                          {fmtHours(m.minutes)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                        </div>
+                      </Link>
+                      {missing.length > 0 && (
+                        <section
+                          className="card p-4"
+                          aria-label="Falta preencher"
+                        >
+                          <h2 className="text-sm font-semibold text-brand-900">
+                            Falta preencher
+                          </h2>
+                          <ul className="mt-1 space-y-1">
+                            {missing.map((m) => (
+                              <li key={m.t}>
+                                <Link
+                                  href={m.h}
+                                  className="text-sm text-brand-700 hover:underline"
+                                >
+                                  {m.t}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </section>
+                      )}
+                    </div>
+                  </div>
                 );
               })()}
-              {extras.hoursByPerson.length > 0 && (
-                <>
-                  <h3 className="mt-4 text-xs font-semibold text-slate-500">
-                    Por pessoa neste mês
-                  </h3>
-                  <ul className="mt-1 divide-y divide-slate-100 text-sm">
-                    {extras.hoursByPerson.map((p) => (
-                      <li key={p.name} className="flex justify-between py-1">
-                        <span>{p.name}</span>
-                        <span className="font-medium tabular-nums">
-                          {fmtHours(p.minutes)}
-                        </span>
-                      </li>
-                    ))}
+              {highlights.length > 0 && (
+                <section className="mb-6" aria-label="Observações importantes">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-brand-900">
+                      📌 Atenção com este cliente
+                    </h2>
+                    <Link
+                      href={`/clientes/${id}?aba=pops`}
+                      className="text-xs text-brand-700 hover:underline"
+                    >
+                      Ver todas as observações →
+                    </Link>
+                  </div>
+                  <ul className="grid gap-3 md:grid-cols-2">
+                    {highlights.map((n) => {
+                      const t = NOTE_TONE[toneOf(n.tone)];
+                      return (
+                        <li
+                          key={n.id}
+                          className={`relative overflow-hidden rounded-xl border p-4 pl-5 ${t.card}`}
+                        >
+                          <span
+                            aria-hidden
+                            className={`absolute inset-y-0 left-0 w-1.5 ${t.bar}`}
+                          />
+                          <p className="text-sm font-semibold text-slate-900">
+                            {t.emoji} {n.title}
+                          </p>
+                          <p className="mt-1 line-clamp-3 whitespace-pre-line text-sm text-slate-700">
+                            {n.content.replace(/\*\*/g, "")}
+                          </p>
+                        </li>
+                      );
+                    })}
                   </ul>
-                </>
+                </section>
               )}
-            </Card>
-          </div>
-          <div className="space-y-6">
-            {(can(actor, "contracts.manage") ||
-              extras.contracts.length > 0) && (
-              <Card
-                title="Contratos"
-                actions={
-                  can(actor, "contracts.manage") && (
+              <div className="space-y-6">
+                <Card
+                  title="Tarefas abertas"
+                  actions={
                     <Link
                       className="text-sm text-brand-700 hover:underline"
-                      href="/contratos"
+                      href={`/tarefas?clientId=${id}`}
                     >
-                      Ver todos
+                      Ver todas
                     </Link>
-                  )
-                }
+                  }
+                  bodyClassName="p-0"
+                >
+                  {openTasks.rows.length ? (
+                    <TaskTable
+                      rows={openTasks.rows}
+                      showClient={false}
+                      showAssignee={false}
+                      compact
+                      caption="Tarefas abertas do cliente"
+                      actor={actor}
+                      running={running}
+                    />
+                  ) : (
+                    <div className="p-4">
+                      <EmptyState
+                        title="Nenhuma tarefa aberta"
+                        description="Crie uma tarefa ou vincule uma rotina recorrente a este cliente."
+                      />
+                      <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-sm">
+                        <p className="font-semibold text-brand-900">
+                          Primeiros passos com este cliente
+                        </p>
+                        <ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-700">
+                          <li>
+                            Complete bancos e sistema em{" "}
+                            <Link
+                              href={`/clientes/${id}?aba=bancos`}
+                              className="font-medium text-brand-700 hover:underline"
+                            >
+                              Bancos
+                            </Link>{" "}
+                            e guarde os acessos no{" "}
+                            <Link
+                              href={`/clientes/${id}?aba=cofre`}
+                              className="font-medium text-brand-700 hover:underline"
+                            >
+                              Cofre
+                            </Link>
+                            .
+                          </li>
+                          <li>
+                            Registre o que é específico dele em{" "}
+                            <Link
+                              href={`/clientes/${id}?aba=pops`}
+                              className="font-medium text-brand-700 hover:underline"
+                            >
+                              Observações
+                            </Link>
+                            .
+                          </li>
+                          <li>
+                            Crie as rotinas do mês em{" "}
+                            <Link
+                              href="/rotinas/recorrencias"
+                              className="font-medium text-brand-700 hover:underline"
+                            >
+                              Modelos e recorrências
+                            </Link>
+                            .
+                          </li>
+                          <li>
+                            Ou comece pela primeira{" "}
+                            <Link
+                              href={`/tarefas/nova?clientId=${id}`}
+                              className="font-medium text-brand-700 hover:underline"
+                            >
+                              tarefa
+                            </Link>
+                            .
+                          </li>
+                        </ol>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+
+                <details className="group">
+                  <summary className="mb-2 cursor-pointer text-sm font-semibold text-brand-900">
+                    Ver concluídas recentemente
+                  </summary>
+                  <Card title="Últimas concluídas" bodyClassName="p-0">
+                    {recentDone.rows.length ? (
+                      <TaskTable
+                        rows={recentDone.rows}
+                        showClient={false}
+                        compact
+                        caption="Tarefas concluídas recentemente"
+                      />
+                    ) : (
+                      <p className="p-4 text-sm text-slate-500">
+                        Nenhuma tarefa concluída ainda.
+                      </p>
+                    )}
+                  </Card>
+                </details>
+              </div>
+            </>
+          )}
+
+          {aba === "pendencias" && (
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Stat
+                  label="Dependem de nós"
+                  value={String(ours.length)}
+                  tone={
+                    ours.some((t) => t.dueAt < startOfToday(now))
+                      ? "danger"
+                      : "default"
+                  }
+                  hint="Tarefas abertas com a equipe"
+                />
+                <Stat
+                  label="Dependem do cliente"
+                  value={String(clientSide.length + missingDocs.length)}
+                  tone="warning"
+                  hint="Pendências e documentos"
+                />
+                <Stat
+                  label="Dependem de terceiros"
+                  value={String(thirdSide.length)}
+                  tone="info"
+                  hint="Banco, contador, órgãos"
+                />
+              </div>
+
+              <Card
+                title="Dependem de nós"
+                description="Tarefas abertas deste cliente que estão com a equipe"
+                bodyClassName="p-0"
               >
-                {extras.contracts.length ? (
-                  <ul className="divide-y divide-slate-100 text-sm">
-                    {extras.contracts.map((c) => (
-                      <li
-                        key={c.id}
-                        className="flex items-center justify-between gap-2 py-2"
-                      >
-                        <div>
-                          <Link
-                            href={`/contratos/${c.id}`}
-                            className="font-medium hover:underline"
-                          >
-                            Contrato {c.number}
-                          </Link>
-                          <p className="text-xs text-slate-500">
-                            {fmtMoney(c.monthlyFee)} · {c.termMonths} meses
-                            {c.startDate
-                              ? ` · desde ${fmtLocalDate(c.startDate)}`
-                              : ""}
-                            {c.hasDistrato ? " · com distrato" : ""}
-                          </p>
-                        </div>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">
-                          {
-                            CONTRACT_STATUS_LABEL[
-                              c.status as keyof typeof CONTRACT_STATUS_LABEL
-                            ]
-                          }
-                        </span>
+                {ours.length ? (
+                  <TaskTable
+                    rows={ours}
+                    showClient={false}
+                    compact
+                    caption="Tarefas que dependem da equipe"
+                    actor={actor}
+                    running={running}
+                  />
+                ) : (
+                  <p className="p-4 text-sm text-slate-500">
+                    Nada pendente com a equipe. Tudo em dia.
+                  </p>
+                )}
+              </Card>
+
+              <Card
+                title="Dependem do cliente"
+                description="Informações e documentos que estamos esperando dele"
+              >
+                {clientSide.length ? (
+                  <ul className="divide-y divide-slate-100">
+                    {clientSide.map((p) => (
+                      <li key={p.id} className="py-2 text-sm">
+                        <Link
+                          href={`/tarefas/${p.task.id}`}
+                          className="font-medium hover:underline"
+                        >
+                          {p.task.title}
+                        </Link>
+                        <p>{p.reason}</p>
+                        <p className="text-xs text-slate-500">
+                          Aguardando há {waitingTime(p.requestedAt, now)}
+                          {p.respondent ? ` · com ${p.respondent}` : ""} ·
+                          acompanhar em{" "}
+                          {fmtLocalDate(dbDateToLocalDate(p.followUpAt))}
+                        </p>
                       </li>
                     ))}
                   </ul>
                 ) : (
                   <p className="text-sm text-slate-500">
-                    Nenhum contrato vinculado a este cliente.
+                    Nenhuma pendência com o cliente.
                   </p>
                 )}
               </Card>
-            )}
 
-            {extras.proposals.length > 0 && (
-              <Card title="Propostas">
-                <ul className="divide-y divide-slate-100 text-sm">
-                  {extras.proposals.map((p) => (
-                    <li
-                      key={p.id}
-                      className="flex items-center justify-between gap-2 py-2"
-                    >
-                      <Link
-                        href={`/propostas/${p.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        Proposta {p.number} · {fmtMoney(p.monthlyFee)}
-                      </Link>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">
-                        {PROPOSAL_STATUS_LABEL[p.status as ProposalStatus]}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+              <Card
+                title="Documentos do mês"
+                description="O que o cliente precisa enviar por mês. Marque o que já chegou."
+              >
+                <DocumentChecklist
+                  clientId={id}
+                  competence={competence}
+                  canConfigure={manage}
+                  items={documents.map((d) => ({
+                    ...d,
+                    receivedAt: d.receivedAt
+                      ? d.receivedAt.toISOString()
+                      : null,
+                  }))}
+                />
               </Card>
-            )}
-          </div>
-        </div>
-        </Fold>
-      )}
 
-      {aba === "dados" && manage && client.status !== "ENCERRADO" && (
-        <details className="mt-6 rounded-xl border border-red-200 bg-red-50/40 p-4">
-          <summary className="cursor-pointer text-sm font-medium text-red-700">Encerrar cliente (registrar saída)</summary>
-          <form action={closeClientAction.bind(null, id)} className="mt-3 grid gap-3 md:grid-cols-3">
-            <label className="text-sm"><span className="font-medium text-slate-700">Motivo</span>
-              <select name="reason" required className="input mt-1" defaultValue=""><option value="" disabled>Escolha</option>{CHURN_REASONS.map((r) => <option key={r}>{r}</option>)}</select></label>
-            <label className="text-sm md:col-span-2"><span className="font-medium text-slate-700">Detalhes (opcional)</span><input name="detail" maxLength={1000} className="input mt-1" /></label>
-            <div><button type="submit" className="btn-secondary border-red-300 text-red-700">Encerrar e registrar saída</button></div>
-          </form>
-        </details>
-      )}
-
-      {aba === "dados" && vol && (
-        <Fold title="Diagnóstico e volume" open={!!(sp.dx || sp.dxerro)}>
-          <DiagnosisPanel clientId={id} diagnosis={vol.diagnosis} rows={vol.rows} manage={manage} flash={{ dx: sp.dx, erro: sp.dxerro }} />
-        </Fold>
-      )}
-
-      {aba === "dados" && (
-        <Fold title="Combinados do onboarding" open={!!(sp.ob || sp.oberro)}>
-        <section className="max-w-4xl">
-          <p className="mb-3 text-xs text-slate-500">Objetivos, responsabilidades e canais combinados com este cliente. As tarefas do onboarding ficam na aba Jornada.</p>
-          {sp.ob && <p className="mb-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">Combinados salvos.</p>}
-          {sp.oberro && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{sp.oberro}</p>}
-          <form action={saveOnboardingAction.bind(null, id)} className="space-y-4">
-            <label className="block text-sm"><span className="font-medium text-slate-700">Objetivos da parceria (um por linha)</span>
-              <textarea name="goals" rows={4} defaultValue={onb?.goals ?? ""} className="input mt-1" placeholder="Ex.: Organização completa dos processos financeiros" /></label>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="block text-sm"><span className="font-medium text-slate-700">Nossas responsabilidades (uma por linha)</span>
-                <textarea name="ourResponsibilities" rows={5} defaultValue={onb?.ourResponsibilities ?? ""} className="input mt-1" /></label>
-              <label className="block text-sm"><span className="font-medium text-slate-700">Responsabilidades do cliente (uma por linha)</span>
-                <textarea name="clientResponsibilities" rows={5} defaultValue={onb?.clientResponsibilities ?? ""} className="input mt-1" /></label>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              <label className="block text-sm"><span className="font-medium text-slate-700">Canal oficial</span><input name="officialChannel" defaultValue={onb?.officialChannel ?? ""} className="input mt-1" placeholder="Ex.: grupo de WhatsApp" /></label>
-              <label className="block text-sm"><span className="font-medium text-slate-700">ERP / sistema usado</span><input name="erp" defaultValue={onb?.erp ?? client.software ?? ""} className="input mt-1" /></label>
-              <label className="block text-sm"><span className="font-medium text-slate-700">E-mail padrão de atendimento</span><input name="defaultEmail" type="email" defaultValue={onb?.defaultEmail ?? ""} className="input mt-1" /></label>
-            </div>
-            <button type="submit" className="btn-primary">Salvar combinados</button>
-          </form>
-        </section>
-        </Fold>
-      )}
-
-      {aba === "dados" && (
-        <Fold title="Bancos" hint={`${banks.length} conta${banks.length === 1 ? "" : "s"}`}>
-          <BankAccountsPanel clientId={id} accounts={banks} canEdit={manage} />
-        </Fold>
-      )}
-
-      {aba === "dados" && manage && (
-        <Fold title="Acesso ao Portal do Cliente" hint={`${portalUsers.filter((u) => !u.revokedAt).length} usuário(s)`}>
-          <PortalAccessPanel
-            clientId={id}
-            users={portalUsers.map((a) => ({ id: a.user.id, name: a.user.name, email: a.user.email, status: a.user.status, lastLoginAt: a.user.lastLoginAt?.toISOString() ?? null, revoked: !!a.revokedAt }))}
-          />
-        </Fold>
-      )}
-
-      {aba === "historico" && (
-        <div className="max-w-3xl">
-          <Card
-            title="Histórico"
-            description="Últimos eventos do cliente e de suas tarefas"
-          >
-            {history.length ? (
-              <ol className="space-y-2">
-                {history.map((e) => (
-                  <li
-                    key={e.id}
-                    className="border-l-2 border-slate-200 pl-3 text-sm"
-                  >
-                    <p>
-                      {e.taskId ? (
+              <Card
+                title="Dependem de terceiros"
+                description="Aguardando banco, contador, órgãos ou fornecedores"
+              >
+                {thirdSide.length ? (
+                  <ul className="divide-y divide-slate-100">
+                    {thirdSide.map((p) => (
+                      <li key={p.id} className="py-2 text-sm">
                         <Link
-                          className="hover:underline"
-                          href={`/tarefas/${e.taskId}`}
+                          href={`/tarefas/${p.task.id}`}
+                          className="font-medium hover:underline"
                         >
-                          {e.summary}
+                          {p.task.title}
                         </Link>
+                        <p>{p.reason}</p>
+                        <p className="text-xs text-slate-500">
+                          Aguardando há {waitingTime(p.requestedAt, now)}
+                          {p.respondent ? ` · com ${p.respondent}` : ""} ·
+                          acompanhar em{" "}
+                          {fmtLocalDate(dbDateToLocalDate(p.followUpAt))}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    Nenhuma pendência com terceiros.
+                  </p>
+                )}
+              </Card>
+            </div>
+          )}
+
+          {aba === "cofre" && (
+            <ClientVaultPanel
+              clientId={id}
+              items={vaultItems}
+              log={vaultLog}
+              canEdit={manage}
+              configured={vaultConfigured()}
+            />
+          )}
+
+          {aba === "pops" && (
+            <div className="space-y-8">
+              <section aria-labelledby="sec-part">
+                <h2
+                  id="sec-part"
+                  className="mb-3 text-sm font-semibold text-brand-900"
+                >
+                  Observações importantes
+                </h2>
+                <ClientNotesPanel
+                  clientId={id}
+                  kind="PARTICULARIDADE"
+                  rows={clientNotes}
+                  canDelete={manage}
+                />
+              </section>
+              <section aria-labelledby="sec-pops">
+                <h2
+                  id="sec-pops"
+                  className="mb-3 text-sm font-semibold text-brand-900"
+                >
+                  POPs
+                </h2>
+                <ClientProceduresPanel
+                  clientId={id}
+                  rows={clientPops}
+                  standard={standardPops}
+                  canManage={can(actor, "procedures.manage")}
+                />
+              </section>
+            </div>
+          )}
+
+          {aba === "atas" && (
+            <ClientNotesPanel
+              clientId={id}
+              kind="ATA"
+              rows={clientNotes}
+              canDelete={manage}
+            />
+          )}
+
+          {aba === "resumo" && !pfOnly && npsData && (
+            <div className="mt-6">
+              <NpsCard
+                clientId={id}
+                rows={npsData.rows}
+                nps={npsData.nps}
+                manage={manage}
+                flash={{
+                  ok: sp.nps === "ok" ? "ok" : undefined,
+                  erro: sp.npserro,
+                }}
+                link={npsLinkUrl}
+              />
+            </div>
+          )}
+
+          {aba === "consultoria" && pfData && (
+            <PfJourneyPanel clientId={id} j={pfData} canEdit={manage} />
+          )}
+
+          {aba === "jornada" && journeyData && (
+            <div className="max-w-5xl">
+              {sp.inicio && (
+                <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+                  Data de início da etapa atualizada
+                  {Number(sp.inicio) > 0
+                    ? `; ${sp.inicio} prazo(s) refeito(s)`
+                    : ""}
+                  .
+                </p>
+              )}
+              {sp.gerou && (
+                <p className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+                  {sp.gerou} tarefa(s) criada(s). Veja em Tarefas.
+                </p>
+              )}
+              {sp.erro && (
+                <p
+                  role="alert"
+                  className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700"
+                >
+                  {sp.erro}
+                </p>
+              )}
+              <JourneyPanel
+                view={journeyData}
+                target={{ clientId: id }}
+                back={`/clientes/${id}?aba=jornada`}
+                today={instantToLocalDate(new Date(), APP_TIMEZONE)}
+                people={journeyPeople.map((p) => ({ id: p.id, name: p.name }))}
+                vars={{
+                  nome: (client.contactName ?? client.tradeName).split(" ")[0],
+                  empresa: client.tradeName,
+                  minhaNome: actor.name,
+                  minhaEmpresa: "Rosan Finanças",
+                  valor:
+                    finance && finance.monthlyFee !== null
+                      ? fmtMoney(finance.monthlyFee)
+                      : "{valor}",
+                  data: "{data}",
+                }}
+                canGenerate={can(actor, "projects.manage")}
+              />
+            </div>
+          )}
+
+          {aba === "fechamentos" && closingData && (
+            <ClosingPanel
+              clientId={id}
+              month={closingMonth}
+              closing={closingData.closing}
+              tasks={closingData.tasks}
+              history={closingHist}
+              manage={manage}
+            />
+          )}
+
+          {aba === "rotinas" && (
+            <div className="space-y-6">
+              <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-4 text-sm text-slate-700">
+                <p className="font-semibold text-brand-900">
+                  O que é a rotina do cliente?
+                </p>
+                <p className="mt-1">
+                  É a agenda fixa deste cliente: o que precisa ser feito, em que
+                  dia e horário. Cadastrada aqui, a rotina gera as tarefas
+                  sozinha, no dia e horário certos.
+                </p>
+              </div>
+              <Card
+                title="Agenda de rotinas"
+                actions={
+                  can(actor, "recurrences.manage") && (
+                    <Link
+                      className="text-sm text-brand-700 hover:underline"
+                      href={`/rotinas/recorrencias/nova?clientId=${id}`}
+                    >
+                      Cadastro avançado
+                    </Link>
+                  )
+                }
+              >
+                <ClientRoutineAgenda
+                  editable={can(actor, "recurrences.manage")}
+                  routines={client.recurrences.map((r) => ({
+                    id: r.id,
+                    name: r.template.title,
+                    frequency: r.frequency,
+                    weekdays: r.weekdays,
+                    monthDays: r.monthDays,
+                    nthBusinessDay: r.nthBusinessDay,
+                    dueTime: r.dueTime,
+                    status: r.status,
+                    assignee: r.assignee?.name ?? null,
+                  }))}
+                />
+              </Card>
+              {routineForm && (
+                <Card
+                  title="Nova rotina"
+                  description="Cadastro rápido: dia, horário e pronto."
+                >
+                  <ClientRoutineForm
+                    clientId={id}
+                    templates={routineForm.templates}
+                    people={routineForm.people}
+                    projects={routineForm.projects}
+                  />
+                </Card>
+              )}
+            </div>
+          )}
+
+          {aba === "dados" && sp.salvo && (
+            <p
+              role="status"
+              className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+            >
+              Dados salvos.
+            </p>
+          )}
+          {aba === "dados" && (
+            <Fold
+              title="Cadastro"
+              hint={client.contactName ?? undefined}
+              open={!!sp.salvo}
+            >
+              {manage && formPeople ? (
+                <ClientForm
+                  action={updateClientAction.bind(null, id)}
+                  people={formPeople}
+                  submitLabel="Salvar dados"
+                  cancelHref={`/clientes/${id}`}
+                  values={{
+                    ...client,
+                    monthlyFee: moneyInput(
+                      client.monthlyFee === null
+                        ? null
+                        : Number(client.monthlyFee),
+                    ),
+                    directCost: moneyInput(
+                      client.directCost === null
+                        ? null
+                        : Number(client.directCost),
+                    ),
+                    startDate: client.startDate
+                      ? dbDateToLocalDate(client.startDate)
+                      : null,
+                    memberIds: client.members.map((m) => m.userId),
+                  }}
+                />
+              ) : (
+                <dl className="grid max-w-2xl grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+                  <dt className="text-slate-500">CNPJ</dt>
+                  <dd>{client.cnpj ? fmtCnpj(client.cnpj) : "—"}</dd>
+                  <dt className="text-slate-500">Razão social</dt>
+                  <dd>{client.legalName}</dd>
+                  <dt className="text-slate-500">Contato</dt>
+                  <dd>{client.contactName ?? "—"}</dd>
+                  <dt className="text-slate-500">E-mail</dt>
+                  <dd className="break-all">{client.contactEmail ?? "—"}</dd>
+                  <dt className="text-slate-500">Telefone</dt>
+                  <dd>{client.contactPhone ?? "—"}</dd>
+                  <dt className="text-slate-500">Responsável</dt>
+                  <dd>{client.responsibleOperator?.name ?? "—"}</dd>
+                </dl>
+              )}
+            </Fold>
+          )}
+
+          {aba === "dados" && showFinance && !pfOnly && (
+            <Fold
+              title="Contrato e rentabilidade"
+              hint={
+                finance && finance.monthlyFee !== null
+                  ? `${fmtMoney(finance.monthlyFee)}/mês`
+                  : undefined
+              }
+            >
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-6">
+                  {finance && (
+                    <Card
+                      title="Contrato e rentabilidade"
+                      description="Mês atual"
+                    >
+                      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+                        <dt className="text-slate-500">Mensalidade</dt>
+                        <dd className="font-medium">
+                          {fmtMoney(finance.monthlyFee)}
+                        </dd>
+                        <dt className="text-slate-500">Vencimento</dt>
+                        <dd>
+                          {finance.billingDay ? (
+                            finance.billingDay2 ? (
+                              <span>
+                                {monthlyInstallments(
+                                  finance.monthlyFee ?? 0,
+                                  finance.billingDay,
+                                  finance.billingDay2,
+                                  finance.firstInstallmentPct,
+                                )
+                                  .map(
+                                    (i) =>
+                                      `${fmtMoney(i.amount)} no dia ${i.day}`,
+                                  )
+                                  .join(" e ")}
+                              </span>
+                            ) : (
+                              `Dia ${finance.billingDay}`
+                            )
+                          ) : (
+                            "—"
+                          )}
+                        </dd>
+                        <dt className="text-slate-500">Horas no mês</dt>
+                        <dd>{fmtHours(finance.minutes)}</dd>
+                        <dt className="text-slate-500">Custo</dt>
+                        <dd>{fmtMoney(finance.cost)}</dd>
+                        <dt className="text-slate-500">Margem</dt>
+                        <dd
+                          className={
+                            finance.margin !== null && finance.margin < 0
+                              ? "font-semibold text-red-700"
+                              : "font-medium"
+                          }
+                        >
+                          {fmtMoney(finance.margin)}{" "}
+                          {finance.marginPct !== null && (
+                            <span className="text-xs text-slate-500">
+                              ({fmtPercent(finance.marginPct)})
+                            </span>
+                          )}
+                        </dd>
+                      </dl>
+                    </Card>
+                  )}
+                  <Card title="Horas trabalhadas" description="Últimos 6 meses">
+                    {(() => {
+                      const max = Math.max(
+                        1,
+                        ...extras.hoursByMonth.map((m) => m.minutes),
+                      );
+                      return (
+                        <ul className="space-y-1.5">
+                          {extras.hoursByMonth.map((m) => (
+                            <li
+                              key={m.month}
+                              className="grid grid-cols-[3.2rem_1fr_3.4rem] items-center gap-2 text-xs"
+                            >
+                              <span className="text-slate-500">
+                                {m.month.slice(5)}/{m.month.slice(2, 4)}
+                              </span>
+                              <span className="h-2 rounded-full bg-slate-100">
+                                <span
+                                  className="block h-2 rounded-full bg-brand-500"
+                                  style={{
+                                    width: `${(m.minutes / max) * 100}%`,
+                                  }}
+                                />
+                              </span>
+                              <span className="text-right tabular-nums text-slate-700">
+                                {fmtHours(m.minutes)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      );
+                    })()}
+                    {extras.hoursByPerson.length > 0 && (
+                      <>
+                        <h3 className="mt-4 text-xs font-semibold text-slate-500">
+                          Por pessoa neste mês
+                        </h3>
+                        <ul className="mt-1 divide-y divide-slate-100 text-sm">
+                          {extras.hoursByPerson.map((p) => (
+                            <li
+                              key={p.name}
+                              className="flex justify-between py-1"
+                            >
+                              <span>{p.name}</span>
+                              <span className="font-medium tabular-nums">
+                                {fmtHours(p.minutes)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </Card>
+                </div>
+                <div className="space-y-6">
+                  {(can(actor, "contracts.manage") ||
+                    extras.contracts.length > 0) && (
+                    <Card
+                      title="Contratos"
+                      actions={
+                        can(actor, "contracts.manage") && (
+                          <Link
+                            className="text-sm text-brand-700 hover:underline"
+                            href="/contratos"
+                          >
+                            Ver todos
+                          </Link>
+                        )
+                      }
+                    >
+                      {extras.contracts.length ? (
+                        <ul className="divide-y divide-slate-100 text-sm">
+                          {extras.contracts.map((c) => (
+                            <li
+                              key={c.id}
+                              className="flex items-center justify-between gap-2 py-2"
+                            >
+                              <div>
+                                <Link
+                                  href={`/contratos/${c.id}`}
+                                  className="font-medium hover:underline"
+                                >
+                                  Contrato {c.number}
+                                </Link>
+                                <p className="text-xs text-slate-500">
+                                  {fmtMoney(c.monthlyFee)} · {c.termMonths}{" "}
+                                  meses
+                                  {c.startDate
+                                    ? ` · desde ${fmtLocalDate(c.startDate)}`
+                                    : ""}
+                                  {c.hasDistrato ? " · com distrato" : ""}
+                                </p>
+                              </div>
+                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">
+                                {
+                                  CONTRACT_STATUS_LABEL[
+                                    c.status as keyof typeof CONTRACT_STATUS_LABEL
+                                  ]
+                                }
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
                       ) : (
-                        e.summary
+                        <p className="text-sm text-slate-500">
+                          Nenhum contrato vinculado a este cliente.
+                        </p>
                       )}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {e.actor?.name ?? "Sistema"} · {fmtDateTime(e.createdAt)}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="text-sm text-slate-500">Sem eventos.</p>
-            )}
-          </Card>
-        </div>
-      )}
+                    </Card>
+                  )}
+
+                  {extras.proposals.length > 0 && (
+                    <Card title="Propostas">
+                      <ul className="divide-y divide-slate-100 text-sm">
+                        {extras.proposals.map((p) => (
+                          <li
+                            key={p.id}
+                            className="flex items-center justify-between gap-2 py-2"
+                          >
+                            <Link
+                              href={`/propostas/${p.id}`}
+                              className="font-medium hover:underline"
+                            >
+                              Proposta {p.number} · {fmtMoney(p.monthlyFee)}
+                            </Link>
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">
+                              {
+                                PROPOSAL_STATUS_LABEL[
+                                  p.status as ProposalStatus
+                                ]
+                              }
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </Fold>
+          )}
+
+          {aba === "dados" && manage && client.status !== "ENCERRADO" && (
+            <details className="mt-6 rounded-xl border border-red-200 bg-red-50/40 p-4">
+              <summary className="cursor-pointer text-sm font-medium text-red-700">
+                Encerrar cliente (registrar saída)
+              </summary>
+              <form
+                action={closeClientAction.bind(null, id)}
+                className="mt-3 grid gap-3 md:grid-cols-3"
+              >
+                <label className="text-sm">
+                  <span className="font-medium text-slate-700">Motivo</span>
+                  <select
+                    name="reason"
+                    required
+                    className="input mt-1"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>
+                      Escolha
+                    </option>
+                    {CHURN_REASONS.map((r) => (
+                      <option key={r}>{r}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-sm md:col-span-2">
+                  <span className="font-medium text-slate-700">
+                    Detalhes (opcional)
+                  </span>
+                  <input
+                    name="detail"
+                    maxLength={1000}
+                    className="input mt-1"
+                  />
+                </label>
+                <div>
+                  <button
+                    type="submit"
+                    className="btn-secondary border-red-300 text-red-700"
+                  >
+                    Encerrar e registrar saída
+                  </button>
+                </div>
+              </form>
+            </details>
+          )}
+
+          {aba === "dados" && !pfOnly && vol && (
+            <Fold title="Diagnóstico e volume" open={!!(sp.dx || sp.dxerro)}>
+              <DiagnosisPanel
+                clientId={id}
+                diagnosis={vol.diagnosis}
+                rows={vol.rows}
+                manage={manage}
+                flash={{ dx: sp.dx, erro: sp.dxerro }}
+              />
+            </Fold>
+          )}
+
+          {aba === "dados" && !pfOnly && (
+            <Fold
+              title="Combinados do onboarding"
+              open={!!(sp.ob || sp.oberro)}
+            >
+              <section className="max-w-4xl">
+                <p className="mb-3 text-xs text-slate-500">
+                  Objetivos, responsabilidades e canais combinados com este
+                  cliente. As tarefas do onboarding ficam na aba Jornada.
+                </p>
+                {sp.ob && (
+                  <p className="mb-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+                    Combinados salvos.
+                  </p>
+                )}
+                {sp.oberro && (
+                  <p
+                    role="alert"
+                    className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700"
+                  >
+                    {sp.oberro}
+                  </p>
+                )}
+                <form
+                  action={saveOnboardingAction.bind(null, id)}
+                  className="space-y-4"
+                >
+                  <label className="block text-sm">
+                    <span className="font-medium text-slate-700">
+                      Objetivos da parceria (um por linha)
+                    </span>
+                    <textarea
+                      name="goals"
+                      rows={4}
+                      defaultValue={onb?.goals ?? ""}
+                      className="input mt-1"
+                      placeholder="Ex.: Organização completa dos processos financeiros"
+                    />
+                  </label>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="block text-sm">
+                      <span className="font-medium text-slate-700">
+                        Nossas responsabilidades (uma por linha)
+                      </span>
+                      <textarea
+                        name="ourResponsibilities"
+                        rows={5}
+                        defaultValue={onb?.ourResponsibilities ?? ""}
+                        className="input mt-1"
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="font-medium text-slate-700">
+                        Responsabilidades do cliente (uma por linha)
+                      </span>
+                      <textarea
+                        name="clientResponsibilities"
+                        rows={5}
+                        defaultValue={onb?.clientResponsibilities ?? ""}
+                        className="input mt-1"
+                      />
+                    </label>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <label className="block text-sm">
+                      <span className="font-medium text-slate-700">
+                        Canal oficial
+                      </span>
+                      <input
+                        name="officialChannel"
+                        defaultValue={onb?.officialChannel ?? ""}
+                        className="input mt-1"
+                        placeholder="Ex.: grupo de WhatsApp"
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="font-medium text-slate-700">
+                        ERP / sistema usado
+                      </span>
+                      <input
+                        name="erp"
+                        defaultValue={onb?.erp ?? client.software ?? ""}
+                        className="input mt-1"
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="font-medium text-slate-700">
+                        E-mail padrão de atendimento
+                      </span>
+                      <input
+                        name="defaultEmail"
+                        type="email"
+                        defaultValue={onb?.defaultEmail ?? ""}
+                        className="input mt-1"
+                      />
+                    </label>
+                  </div>
+                  <button type="submit" className="btn-primary">
+                    Salvar combinados
+                  </button>
+                </form>
+              </section>
+            </Fold>
+          )}
+
+          {aba === "dados" && !pfOnly && (
+            <Fold
+              title="Bancos"
+              hint={`${banks.length} conta${banks.length === 1 ? "" : "s"}`}
+            >
+              <BankAccountsPanel
+                clientId={id}
+                accounts={banks}
+                canEdit={manage}
+              />
+            </Fold>
+          )}
+
+          {aba === "dados" && manage && !pfOnly && (
+            <Fold
+              title="Acesso ao Portal do Cliente"
+              hint={`${portalUsers.filter((u) => !u.revokedAt).length} usuário(s)`}
+            >
+              <PortalAccessPanel
+                clientId={id}
+                users={portalUsers.map((a) => ({
+                  id: a.user.id,
+                  name: a.user.name,
+                  email: a.user.email,
+                  status: a.user.status,
+                  lastLoginAt: a.user.lastLoginAt?.toISOString() ?? null,
+                  revoked: !!a.revokedAt,
+                }))}
+              />
+            </Fold>
+          )}
+
+          {aba === "historico" && (
+            <div className="max-w-3xl">
+              <Card
+                title="Histórico"
+                description="Últimos eventos do cliente e de suas tarefas"
+              >
+                {history.length ? (
+                  <ol className="space-y-2">
+                    {history.map((e) => (
+                      <li
+                        key={e.id}
+                        className="border-l-2 border-slate-200 pl-3 text-sm"
+                      >
+                        <p>
+                          {e.taskId ? (
+                            <Link
+                              className="hover:underline"
+                              href={`/tarefas/${e.taskId}`}
+                            >
+                              {e.summary}
+                            </Link>
+                          ) : (
+                            e.summary
+                          )}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {e.actor?.name ?? "Sistema"} ·{" "}
+                          {fmtDateTime(e.createdAt)}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-sm text-slate-500">Sem eventos.</p>
+                )}
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     </>
