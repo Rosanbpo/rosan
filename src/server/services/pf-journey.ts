@@ -7,6 +7,8 @@ import {
 } from "@/domain/pf-journey";
 import { prisma } from "../db";
 import { assertClientAccess } from "./access";
+import { mailConfigured } from "../mail";
+import { sendRosanLifeInviteEmail } from "../portal-mail";
 import { recordAudit } from "./audit";
 
 const iso = (d: Date | null) => (d ? dbDateToLocalDate(d) : null);
@@ -130,4 +132,36 @@ export async function listPfClients(actor: Actor) {
     const dl = pfDeadlines({ startDate: iso(j?.startDate ?? null), appBonusStart: iso(j?.appBonusStart ?? null) });
     return { id: c.id, name: c.tradeName, email: c.contactEmail, status: (j?.status ?? "NOVO_INTERESSADO") as PfStatus, startDate: iso(j?.startDate ?? null), endDate: dl.endDate, appBonusEnd: dl.appBonusEnd, appInvitedAt: j?.appInvitedAt ?? null, paid: !!j?.paidAt };
   });
+}
+
+/** Pede ao ROSAN LIFE um convite para o e-mail do cliente e o envia. Sem e-mail configurado, devolve o link para copiar. */
+export async function inviteToRosanLife(actor: Actor, clientId: string): Promise<{ sent: boolean; link: string; email: string }> {
+  const j = await load(actor, clientId);
+  const client = await prisma.client.findUniqueOrThrow({ where: { id: clientId }, select: { contactEmail: true, contactName: true, tradeName: true } });
+  if (!client.contactEmail) throw new ValidationError("Cadastre o e-mail do cliente (Contato principal) antes de enviar o convite.");
+  const base = (process.env.ROSAN_LIFE_URL ?? "").replace(/\/$/, "");
+  const secret = process.env.CENTRAL_API_SECRET;
+  if (!base || !secret) throw new ValidationError("A ligação com o ROSAN LIFE ainda não foi configurada (ROSAN_LIFE_URL e CENTRAL_API_SECRET).");
+  let link: string;
+  try {
+    const res = await fetch(`${base}/api/central/convite`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
+      body: JSON.stringify({ email: client.contactEmail, name: client.contactName ?? client.tradeName }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const data = (await res.json().catch(() => ({}))) as { link?: string; erro?: string };
+    if (!res.ok || !data.link) throw new ValidationError(data.erro ?? `O ROSAN LIFE recusou o pedido (${res.status}).`);
+    link = data.link;
+  } catch (e) {
+    if (e instanceof ValidationError) throw e;
+    throw new ValidationError("Não foi possível falar com o ROSAN LIFE agora. Tente de novo em instantes.");
+  }
+  let sent = false;
+  if (mailConfigured()) sent = (await sendRosanLifeInviteEmail(client.contactEmail, client.contactName ?? client.tradeName, link)).ok;
+  await prisma.$transaction(async (tx) => {
+    await tx.pfJourney.update({ where: { id: j.id }, data: { appInvitedAt: new Date() } });
+    await log(tx, actor, j.id, clientId, sent ? `convite do ROSAN LIFE enviado para ${client.contactEmail}` : `convite do ROSAN LIFE gerado para ${client.contactEmail} (link copiado, e-mail não enviado)`);
+  });
+  return { sent, link, email: client.contactEmail };
 }

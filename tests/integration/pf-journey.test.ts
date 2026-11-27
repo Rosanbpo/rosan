@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ValidationError } from "@/domain/permissions";
 import { prisma } from "@/server/db";
 import { createClient } from "@/server/services/clients";
-import { getPfJourney, listPfClients, savePfDates, setPfContinuity, setPfStatus, togglePfItem } from "@/server/services/pf-journey";
+import { getPfJourney, inviteToRosanLife, listPfClients, savePfDates, setPfContinuity, setPfStatus, togglePfItem } from "@/server/services/pf-journey";
 import { resetDb, setupOrg } from "./helpers";
 
+vi.mock("server-only", () => ({}));
 beforeEach(resetDb);
 
 async function pfClient(s: Awaited<ReturnType<typeof setupOrg>>, lines: string[] = ["CONSULTORIA_PF"]) {
@@ -66,5 +67,53 @@ describe("jornada da Consultoria PF", () => {
     const rows = await listPfClients(s.admin);
     expect(rows.map((r) => r.name)).toEqual(["Maria Souza"]);
     expect(await prisma.client.count()).toBe(2);
+  });
+});
+
+describe("convite do ROSAN LIFE", () => {
+  const OLD = { ...process.env };
+  afterEach(() => { process.env = { ...OLD }; vi.unstubAllGlobals(); });
+
+  async function ready() {
+    const s = await setupOrg();
+    const c = await createClient(s.admin, { legalName: "Maria", tradeName: "Maria", status: "ATIVO", services: [], serviceLines: ["CONSULTORIA_PF"], contactEmail: "maria@teste.com", memberIds: [] });
+    return { s, c };
+  }
+
+  it("exige a configuração da ligação", async () => {
+    const { s, c } = await ready();
+    delete process.env.ROSAN_LIFE_URL; delete process.env.CENTRAL_API_SECRET;
+    await expect(inviteToRosanLife(s.admin, c.id)).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("pede o convite, devolve o link e registra no histórico", async () => {
+    const { s, c } = await ready();
+    process.env.ROSAN_LIFE_URL = "https://life.exemplo.com/"; process.env.CENTRAL_API_SECRET = "s".repeat(40);
+    delete process.env.RESEND_API_KEY; delete process.env.MAIL_FROM;
+    const f = vi.fn(async () => new Response(JSON.stringify({ link: "https://life.exemplo.com/convite/abc" }), { status: 200 }));
+    vi.stubGlobal("fetch", f);
+    const r = await inviteToRosanLife(s.admin, c.id);
+    expect(r).toMatchObject({ sent: false, link: "https://life.exemplo.com/convite/abc", email: "maria@teste.com" });
+    const call = f.mock.calls[0] as unknown as [string, RequestInit];
+    expect(call[0]).toBe("https://life.exemplo.com/api/central/convite");
+    expect((call[1].headers as Record<string, string>).authorization).toBe(`Bearer ${"s".repeat(40)}`);
+    const j = await getPfJourney(s.admin, c.id);
+    expect(j?.appInvitedAt).not.toBeNull();
+    expect(j?.history[0].summary).toContain("convite do ROSAN LIFE");
+  });
+
+  it("repassa o erro do app e não marca como enviado", async () => {
+    const { s, c } = await ready();
+    process.env.ROSAN_LIFE_URL = "https://life.exemplo.com"; process.env.CENTRAL_API_SECRET = "s".repeat(40);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ erro: "Não autorizado" }), { status: 401 })));
+    await expect(inviteToRosanLife(s.admin, c.id)).rejects.toThrow("Não autorizado");
+    expect((await getPfJourney(s.admin, c.id))?.appInvitedAt).toBeNull();
+  });
+
+  it("exige o e-mail do cliente", async () => {
+    const s = await setupOrg();
+    const c = await createClient(s.admin, { legalName: "Sem", tradeName: "Sem", status: "ATIVO", services: [], serviceLines: ["CONSULTORIA_PF"], memberIds: [] });
+    process.env.ROSAN_LIFE_URL = "https://x.com"; process.env.CENTRAL_API_SECRET = "s".repeat(40);
+    await expect(inviteToRosanLife(s.admin, c.id)).rejects.toThrow("e-mail");
   });
 });

@@ -26,3 +26,13 @@ export function sendResetEmail(to: string, name: string, url: string) {
     html: layout("Redefinir senha", `<p>Olá, ${esc(first)}!</p><p>Recebemos um pedido para criar uma nova senha. O link vale por 2 horas. Se não foi você, ignore este e-mail.</p>`, { label: "Criar nova senha", url }),
   });
 }
+
+export function sendRosanLifeInviteEmail(to: string, name: string, url: string) {
+  const first = name.split(" ")[0];
+  return sendMail({
+    to,
+    subject: "Seu acesso ao ROSAN LIFE — Rosan Finanças",
+    text: `Olá, ${first}! Liberei o seu acesso ao ROSAN LIFE, o aplicativo que vamos usar na sua consultoria financeira. Crie sua conta em: ${url} (o link vale por 14 dias).`,
+    html: layout("Seu acesso ao ROSAN LIFE", `<p>Olá, ${esc(first)}!</p><p>Liberei o seu acesso ao <strong>ROSAN LIFE</strong>, o aplicativo de organização financeira que vamos usar na sua consultoria.</p><p>O link vale por 14 dias e só funciona com este e-mail.</p>`, { label: "Criar minha conta", url }),
+  });
+}
